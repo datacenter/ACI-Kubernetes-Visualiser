@@ -10,42 +10,69 @@ data:
 # User needs to set the list of APIC IPs (for both containers) and the name of the APIC certificate and the user that is associated to it. 
 # The vkaci POD will just sleep forever waiting for someone to call the visibility.py script.
 ---
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: vkaci
   labels:
     app: vkaci
 spec:
-  containers:
-  - name: vkaci
-    image: quay.io/camillo/vkaci
-    command: ['sh', '-c',"while true; do sleep 30; done;"]
-    env:
-      - name: APIC_IPS
-        value: "10.67.185.102,10.67.185.42,10.67.185.41"
-      - name: CERT_NAME
-        value: "ansible.crt"
-      - name: CERT_USER
-        value: "ansible"
-    volumeMounts:
-      - name: aci-user-cert-volume
-        mountPath: /usr/local/etc/aci-cert/
-      - name: aci-meta
-        mountPath: "/root/.aci-meta"
-  initContainers:
-  - name: init-vkaci
-    image: quay.io/camillo/vkaci-init
-    command: ['sh', '-c', "python3 init.py"]
-    env:
-      - name: APIC_IPS
-        value: "10.67.185.102,10.67.185.42,10.67.185.41"
-    volumeMounts:
-      - name: aci-meta
-        mountPath: "/root/.aci-meta"
-  volumes:
-    - name: aci-user-cert-volume
-      secret:
-        secretName: aci-user-cert
-    - name: aci-meta
-      emptyDir: {}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vkaci
+  template:
+    metadata:
+      labels:
+        app: vkaci
+    spec:
+       containers:
+       - name: vkaci
+         image: quay.io/camillo/vkaci
+         ports:
+         - containerPort: 50000
+         command: ['sh', '-c', "python3 visibility_ui.py" ]
+         env:
+           - name: APIC_IPS
+             value: "10.67.185.102,10.67.185.42,10.67.185.41"
+           - name: CERT_NAME
+             value: "ansible.crt"
+           - name: CERT_USER
+             value: "ansible"
+           - name: TENANT
+             value: "common"
+           - name: VRF
+             value: "calico"
+         volumeMounts:
+           - name: aci-user-cert-volume
+             mountPath: /usr/local/etc/aci-cert/
+           - name: aci-meta
+             mountPath: "/root/.aci-meta"
+       initContainers:
+       - name: init-vkaci
+         image: quay.io/camillo/vkaci-init
+         command: ['sh', '-c', "python3 init.py"]
+         env:
+           - name: APIC_IPS
+             value: "10.67.185.102,10.67.185.42,10.67.185.41"
+         volumeMounts:
+           - name: aci-meta
+             mountPath: "/root/.aci-meta"
+       volumes:
+         - name: aci-user-cert-volume
+           secret:
+             secretName: aci-user-cert
+         - name: aci-meta
+           emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vkaci
+spec:
+  selector:
+    app: vkaci
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80

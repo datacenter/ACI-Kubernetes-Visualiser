@@ -2,7 +2,6 @@
 from re import L
 import sys
 import os
-from kubernetes import client, config
 from pyaci import Node
 from pyaci import options
 from pyaci import filters
@@ -174,63 +173,76 @@ topology = {'master-1': {'bgp_peers': {'node-204', 'node-203'},
 
 #There is too much data to visualize in a single graph so we have a few options:
 
-def add_node(node, nodeV, pods):
-    gK8sNodes.add_node(node, tooltip="Pods on the node:\n" + pods, label = node + '\n' + nodeV['node_ip'])
-    for bgp_peer in nodeV['bgp_peers']:
-        ebgpNodeName = 'eBGP Peer\n' + bgp_peer
-        gBgpPeers.add_node(ebgpNodeName, shape='box')
-        gBgpPeering.add_edge(node,ebgpNodeName,style='dotted',color='red', tooltip='eBGP Peering' )
-    for lldp_host, lldpV in nodeV['lldp_neighbours'].items():
-        gLldpHost.add_node(lldp_host)
-        gLldpAdj.add_edge(node,lldp_host, color='blue')
-        for switch, interface in lldpV.items():
-            gLldpSwitch.add_node(switch, shape='box')
-            gLldpAdj.add_edge(lldp_host, switch, color='blue', tooltip='\n'.join(map(str, list(interface))))
+class vkaci_topology(object):
+    def __init__(self) -> None:
+        super().__init__()
+        self.gRoot = pgv.AGraph(directed=True)
+        self.gBgpPeers = self.gRoot.add_subgraph(name='BgpPeers')
+        self.gLldpHost = self.gRoot.add_subgraph(name='LldpHost', rank ='same')
+        self.gLldpSwitch = self.gRoot.add_subgraph(name='LldpSwitch', rank ='same')
+        self.gLldpAdj = self.gRoot.add_subgraph(name='LldpAdj')
+        self.gK8sNodes = self.gRoot.add_subgraph(name='K8sNodes', rank ='same')
+        self.gPods = self.gRoot.add_subgraph(name='Pods', rank ='min')
+        self.gPodsToNodes = self.gRoot.add_subgraph(name='PodsToNodes')
+        self.gBgpPeering = self.gRoot.add_subgraph(name='BgpPeering')
 
-def add_nodes(topology):
-    for node, nodeV in topology.items():
-        pods = '\n'.join(map(str, list(nodeV['pods'].keys())))
-        add_node(node, nodeV,pods)
-        
-def add_pod(topology, pod_name):
-    for node, nodeV in topology.items():
-        if pod_name in nodeV['pods'].keys():
+
+    def add_node(self, node, nodeV, pods):
+        self.gK8sNodes.add_node(node, tooltip="Pods on the node:\n" + pods, label = node + '\n' + nodeV['node_ip'])
+        for bgp_peer in nodeV['bgp_peers']:
+            ebgpNodeName = 'eBGP Peer\n' + bgp_peer
+            self.gBgpPeers.add_node(ebgpNodeName, shape='box')
+            self.gBgpPeering.add_edge(node,ebgpNodeName,style='dotted',color='red', tooltip='eBGP Peering' )
+        for lldp_host, lldpV in nodeV['lldp_neighbours'].items():
+            self.gLldpHost.add_node(lldp_host)
+            self.gLldpAdj.add_edge(node,lldp_host, color='blue')
+            for switch, interface in lldpV.items():
+                self.gLldpSwitch.add_node(switch, shape='box')
+                self.gLldpAdj.add_edge(lldp_host, switch, color='blue', tooltip='\n'.join(map(str, list(interface))))
+    
+    def add_nodes(self):
+        for node, nodeV in topology.items():
             pods = '\n'.join(map(str, list(nodeV['pods'].keys())))
-            add_node(node, nodeV,pods)
-            gPods.add_node(pod_name, label=pod_name + '\n ip=' + nodeV['pods'][pod_name]['ip'] + '\n ns=' + nodeV['pods'][pod_name]['ns'])
-            gPodsToNodes.add_edge(pod_name,node)
-    if gPods.number_of_nodes() == 0:
-        gRoot.clear()
-        gRoot.add_node(pod_name, label=pod_name +'\nNOT FOUND')
-        
+            self.add_node(node, nodeV,pods)
+            
+    def add_pod(self, pod_name):
+        for node, nodeV in topology.items():
+            if pod_name in nodeV['pods'].keys():
+                pods = '\n'.join(map(str, list(nodeV['pods'].keys())))
+                self.add_node(node, nodeV,pods)
+                self.gPods.add_node(pod_name, label=pod_name + '\n ip=' + nodeV['pods'][pod_name]['ip'] + '\n ns=' + nodeV['pods'][pod_name]['ns'])
+                self.gPodsToNodes.add_edge(pod_name,node)
+        if self.gPods.number_of_nodes() == 0:
+            self.gRoot.clear()
+            if not pod_name:
+                pod_name = "Pod Name Not Specified"
+                # THis is the graphiz add_node function :D 
+                self.gRoot.add_node(pod_name, label=pod_name +'\nNOT FOUND')
+            else:
+                self.gRoot.add_node(pod_name, label=pod_name +'\nNOT FOUND')
 
-def svg(fn):
-    print(gRoot.string())
-    gRoot.layout("dot")  # layout with dot
-    gRoot.draw(fn + ".svg")  # write to file
+            
+    
+    def svg(self, fn):
+        print(self.gRoot.string())
+        self.gRoot.layout("dot")  # layout with dot
+        self.gRoot.draw(fn + ".svg")  # write to file
+    
+    
+    
+    
+    #add_nodes(topology)
+#svg('template/assets/cluster')
 
-gRoot = pgv.AGraph(directed=True)
-gBgpPeers = gRoot.add_subgraph(name='BgpPeers')
-gLldpHost = gRoot.add_subgraph(name='LldpHost', rank ='same')
-gLldpSwitch = gRoot.add_subgraph(name='LldpSwitch', rank ='same')
-gLldpAdj = gRoot.add_subgraph(name='LldpAdj')
-gK8sNodes = gRoot.add_subgraph(name='K8sNodes', rank ='same')
-gPods = gRoot.add_subgraph(name='Pods', rank ='min')
-gPodsToNodes = gRoot.add_subgraph(name='PodsToNodes')
-gBgpPeering = gRoot.add_subgraph(name='BgpPeering')
+#gRoot = pgv.AGraph(directed=True)
+#gBgpPeers = gRoot.add_subgraph(name='BgpPeers')
+#gLldpHost = gRoot.add_subgraph(name='LldpHost', rank ='same')
+#gLldpSwitch = gRoot.add_subgraph(name='LldpSwitch', rank ='same')
+#gLldpAdj = gRoot.add_subgraph(name='LldpAdj')
+#gK8sNodes = gRoot.add_subgraph(name='K8sNodes', rank ='same')
+#gPods = gRoot.add_subgraph(name='Pods', rank ='min')
+#gPodsToNodes = gRoot.add_subgraph(name='PodsToNodes')
+#gBgpPeering = gRoot.add_subgraph(name='BgpPeering')
 
-add_nodes(topology)
-svg('cluster')
-
-gRoot = pgv.AGraph(directed=True)
-gBgpPeers = gRoot.add_subgraph(name='BgpPeers')
-gLldpHost = gRoot.add_subgraph(name='LldpHost', rank ='same')
-gLldpSwitch = gRoot.add_subgraph(name='LldpSwitch', rank ='same')
-gLldpAdj = gRoot.add_subgraph(name='LldpAdj')
-gK8sNodes = gRoot.add_subgraph(name='K8sNodes', rank ='same')
-gPods = gRoot.add_subgraph(name='Pods', rank ='min')
-gPodsToNodes = gRoot.add_subgraph(name='PodsToNodes')
-gBgpPeering = gRoot.add_subgraph(name='BgpPeering')
-
-add_pod(topology,'vkaci')
-svg('pod')
+#add_pod(topology,'vkaci')
+#svg('template/assets/pod')
