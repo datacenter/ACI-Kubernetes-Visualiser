@@ -1,0 +1,4 @@
+kubernetes
+flask
+pygraphviz
+https://github.com/datacenter/pyaci/archive/master.zip

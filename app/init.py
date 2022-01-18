@@ -6,6 +6,6 @@ import os
 print("Loading ACI Metadata")
 url = "https://" + os.environ.get("APIC_IPS").split(',')[0] + '/acimeta/aci-meta.json'
 r = requests.get(url, verify=False, allow_redirects=True)
-open('/root/.aci-meta/aci-meta.json','wb').write(r.content)
+open(os.path.expanduser("~") + '/.aci-meta/aci-meta.json','wb').write(r.content)
 print("ACI Metadata Loaded")
 

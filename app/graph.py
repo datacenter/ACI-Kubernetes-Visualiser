@@ -30,11 +30,14 @@ class vkaci_build_topology(object):
         
         self.aci_vrf = 'uni/tn-' + self.tenant + '/ctx-' + self.vrf
 
-       
-
         ## Configs can be set in Configuration class directly or using helper utility
-        #config.load_kube_config(config_file="/home/cisco/.kube/config")
-        config.load_incluster_config()
+        if os.environ.get("MODE") == "LOCAL":
+            print("LOCAL")
+            config.load_kube_config(config_file=os.environ.get("KUBE_CONFIG"))
+        elif os.environ.get("MODE") == "CLUSTER":
+            config.load_incluster_config()
+        else:
+            print("Invalid Mode {}. Only LOCAL or CLUSTER is supported").format(os.environ.get("MODE"))
         #
         self.v1 = client.CoreV1Api()
 
@@ -42,9 +45,10 @@ class vkaci_build_topology(object):
         self.topology = {}
         self.apic = Node('https://' + random.choice(self.apic_ip))
         
-        
-        #self.apic.useX509CertAuth("ansible","ansible.crt",'/home/cisco/Coding/ansible.key')
-        self.apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
+        if os.environ.get("MODE") == "LOCAL":
+            self.apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),os.environ.get("KEY_PATH"))
+        elif os.environ.get("MODE") == "CLUSTER":
+            self.apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
         ##Load all the POD in Memory. 
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
@@ -66,8 +70,6 @@ class vkaci_build_topology(object):
             else:
                 ep = ep[0]
             
-            
-
             #Find the mac to interface mapping 
             path = self.apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', ep.mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
 
