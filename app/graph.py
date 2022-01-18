@@ -8,6 +8,7 @@ from pyaci import filters
 import random
 from pyaci.core import AutoRefreshThread
 import pygraphviz as pgv
+import json
 
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logging.INFO)
@@ -32,7 +33,6 @@ class vkaci_build_topology(object):
 
         ## Configs can be set in Configuration class directly or using helper utility
         if os.environ.get("MODE") == "LOCAL":
-            print("LOCAL")
             config.load_kube_config(config_file=os.environ.get("KUBE_CONFIG"))
         elif os.environ.get("MODE") == "CLUSTER":
             config.load_incluster_config()
@@ -109,7 +109,8 @@ class vkaci_build_topology(object):
                 for bgpPeer in bgpPeerEntry:
                     if bgpPeer.operSt == "established":
                         v['bgp_peers'].add( bgpPeer.dn.split("/")[2] )
-        print(self.topology)
+        #print("Topology:")
+        #print(json.dumps(self.topology))
         return self.topology
 
     def get(self):
@@ -167,7 +168,7 @@ class vkaci_draw(object):
             
     
     def svg(self, fn):
-        print(self.gRoot.string())
+        #print(self.gRoot.string())
         self.gRoot.layout("dot")  # layout with dot
         self.gRoot.draw(fn + ".svg")  # write to file
 
