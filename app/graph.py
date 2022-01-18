@@ -6,24 +6,18 @@ from pyaci import Node
 from pyaci import options
 from pyaci import filters
 import random
-from pyaci.core import AutoRefreshThread
 import pygraphviz as pgv
-import json
 
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logging.INFO)
 #logging.getLogger('pyaci').setLevel(logging.DEBUG)
 
-#pod_name= sys.argv[1]
 
 class vkaci_build_topology(object):
     def __init__(self) -> None:
         super().__init__()
         self.pod = {}
         self.topology = {}
-        #self.apic_ip="10.67.185.102,10.67.185.42,10.67.185.41".split(',')
-        #self.tenant = 'common'
-        #self.vrf = 'calico'
         
         self.apic_ip=os.environ.get("APIC_IPS").split(',')
         self.tenant=os.environ.get("TENANT")
@@ -52,7 +46,6 @@ class vkaci_build_topology(object):
         ##Load all the POD in Memory. 
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
-            #pod[i.metadata.name] = {"ip": i.status.pod_ip, "ns": i.metadata.namespace, "node_ip": i.status.host_ip, "node_name": i.spec.node_name }
             if i.spec.node_name not in self.topology.keys():
                self.topology[i.spec.node_name] = { "node_ip": i.status.host_ip, "pods" : {}, 'bgp_peers': set(), 'lldp_neighbours': {} }
             self.topology[i.spec.node_name]['pods'][i.metadata.name] = {"ip": i.status.pod_ip, "ns": i.metadata.namespace}
