@@ -15,9 +15,9 @@ vkaci needs to connect to the APIC via certificate based authetication. It is ex
   - MODE: Set the app to run in `CLUSTER` mode (deployed on the cluster that is monitoring) or in `LOCAL` mode, useful for development. 
   - APIC_IPS: Comma separated list of your APIC IPs
   - CERT_USER: Name of the user
-  - CERT_NAME: Name of the certificate configured in the APIC.
-  - TENANT: Tenant where the cluster L3OUT is deployed
-  - VRF: Name of the VRF where the cluster is deployed
+  - CERT_NAME: Name of the certificate configured in the APIC
+  - TENANT: Tenant where the cluster VRF is deployed
+  - VRF: Name of the VRF used by the cluster
   - aci-user-cert: Replace the user.key content with your certificate key.
 - apply the `list-permission.yaml` this will allow the `ServiceAccount` `default` to list pod.
 - apply the `vkaci.yaml` this spin up the container that will run our tasks

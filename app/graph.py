@@ -7,6 +7,9 @@ from pyaci import options
 from pyaci import filters
 import random
 import pygraphviz as pgv
+import logging
+import concurrent.futures
+import time
 
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logging.INFO)
@@ -35,73 +38,97 @@ class vkaci_build_topology(object):
         #
         self.v1 = client.CoreV1Api()
 
-    def update(self):
-        self.topology = {}
-        self.apic = Node('https://' + random.choice(self.apic_ip))
+    def update_node(self, apic, node):
+        print(node['node_ip'])
+        ep = apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & 
+                                                    options.subtreeFilter(filters.Eq('fvIp.addr', node['node_ip']) & filters.Eq('fvIp.vrfDn',self.aci_vrf)))
+        if len(ep) > 1:
+            print("Detected Duplicate node IP {} with Macs".format(node['node_ip']))
+            for i in ep:
+                print(i.mac)
+            print("Terminating")
+            exit()
+        elif len(ep) == 0:
+            print("No nodes found, please check that the Tenant {} and VRF {} are correct".format(self.tenant, self.vrf))
+        else:
+            ep = ep[0]
         
-        if os.environ.get("MODE") == "LOCAL":
-            self.apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),os.environ.get("KEY_PATH"))
-        elif os.environ.get("MODE") == "CLUSTER":
-            self.apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
-        ##Load all the POD in Memory. 
+        #Find the mac to interface mapping 
+        path = apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', ep.mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
+
+        #Get Path, there should be only one...need to add checks
+        for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
+            pathtDn = fvRsCEpToPathEp.tDn
+
+        #print("The K8s Node is physically connected to: {}".format(pathtDn))
+        #Get all LLDP Neighbors for that interface
+        lldp_neighbours = apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathtDn)) & options.rspSubtreeClass('lldpAdjEp'))
+        for lldp_neighbour in lldp_neighbours:
+            if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
+
+                # Get the LLD Host that shoudl be either the same as the K8s node or a Hypervisor host name. 
+
+                for lldp_neighbour_hostname in lldp_neighbour.lldpAdjEp:
+                    if lldp_neighbour_hostname.sysName not in node['lldp_neighbours'].keys():
+                        node['lldp_neighbours'][lldp_neighbour_hostname.sysName] = {}
+
+                # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
+                switch = lldp_neighbour.sysDesc.split('/')[2]
+                if switch not in node['lldp_neighbours'][lldp_neighbour_hostname.sysName].keys() and lldp_neighbour_hostname:
+                    # Add the swithc ID as a key and create a set to hold the interfaces this shoudl be uniqe and I do not need to be an dictionary.
+                    node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch] = set()
+
+            # lldp_neighbour.id == Interface ID 
+                    
+                node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id)
+
+            #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
+            # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
+            # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
+            #and extract the common and calico part. 
+            vrf=re.split('/|-',ep.vrfDn)
+            vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
+            bgpPeerEntry = apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr',node['node_ip'])))
+            for bgpPeer in bgpPeerEntry:
+                if bgpPeer.operSt == "established":
+                    node['bgp_peers'].add( bgpPeer.dn.split("/")[2] )
+
+    def update(self):
+        start = time.time()
+        self.topology = { }
+        self.apics = []
+        
+        #Create list of APICs and set the useX509CertAuth parameters
+        for i in self.apic_ip:
+            self.apics.append(Node('https://' + i))
+        for apic in self.apics:
+            if os.environ.get("MODE") == "LOCAL":
+                apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),os.environ.get("KEY_PATH"))
+            elif os.environ.get("MODE") == "CLUSTER":
+                apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
+        
+        ##Load all the POD and Nodes in Memory. 
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
             if i.spec.node_name not in self.topology.keys():
                self.topology[i.spec.node_name] = { "node_ip": i.status.host_ip, "pods" : {}, 'bgp_peers': set(), 'lldp_neighbours': {} }
             self.topology[i.spec.node_name]['pods'][i.metadata.name] = {"ip": i.status.pod_ip, "ns": i.metadata.namespace}
+        
+        #Find the K8s Node IP/Mac
+        
+        # No Thread 50 nodes takes ~ 41 seconds
+        #for k,v in self.topology.items():
+        #    self.update_node(node=v)
 
-         #Find the K8s Node IP/Mac
-        for k,v in self.topology.items():
-            ep = self.apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & 
-                                                    options.subtreeFilter(filters.Eq('fvIp.addr', v['node_ip']) & filters.Eq('fvIp.vrfDn',self.aci_vrf)))
-            if len(ep) > 1:
-                print("Detected Duplicate node IP {} with Macs".format(v['node_ip']))
-                for i in ep:
-                    print(i.mac)
-                print("Terminating")
-                exit()
-            else:
-                ep = ep[0]
-            
-            #Find the mac to interface mapping 
-            path = self.apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', ep.mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
-
-            #Get Path, there should be only one...need to add checks
-            for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
-                pathtDn = fvRsCEpToPathEp.tDn
-
-            #print("The K8s Node is physically connected to: {}".format(pathtDn))
-            #Get all LLDP Neighbors for that interface
-            lldp_neighbours = self.apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathtDn)) & options.rspSubtreeClass('lldpAdjEp'))
-            for lldp_neighbour in lldp_neighbours:
-                if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
-
-                    # Get the LLD Host that shoudl be either the same as the K8s node or a Hypervisor host name. 
-    
-                    for lldp_neighbour_hostname in lldp_neighbour.lldpAdjEp:
-                        if lldp_neighbour_hostname.sysName not in v['lldp_neighbours'].keys():
-                            v['lldp_neighbours'][lldp_neighbour_hostname.sysName] = {}
-    
-                    # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
-                    switch = lldp_neighbour.sysDesc.split('/')[2]
-                    if switch not in v['lldp_neighbours'][lldp_neighbour_hostname.sysName].keys() and lldp_neighbour_hostname:
-                        # Add the swithc ID as a key and create a set to hold the interfaces this shoudl be uniqe and I do not need to be an dictionary.
-                        v['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch] = set()
-    
-                # lldp_neighbour.id == Interface ID 
-                        
-                    v['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id)
-
-                #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
-                # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
-                # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
-                #and extract the common and calico part. 
-                vrf=re.split('/|-',ep.vrfDn)
-                vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
-                bgpPeerEntry = self.apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr',v['node_ip'])))
-                for bgpPeer in bgpPeerEntry:
-                    if bgpPeer.operSt == "established":
-                        v['bgp_peers'].add( bgpPeer.dn.split("/")[2] )
+        #Threaded to single APIC 50 nodes takes ~ 11 seconds
+        #Threaded picking APIC randomly 50 nodes takes ~ 8 seconds
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            for k,v in self.topology.items():
+                executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+        print(executor._max_workers)
+        executor.shutdown(wait=True)
+        
+        print("time:", time.time() - start)
         #print("Topology:")
         #print(json.dumps(self.topology))
         return self.topology
