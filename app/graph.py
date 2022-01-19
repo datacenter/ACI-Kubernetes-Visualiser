@@ -12,9 +12,16 @@ import concurrent.futures
 import time
 
 #If you need to look at the API calls this is what you do
-#logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logger.info)
 #logging.getLogger('pyaci').setLevel(logging.DEBUG)
 
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+formatter = logging.Formatter(
+        '%(asctime)s %(name)-1s %(levelname)-1s %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 class vkaci_build_topology(object):
     def __init__(self) -> None:
@@ -34,7 +41,7 @@ class vkaci_build_topology(object):
         elif os.environ.get("MODE") == "CLUSTER":
             config.load_incluster_config()
         else:
-            print("Invalid Mode {}. Only LOCAL or CLUSTER is supported").format(os.environ.get("MODE"))
+            logger.info("Invalid Mode {}. Only LOCAL or CLUSTER is supported").format(os.environ.get("MODE"))
         #
         self.v1 = client.CoreV1Api()
 
@@ -44,13 +51,13 @@ class vkaci_build_topology(object):
         #ep = apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & 
         #                                            options.subtreeFilter(filters.Eq('fvIp.vrfDn',self.aci_vrf) & filters.Eq('fvIp.addr', node['node_ip'])))
         #if len(ep) > 1:
-        #    print("Detected Duplicate node IP {} with Macs".format(node['node_ip']))
+        #    logger.info("Detected Duplicate node IP {} with Macs".format(node['node_ip']))
         #    for i in ep:
-        #        print(i.mac)
-        #    print("Terminating")
+        #        logger.info(i.mac)
+        #    logger.info("Terminating")
         #    exit()
         #elif len(ep) == 0:
-        #    print("No nodes found, please check that the Tenant {} and VRF {} are correct".format(self.tenant, self.vrf))
+        #    logger.info("No nodes found, please check that the Tenant {} and VRF {} are correct".format(self.tenant, self.vrf))
         #else:
         #    ep = ep[0]
         
@@ -61,7 +68,7 @@ class vkaci_build_topology(object):
         for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
             pathtDn = fvRsCEpToPathEp.tDn
 
-        #print("The K8s Node is physically connected to: {}".format(pathtDn))
+        #logger.info("The K8s Node is physically connected to: {}".format(pathtDn))
         #Get all LLDP Neighbors for that interface
         lldp_neighbours = apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathtDn)) & options.rspSubtreeClass('lldpAdjEp'))
         for lldp_neighbour in lldp_neighbours:
@@ -108,7 +115,7 @@ class vkaci_build_topology(object):
             elif os.environ.get("MODE") == "CLUSTER":
                 apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
             else:
-                print("MODE can only be LOCAL or CLUSTER but {} was given".format(os.environ.get("MODE")))
+                logger.info("MODE can only be LOCAL or CLUSTER but {} was given".format(os.environ.get("MODE")))
                 exit()
         
         ##Load all the POD and Nodes in Memory. 
@@ -122,9 +129,7 @@ class vkaci_build_topology(object):
         #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac. This is faster done locally. The same query where I filter by IP and VRF takes 0.4s per node
         # Dumping 900 EPs takes 1.3s in total. 
         eps = self.apics[0].methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & options.subtreeFilter(filters.Eq('fvIp.vrfDn',self.aci_vrf)))
-        print(len(eps))
-
-        print("ACI EP completed after: {} seconds".format(time.time() - start))
+        logger.info("ACI EP completed after: {} seconds".format(time.time() - start))
         #Find the K8s Node IP/Mac
         
         # No Thread 50 nodes takes ~ 41 seconds
@@ -133,7 +138,7 @@ class vkaci_build_topology(object):
 
         #Threaded to single APIC 50 nodes takes ~ 11 seconds
         #Threaded picking APIC randomly 50 nodes takes ~ 8 seconds
-        print("Start querying ACI")
+        logger.info("Start querying ACI")
         start = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for k,v in self.topology.items():
@@ -145,9 +150,9 @@ class vkaci_build_topology(object):
                 executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         
-        print("ACI queries completed after: {} seconds".format(time.time() - start))
-        #print("Topology:")
-        print(self.topology)
+        logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
+        #logger.info("Topology:")
+        #logger.info(self.topology)
         return self.topology
 
     def get(self):
@@ -205,7 +210,7 @@ class vkaci_draw(object):
             
     
     def svg(self, fn):
-        #print(self.gRoot.string())
+        #logger.info(self.gRoot.string())
         self.gRoot.layout("dot")  # layout with dot
         self.gRoot.draw(fn + ".svg")  # write to file
 
