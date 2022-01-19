@@ -164,4 +164,7 @@ class vkaci_draw(object):
         #print(self.gRoot.string())
         self.gRoot.layout("dot")  # layout with dot
         self.gRoot.draw(fn + ".svg")  # write to file
+    
+    def get_gRoot(self):
+        return self.gRoot
 
