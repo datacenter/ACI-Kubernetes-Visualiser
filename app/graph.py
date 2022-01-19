@@ -39,22 +39,23 @@ class vkaci_build_topology(object):
         self.v1 = client.CoreV1Api()
 
     def update_node(self, apic, node):
-        print(node['node_ip'])
-        ep = apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & 
-                                                    options.subtreeFilter(filters.Eq('fvIp.addr', node['node_ip']) & filters.Eq('fvIp.vrfDn',self.aci_vrf)))
-        if len(ep) > 1:
-            print("Detected Duplicate node IP {} with Macs".format(node['node_ip']))
-            for i in ep:
-                print(i.mac)
-            print("Terminating")
-            exit()
-        elif len(ep) == 0:
-            print("No nodes found, please check that the Tenant {} and VRF {} are correct".format(self.tenant, self.vrf))
-        else:
-            ep = ep[0]
+
+        # double filter is very slow, not sure why but retuirning all the enpoints and child is 
+        #ep = apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & 
+        #                                            options.subtreeFilter(filters.Eq('fvIp.vrfDn',self.aci_vrf) & filters.Eq('fvIp.addr', node['node_ip'])))
+        #if len(ep) > 1:
+        #    print("Detected Duplicate node IP {} with Macs".format(node['node_ip']))
+        #    for i in ep:
+        #        print(i.mac)
+        #    print("Terminating")
+        #    exit()
+        #elif len(ep) == 0:
+        #    print("No nodes found, please check that the Tenant {} and VRF {} are correct".format(self.tenant, self.vrf))
+        #else:
+        #    ep = ep[0]
         
         #Find the mac to interface mapping 
-        path = apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', ep.mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
+        path = apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', node['mac'])) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
 
         #Get Path, there should be only one...need to add checks
         for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
@@ -86,7 +87,7 @@ class vkaci_build_topology(object):
             # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
             # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
             #and extract the common and calico part. 
-            vrf=re.split('/|-',ep.vrfDn)
+            vrf=re.split('/|-',self.aci_vrf)
             vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
             bgpPeerEntry = apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr',node['node_ip'])))
             for bgpPeer in bgpPeerEntry:
@@ -94,7 +95,7 @@ class vkaci_build_topology(object):
                     node['bgp_peers'].add( bgpPeer.dn.split("/")[2] )
 
     def update(self):
-        start = time.time()
+        
         self.topology = { }
         self.apics = []
         
@@ -106,6 +107,9 @@ class vkaci_build_topology(object):
                 apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),os.environ.get("KEY_PATH"))
             elif os.environ.get("MODE") == "CLUSTER":
                 apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
+            else:
+                print("MODE can only be LOCAL or CLUSTER but {} was given".format(os.environ.get("MODE")))
+                exit()
         
         ##Load all the POD and Nodes in Memory. 
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
@@ -114,6 +118,13 @@ class vkaci_build_topology(object):
                self.topology[i.spec.node_name] = { "node_ip": i.status.host_ip, "pods" : {}, 'bgp_peers': set(), 'lldp_neighbours': {} }
             self.topology[i.spec.node_name]['pods'][i.metadata.name] = {"ip": i.status.pod_ip, "ns": i.metadata.namespace}
         
+        start = time.time()
+        #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac. This is faster done locally. The same query where I filter by IP and VRF takes 0.4s per node
+        # Dumping 900 EPs takes 1.3s in total. 
+        eps = self.apics[0].methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & options.subtreeFilter(filters.Eq('fvIp.vrfDn',self.aci_vrf)))
+        print(len(eps))
+
+        print("ACI EP completed after: {} seconds".format(time.time() - start))
         #Find the K8s Node IP/Mac
         
         # No Thread 50 nodes takes ~ 41 seconds
@@ -122,15 +133,21 @@ class vkaci_build_topology(object):
 
         #Threaded to single APIC 50 nodes takes ~ 11 seconds
         #Threaded picking APIC randomly 50 nodes takes ~ 8 seconds
+        print("Start querying ACI")
+        start = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for k,v in self.topology.items():
+                #find the mac for the IP of the node and add it to the topology file.
+                for ep in eps:
+                    for ip in ep.Children:
+                        if ip.addr == v['node_ip']:
+                            v['mac'] = ep.mac
                 executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
-        print(executor._max_workers)
         executor.shutdown(wait=True)
         
-        print("time:", time.time() - start)
+        print("ACI queries completed after: {} seconds".format(time.time() - start))
         #print("Topology:")
-        #print(json.dumps(self.topology))
+        print(self.topology)
         return self.topology
 
     def get(self):
