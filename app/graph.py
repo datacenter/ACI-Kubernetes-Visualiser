@@ -2,9 +2,7 @@
 import os
 import re
 from kubernetes import client, config
-from pyaci import Node
-from pyaci import options
-from pyaci import filters
+from pyaci import Node, options, filters
 import random
 import pygraphviz as pgv
 import logging
@@ -23,25 +21,58 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+class vkaci_env_variables(object):
+    def __init__(self, dict_env:dict = None):
+        """Constructor with real environment variables"""
+        super().__init__()
+        self.dict_env = dict_env
+
+        self.apic_ip = self.enviro().get("APIC_IPS")
+        if self.apic_ip is not None:
+            self.apic_ip = self.apic_ip.split(',')
+        else:
+            self.apic_ip = []
+
+        self.tenant = self.enviro().get("TENANT")
+        self.vrf = self.enviro().get("VRF")
+
+        self.mode = self.enviro().get("MODE")
+        if self.mode is None:
+            self.mode = "None"
+
+        self.kube_config = self.enviro().get("KUBE_CONFIG")
+        self.cert_user= self.enviro().get("CERT_USER")
+        self.cert_name= self.enviro().get("CERT_NAME")
+        self.key_path= self.enviro().get("KEY_PATH")
+
+    def enviro(self):
+        if self.dict_env == None:
+            return os.environ
+        else:
+            return self.dict_env
+
+
 class vkaci_build_topology(object):
-    def __init__(self) -> None:
+    def __init__(self, env:vkaci_env_variables) -> None:
         super().__init__()
         self.pod = {}
         self.topology = {}
+        self.env = env
         
-        self.apic_ip=os.environ.get("APIC_IPS").split(',')
-        self.tenant=os.environ.get("TENANT")
-        self.vrf = os.environ.get("VRF")
-        
-        self.aci_vrf = 'uni/tn-' + self.tenant + '/ctx-' + self.vrf
-
+        if self.env.tenant is not None and self.env.vrf is not None:
+            self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
+        else: 
+            self.aci_vrf = None
+            logger.error("Invalid Tenant or VRF.")
+    
         ## Configs can be set in Configuration class directly or using helper utility
-        if os.environ.get("MODE") == "LOCAL":
-            config.load_kube_config(config_file=os.environ.get("KUBE_CONFIG"))
-        elif os.environ.get("MODE") == "CLUSTER":
+        if self.env.mode == "LOCAL":
+            config.load_kube_config(config_file= self.env.kube_config)
+        elif self.env.mode == "CLUSTER":
             config.load_incluster_config()
         else:
-            logger.info("Invalid Mode {}. Only LOCAL or CLUSTER is supported").format(os.environ.get("MODE"))
+            logger.error("Invalid Mode, %s. Only LOCAL or CLUSTER is supported." % self.env.mode)
+        
         #
         self.v1 = client.CoreV1Api()
 
@@ -106,17 +137,22 @@ class vkaci_build_topology(object):
         self.topology = { }
         self.apics = []
         
+        # Check APIC Ips
+        if self.env.apic_ip is None or len(self.env.apic_ip) == 0:
+            logger.error("Invalid APIC IP addresses.")
+            return
+
         #Create list of APICs and set the useX509CertAuth parameters
-        for i in self.apic_ip:
+        for i in self.env.apic_ip:
             self.apics.append(Node('https://' + i))
         for apic in self.apics:
-            if os.environ.get("MODE") == "LOCAL":
-                apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),os.environ.get("KEY_PATH"))
-            elif os.environ.get("MODE") == "CLUSTER":
-                apic.useX509CertAuth(os.environ.get("CERT_USER"),os.environ.get("CERT_NAME"),'/usr/local/etc/aci-cert/user.key')
+            if self.env.mode == "LOCAL":
+                apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, self.env.key_path)
+            elif self.env.mode == "CLUSTER":
+                apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, '/usr/local/etc/aci-cert/user.key')
             else:
-                logger.info("MODE can only be LOCAL or CLUSTER but {} was given".format(os.environ.get("MODE")))
-                exit()
+                logger.error("MODE can only be LOCAL or CLUSTER but {} was given".format(self.env.mode))
+                return
         
         ##Load all the POD and Nodes in Memory. 
         ret = self.v1.list_pod_for_all_namespaces(watch=False)

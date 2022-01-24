@@ -1,26 +1,22 @@
-from graph import vkaci_draw
+from app.graph import vkaci_draw, vkaci_build_topology, vkaci_env_variables
 import unittest
 import json
 
-"""New Fake data for unit testing"""
-
-# Opening JSON file
-f = open('test_topology.json')
- 
-# returns JSON object as
-# a dictionary
-data = json.load(f)
- 
-# Closing file
-f.close()
-
-
-
-
 class testvkacigraph(unittest.TestCase):
 
+    """New Fake data for unit testing"""
+
+    # Opening JSON file
+    f = open('app/test_topology.json')
+ 
+    # returns JSON object as a dictionary
+    data = json.load(f)
+    
+    # Closing file
+    f.close()
+
     def test_vkaci_graph(self):
-        draw = vkaci_draw(data)
+        draw = vkaci_draw(self.data)
         draw.add_pod("goldpinger-znt4g")
         g = draw.get_gRoot()
         nodes = g.number_of_nodes()
@@ -50,19 +46,27 @@ class testvkacigraph(unittest.TestCase):
     def test_pod_not_in_topology(self):
         """Test any pod midsing from the topology"""
         draw = vkaci_draw(None)
-# In progress
+# visualisation to replace 
 
     def test_shapes_of_nodes(self):
         """Test the shapes of the nodes in the topology"""
         draw = vkaci_draw(None)
-# In progress
+# visualisation to replace 
 
+    def test_no_env_variables(self):
+        """Test that no environment variables are handled"""
+        # Arange
+        build = vkaci_build_topology(vkaci_env_variables({}))
+        
+        # Act
+        build.update()
+
+        # Assert
+        self.assertEqual(build.env.mode, 'None')
+        self.assertIsNone(build.aci_vrf)
+        self.assertEqual(len(build.env.apic_ip), 0)
         
 
-       
-
-
-  
-
-unittest.main()
+if __name__ == '__main__':
+    unittest.main()
 

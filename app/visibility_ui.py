@@ -1,8 +1,8 @@
 #!/usr/local/bin/python3
 from flask import Flask, render_template, request
-from  graph import vkaci_draw, vkaci_build_topology
+from  graph import vkaci_draw, vkaci_build_topology, vkaci_env_variables
 app = Flask(__name__, template_folder='template',static_folder='template/assets')
-topology = vkaci_build_topology()
+topology = vkaci_build_topology(vkaci_env_variables())
 
 @app.route('/',methods=['GET', 'POST'])
 
