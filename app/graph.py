@@ -51,13 +51,30 @@ class vkaci_env_variables(object):
         else:
             return self.dict_env
 
+class apic_methods_resolve(object):
+    def __init__(self) -> None:
+        super().__init__()
+        
+    def get_fvcep(self, apic: Node, aci_vrf: str): 
+        return apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & options.subtreeFilter(filters.Eq('fvIp.vrfDn', aci_vrf)))
+
+    def get_fvcep_mac(self, apic: Node, mac: str): 
+        return apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
+
+    def get_lldpif(self, apic:Node, pathDn): 
+        return apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathDn)) & options.rspSubtreeClass('lldpAdjEp'))
+
+    def get_bgppeerentry(self, apic:Node, vrf: str, node_ip: str): 
+        return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
+    
 
 class vkaci_build_topology(object):
-    def __init__(self, env:vkaci_env_variables) -> None:
+    def __init__(self, env:vkaci_env_variables, apic_methods:apic_methods_resolve) -> None:
         super().__init__()
         self.pod = {}
         self.topology = {}
         self.env = env
+        self.apic_methods = apic_methods
         
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -66,15 +83,21 @@ class vkaci_build_topology(object):
             logger.error("Invalid Tenant or VRF.")
     
         ## Configs can be set in Configuration class directly or using helper utility
-        if self.env.mode == "LOCAL":
-            config.load_kube_config(config_file= self.env.kube_config)
-        elif self.env.mode == "CLUSTER":
+        if self.is_local_mode(): 
+            config.load_kube_config(config_file = self.env.kube_config)
+        elif self.is_cluster_mode():
             config.load_incluster_config()
         else:
             logger.error("Invalid Mode, %s. Only LOCAL or CLUSTER is supported." % self.env.mode)
         
         #
         self.v1 = client.CoreV1Api()
+
+    def is_local_mode(self): 
+        return self.env.mode.casefold() == "LOCAL".casefold()
+
+    def is_cluster_mode(self): 
+        return self.env.mode.casefold() == "CLUSTER".casefold()
 
     def update_node(self, apic, node):
 
@@ -93,15 +116,16 @@ class vkaci_build_topology(object):
         #    ep = ep[0]
         
         #Find the mac to interface mapping 
-        path = apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', node['mac'])) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
-
+        path =  self.apic_methods.get_fvcep_mac(apic, node['mac'])
+        
         #Get Path, there should be only one...need to add checks
         for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
             pathtDn = fvRsCEpToPathEp.tDn
 
         #logger.info("The K8s Node is physically connected to: {}".format(pathtDn))
         #Get all LLDP Neighbors for that interface
-        lldp_neighbours = apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathtDn)) & options.rspSubtreeClass('lldpAdjEp'))
+        lldp_neighbours = self.apic_methods.get_lldpif(apic, pathtDn)
+
         for lldp_neighbour in lldp_neighbours:
             if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
 
@@ -127,7 +151,8 @@ class vkaci_build_topology(object):
             #and extract the common and calico part. 
             vrf=re.split('/|-',self.aci_vrf)
             vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
-            bgpPeerEntry = apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr',node['node_ip'])))
+            bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
+            
             for bgpPeer in bgpPeerEntry:
                 if bgpPeer.operSt == "established":
                     node['bgp_peers'].add( bgpPeer.dn.split("/")[2] )
@@ -146,9 +171,9 @@ class vkaci_build_topology(object):
         for i in self.env.apic_ip:
             self.apics.append(Node('https://' + i))
         for apic in self.apics:
-            if self.env.mode == "LOCAL":
+            if self.is_local_mode():
                 apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, self.env.key_path)
-            elif self.env.mode == "CLUSTER":
+            elif self.is_cluster_mode():
                 apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, '/usr/local/etc/aci-cert/user.key')
             else:
                 logger.error("MODE can only be LOCAL or CLUSTER but {} was given".format(self.env.mode))
@@ -164,7 +189,7 @@ class vkaci_build_topology(object):
         start = time.time()
         #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac. This is faster done locally. The same query where I filter by IP and VRF takes 0.4s per node
         # Dumping 900 EPs takes 1.3s in total. 
-        eps = self.apics[0].methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & options.subtreeFilter(filters.Eq('fvIp.vrfDn',self.aci_vrf)))
+        eps = self.apic_methods.get_fvcep(self.apics[0], self.aci_vrf)
         logger.info("ACI EP completed after: {} seconds".format(time.time() - start))
         #Find the K8s Node IP/Mac
         
@@ -183,8 +208,9 @@ class vkaci_build_topology(object):
                     for ip in ep.Children:
                         if ip.addr == v['node_ip']:
                             v['mac'] = ep.mac
-                executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+                future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
+        result = future.result()
         
         logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
         #logger.info("Topology:")
