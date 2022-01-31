@@ -24,7 +24,7 @@ vkaci needs to connect to the APIC via certificate based authetication. It is ex
 
 ## Installation - Off Cluster/for development
 
-The same environemntvariables can be set to run the application locally. In addition the following additiona environment variable needs to be set:
+The same environemntvariables can be set to run the application locally. In addition the following environment variable needs to be set:
 
 - `KEY_PATH`: to define the location of the key used for APIC authentication.
 - `KUBE_CONFIG`: to define the location of the kubeconfig file.
