@@ -4,6 +4,9 @@ from  graph import vkaci_draw, vkaci_build_topology
 app = Flask(__name__, template_folder='template',static_folder='template/assets')
 topology = vkaci_build_topology()
 
+f = open("version.txt", "r")
+__build__ = f.read()
+
 @app.route('/',methods=['GET', 'POST'])
 
 def index():
@@ -20,8 +23,8 @@ def index():
             cluster_topo = vkaci_draw(topology.update())
             cluster_topo.add_nodes()
             cluster_topo.svg('template/assets/cluster')
-        return render_template('index.html')
-    return render_template('index.html')
+        return render_template('index.html', version=__build__)
+    return render_template('index.html', version=__build__)
 
 if __name__ == '__main__':
 	app.run(debug=True, host="0.0.0.0", port=8080)
