@@ -34,10 +34,90 @@
          display: flex !important;
          justify-content: center !important;
       }
+
+      #viz {
+            width: 1500px;
+            height: 800px;
+            border: 10px solid black;
+            font: 22pt arial;
+        }
    </style>
+   <script type="text/javascript">
+      // define config car
+      // instantiate nodevis object
+      // draw
+
+      // different views
+      //View_without_pods: "MATCH (n:Node)-[r1:RUNNING_IN]->(m:VM_Host) MATCH (n:Node)-[r2:PEERED_INTO]->(s:Switch) Return n,m,s,r1,r2",
+      //No_bgp_peers: "MATCH (n1)-[r1:RUNNING_IN]-(n2)-[r2:CONNECTED_TO]-(n3) RETURN r1, r2, n1, n2, n3",
+      //only_pods:  "MATCH (n1:Pod)-[r]->(n2) RETURN r, n1, n2",
+      //only_nodes_without_connection: `MATCH (n:Node)-[:RUNNING_IN]->(m:VM_Host) MATCH (n:Node)-[:PEERED_INTO]->(s:Switch) Return n,m,s`
+
+      var viz;
+
+      function draw() {
+          var config = {
+              container_id: "viz",
+              server_url: "{{ env.neo4j_url }}",
+              server_user: "{{ env.neo4j_user }}",
+              server_password: "{{ env.neo4j_password }}",
+              initial_cypher: `MATCH (n:Node)-[r1:RUNNING_IN]->(m:VM_Host) MATCH (n:Node)-[r2:PEERED_INTO]->(s:Switch) Return n,m,s,r1,r2`,
+              //"MATCH (n)-[r]-(m) RETURN n,r,m",
+              
+
+              labels: {
+                  "Node": {
+                      caption: "name",
+                      "size": 3,
+                      //"sizeCypher": 'MATCH (n) WHERE id(n) = $id MATCH (n)-[r]-() RETURN count(r) AS c',
+                      image: 'https://github.com/kubernetes/community/blob/master/icons/png/infrastructure_components/unlabeled/node-128.png?raw=true',
+                      "font": {
+                          "size": 26,
+                           "color": "#6e1313", 
+                      },
+                  },
+                  "Pod": {
+                      caption: "pod",
+                      size: 2,
+                      image: './assets/cui-2.0.0/img/pod-128.png'
+                  },
+                  "VM_Host": {
+                      caption: "name",
+                      size: 5,
+                      //"sizeCypher": 'MATCH (n) WHERE id(n) = $id MATCH (n)-[r]-() RETURN count(r) AS c',
+                      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRQodWjbIhRtD2wpIrkOmyu58azJBzXZ9Ms0Zpx169xuU5IBG4Xkds1YsAjzbzwcB6et54&usqp=CAU',
+                   "font": {
+                      "size": 26,
+                      "color": "#000000"
+                   },
+                },
+                "Switch": {
+                   caption: "name",
+                   size: 4,
+                   //"sizeCypher": 'MATCH (n) WHERE id(n) = $id MATCH (n)-[r]-() RETURN count(r) AS c',
+                   "font": {
+                      "size": 26,
+                      "color": "#000000"
+                   },
+                },
+             },
+             relationships: {
+                [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
+                   "thickness": "defaultThicknessProperty",
+                   "caption": "defaultCaption"
+                },
+             }
+          };
+
+          viz = new NeoVis.default(config);
+          viz.render();
+          console.log(viz);
+
+      }
+  </script>
 </head>
 
-<body class="cui cui--animated cui--compressed" data-theme="">
+<body onload="draw()" class="cui cui--animated cui--compressed" data-theme="">
    <div id="VK ACI">
       <!-- Main Content -->
       <main class="c549">
@@ -46,7 +126,7 @@
             <div class="container">
                <div class="header-panels">
                   <div class="header-panel"><a href="http://www.cisco.com" target="_blank" class="header__logo" id="_uid5f5ccc10"><span class="icon-cisco"></span></a><img src="data:image/jpeg;base64,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" class="c8203">
-                     <div class="header__title"><b>VK ACI {{ version }}</b></div>
+                     <div class="header__title"><b>VK ACI 0.0.1</b></div>
                   </div>
                   <div class="header-panel header-panel--right"><a data-hreftarget="_self" target="_self" data-hreflink="https://aci-github.cisco.com/camrossi/vkaci" href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Source Code" title="Source Code" class="header-item" id="_uidb14b144f">GitHub</a><a data-hreftarget="_self" target="_self" data-hreflink="https://aci-github.cisco.com/camrossi/vkaci" href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Open An Issue" title="Open An Issue" class="header-item" id="_uid2e094e7e">Open An Issue</a></div>
                </div>
@@ -54,8 +134,8 @@
          </header>
          <div class="container">
             <h2 id="ij8p">How to:</h2>
-            <p id="i41kb">This app lets you quickly build K8s and ACI end to end topologies. The Cluster Topology shows the complete clsuter, hit refresh to generate/update it. The Pod Topology focus on a single POD.
-               Submi re-generate the whole cluster topology and update the POD info this is slow. Quick update uses the last cluster/ACI collected info. </p>
+            <p id="i41kb">This app lets you quickly build K8s and ACI end to end topologies. The Cluster Topology shows the complete clsuter where as the Pod Topology focuses on a single POD.
+               Submit re-generate the whole cluster topology and update the POD info this is slow. Quick update uses the last cluster/ACI collected info. </p>
          </div>
          <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568">
             <ul class="tabs" id="_uidb6d8fe4a">
@@ -76,7 +156,9 @@
                     </form>
                         
                      </div>
-                     <object id="svg1" data="./assets/cluster.svg" type="image/svg+xml" class="topology"></object>
+                     <br>
+                     <div id="viz"></div>
+                     <!-- <object id="svg1" data="./assets/cluster.svg" type="image/svg+xml" class="topology"></object> -->
                </div>
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div class="c10751">
@@ -87,8 +169,8 @@
                         <input class="btn btn--small" name="submit_button" type="submit" value="Quick Submit">
                   </form>
                </div>
-                  
-               <object id="svg1" data="./assets/pod.svg" type="image/svg+xml" class="topology"></object>
+            
+               <!-- <object id="svg1" data="./assets/pod.svg" type="image/svg+xml" class="topology"></object> -->
 
                </div>
             </div>
@@ -105,6 +187,7 @@
    <script src="./assets/cui-2.0.0/js/highcharts.js"></script>
    <script src="./assets/cui-2.0.0/js/exporting.js"></script>
    <script src="./assets/cui-2.0.0/js/html2canvas.js"></script>
+   <script src="./assets/cui-2.0.0/js/neovis.js"></script>
    <div id="canvas"></div>
    <script>
       $(document).ready(function() {
