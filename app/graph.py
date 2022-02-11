@@ -136,7 +136,7 @@ class vkaci_build_topology(object):
                         node['lldp_neighbours'][lldp_neighbour_hostname.sysName] = {}
 
                 # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
-                switch = lldp_neighbour.sysDesc.split('/')[2]
+                switch = lldp_neighbour.sysDesc.split('/')[2].replace("node", "leaf")
                 if switch not in node['lldp_neighbours'][lldp_neighbour_hostname.sysName].keys() and lldp_neighbour_hostname:
                     # Add the swithc ID as a key and create a set to hold the interfaces this shoudl be uniqe and I do not need to be an dictionary.
                     node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch] = set()
@@ -155,7 +155,7 @@ class vkaci_build_topology(object):
             
             for bgpPeer in bgpPeerEntry:
                 if bgpPeer.operSt == "established":
-                    node['bgp_peers'].add( bgpPeer.dn.split("/")[2] )
+                    node['bgp_peers'].add( bgpPeer.dn.split("/")[2].replace("node", "leaf") )
 
     def update(self):
         
