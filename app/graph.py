@@ -225,6 +225,14 @@ class vkaci_build_topology(object):
 
     def get(self):
         return self.topology
+
+    def get_pods(self):
+        pod_names = []
+        for node in self.topology.keys():
+            for pod in self.topology[node]["pods"].keys():
+                pod_names.append(pod)
+        return pod_names
+
 #There is too much data to visualize in a single graph so we have a few options:
 
 class vkaci_graph(object):
@@ -267,6 +275,7 @@ class vkaci_graph(object):
                 "bgp_peers": list(topology[node]["bgp_peers"])
             })
 
+        graph.run("MATCH (n) DETACH DELETE n")
         results = graph.run(self.query,json=data)
 
         tx = graph.begin()

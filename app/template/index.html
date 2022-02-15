@@ -18,7 +18,8 @@
       }
 
       .chevron ul.tabs li a {
-         height: 56px min-width: 90% !important;
+         height: 56px;
+         min-width: 90% !important;
          padding: 10px 6px;
          background-color: #ffffff;
          opacity: 1 !important;
@@ -38,23 +39,16 @@
       .viz {
          width: 80%;
          height: 800px;
-         border: 10px solid black;
+         border: 5px solid black;
          font: 22pt arial;
+         background-color: ;
+      }
+
+      .view {
+         margin: 5px 5px 10px 5px;
       }
    </style>
    <script type="text/javascript">
-
-      // define config car
-      // instantiate nodevis object
-      // draw
-
-      // different views
-      //Everything: "MATCH (n)-[r]-(m) RETURN n,r,m"
-      //View_without_pods: "MATCH (n:Node)-[r*1..2]->(m) Return n,m,r",
-      //No_bgp_peers: "MATCH (n1)-[r1:RUNNING_IN]-(n2)-[r2:CONNECTED_TO]-(n3) RETURN r1, r2, n1, n2, n3",
-      //only_pods:  "MATCH (n1:Pod)-[r]->(n2) RETURN r, n1, n2",
-      //only_nodes_without_connection: `MATCH (n:Node)-[:RUNNING_IN]->(m:VM_Host) MATCH (n:Node)-[:PEERED_INTO]->(s:Switch) Return n,m,s`
-      //Specific_pod_topology: `MATCH (n1:Pod)-[r]->(n2:Node)-[r2]->(n3)-[r3]->(n4) WHERE n1.name = "kube-proxy-f4754" RETURN n1, r, n2, r2, n3, r3, n4`
 
       function neo_viz_config(showPodName, container, cypher) {
          var podCaption = "pod"
@@ -68,12 +62,13 @@
             server_user: "{{ env.neo4j_user }}",
             server_password: "{{ env.neo4j_password }}",
             initial_cypher: cypher,
+            arrows: showPodName,
+
 
             labels: {
                "Node": {
                   caption: "name",
                   "size": 3,
-                  //"sizeCypher": 'MATCH (n) WHERE id(n) = $id MATCH (n)-[r]-() RETURN count(r) AS c',
                   image: 'https://github.com/kubernetes/community/blob/master/icons/png/infrastructure_components/unlabeled/node-128.png?raw=true',
                   "font": {
                      "size": 26,
@@ -88,7 +83,6 @@
                "VM_Host": {
                   caption: "name",
                   size: 5,
-                  //"sizeCypher": 'MATCH (n) WHERE id(n) = $id MATCH (n)-[r]-() RETURN count(r) AS c',
                   image: './assets/cui-2.0.0/img/esxi.png',
                   "font": {
                      "size": 26,
@@ -98,7 +92,6 @@
                "Switch": {
                   caption: "name",
                   size: 4,
-                  //"sizeCypher": 'MATCH (n) WHERE id(n) = $id MATCH (n)-[r]-() RETURN count(r) AS c',
                   image: './assets/cui-2.0.0/img/switch.png',
                   "font": {
                      "size": 26,
@@ -107,6 +100,15 @@
                },
             },
             relationships: {
+               "PEERED_INTO": {
+                  "color": "#CD5C5C",
+                  "dashes": "true"
+               },
+
+               "CONNECTED_TO": {
+                  "color": "#7A8A24"
+               },
+
                [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
                   "thickness": "defaultThicknessProperty",
                   "caption": "defaultCaption"
@@ -117,21 +119,28 @@
          return config
       }
 
-      function draw() {
-         var config = neo_viz_config(false, "viz", "MATCH (n:Node)-[r*1..2]->(m) Return n,m,r")
+      function draw_all() {
+         draw("MATCH (n)-[r]-(m) RETURN n,r,m")
+      }
+
+      function draw_without_pods() {
+         draw("MATCH (n:Node)-[r*1..2]->(m) Return n,m,r")
+      }
+
+      function draw_without_bgp_peers() {
+         draw("MATCH (n1)-[r1:RUNNING_IN]-(n2)-[r2:CONNECTED_TO]-(n3) RETURN r1, r2, n1, n2, n3")
+      }
+
+      function draw_pods_and_nodes() {
+         draw("MATCH (n1:Pod)-[r]->(n2) RETURN r, n1, n2", true)
+      }
+
+      function draw(query, pods = false) {
+         var config = neo_viz_config(pods, "viz", query)
          var viz = new NeoVis.default(config);
          viz.render();
          console.log(viz);
-         
-         // var test = viz._nodes;
-
-         // console.log(test)
-         // var pods = test.filter(x => x.group === 'Pod')
-         // console.log(pods);
-
-         
       }
-
 
       function draw_pod() {
          var str = $("#podname").val();
@@ -143,7 +152,7 @@
    </script>
 </head>
 
-<body onload="draw()" class="cui cui--animated cui--compressed" data-theme="">
+<body onload="draw_without_pods()" class="cui cui--animated cui--compressed" data-theme="">
    <div id="VK ACI">
       <!-- Main Content -->
       <main class="c549">
@@ -180,9 +189,7 @@
                   <p id="i1rhp">The image has tool tips on the pods and links! Click Regenerate to update it.</p>
                   <input class="btn btn--small" type="submit" , value="Regenerate">
                </form>
-
             </div>
-
          </div>
 
          <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568">
@@ -202,31 +209,37 @@
             </ul>
             <div class="tab-content">
                <div notcomponent="" data-cubextabs="panel" class="tab-pane active">
+                  <div class="btn-group btn-group--large btn-group--square">
+                     <div class="dropdown">
+                        <button class="btn btn--white btn--dropdown selected view">Different Views</button>
+                        <div class="dropdown__menu dropdown__menu--openleft">
+                           <a onclick="draw_pods_and_nodes()">Pods & Nodes</a>
+                           <a onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
+                           <a onclick="draw_without_pods()">Without Pods</a>
+                           <div class="dropdown__divider"></div>
+                           <a onclick="draw_all()">View All</a>
+                        </div>
+                     </div>
+                  </div>
 
-                  <br>
                   <div id="viz" class="viz"></div>
-                  <!-- <object id="svg1" data="./assets/cluster.svg" type="image/svg+xml" class="topology"></object> -->
+
                </div>
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div class="c10751">
                      <p id="ik79f">Type the pod name and click show to update the graph</p>
-                        Pod Name: <input type="text" id="podname" list="languageList">
-                        <datalist id="languageList">
-                           <!-- <option value="HTML" />
-                           <option value="CSS" />
-                           <option value="JavaScript" />
-                           <option value="SQL" />
-                           <option value="PHP" />
-                           <option value="jQuery" />
-                           <option value="Bootstrap" />
-                           <option value="Angular" />
-                           <option value="ASP.NET" />
-                           <option value="XML" /> -->
-                        </datalist>
-                        <button class="btn btn--small" onclick="draw_pod()">Show</button>
+                     Pod Name: <input type="text" id="podname" list="languageList">
+                     <datalist id="languageList">
+                        <!-- For loop logic of jinja template -->
+                        {%for pod in pod_names %}
+                        <option>{{pod}}</option>
+                        {%endfor%}
+
+                     </datalist>
+                     <button class="btn btn--small" onclick="draw_pod()">Show</button>
                   </div>
                   <div id="viz_pod" class="viz"></div>
-                  <!-- <object id="svg1" data="./assets/pod.svg" type="image/svg+xml" class="topology"></object> -->
+
                </div>
             </div>
             <div>
