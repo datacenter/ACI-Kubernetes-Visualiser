@@ -226,6 +226,11 @@ class vkaci_build_topology(object):
     def get(self):
         return self.topology
 
+    def get_nodes(self):
+        al=list(self.topology.keys())
+        al.sort()
+        return al
+
     def get_pods(self):
         pod_names = []
         for node in self.topology.keys():
