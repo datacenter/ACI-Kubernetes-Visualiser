@@ -55,7 +55,7 @@
 
             <div class="c10713">
 
-               <form action="/" method="post">
+               <form action="/re-generate" method="post">
                   <p>The image has tool tips on the pods and links! Click Regenerate to update it.
                      <input class="btn btn--small" type="submit" , value="Regenerate">
                   </p>
@@ -91,13 +91,27 @@
                   <div class="btn-group btn-group--large btn-group--square">
                      <div class="dropdown">
                         <button class="btn btn--white btn--dropdown selected view">Different Views</button>
-                        <div class="dropdown__menu dropdown__menu--openleft">
-                           <a onclick="draw_pods_and_nodes()">Pods & Nodes</a>
-                           <a onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
-                           <a onclick="draw_without_pods()">Without Pods</a>
-                           <a onclick="draw_only_bgp_peers()">BGP Peers</a>
+                        <div id="selected_views" class="dropdown__menu dropdown__menu--openleft">
+                           <a id="PodsAndNodes" onclick="draw_pods_and_nodes()">Pods & Nodes</a>
+                           <a id="WithoutBgpPeers" onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
+                           <a id="WithoutPods" onclick="draw_without_pods()">Without Pods</a>
+                           <a id="OnlyBgpPeers" onclick="draw_only_bgp_peers()">BGP Peers</a>
                            <div class="dropdown__divider"></div>
-                           <a onclick="draw_all()">View All</a>
+                           <a id="All" onclick="draw_all()">View All</a>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div class="btn-group btn-group--large btn-group--square">
+                     <div class="dropdown">
+                        <button class="btn btn--white btn--dropdown selected view">Namespaces</button>
+                        <div id="selected_namespace" class="dropdown__menu dropdown__menu--openleft">
+                           <!-- For loop logic of jinja template -->
+                           {%for namespace in namespaces %}
+                           <a id="{{namespace}}" onclick="draw_namespace('{{namespace}}')">{{namespace}}</a>
+                           {%endfor%}
+                           <div class="dropdown__divider"></div>
+                           <a id=".*" onclick="draw_namespace('.*')">All</a>
                         </div>
                      </div>
                   </div>
@@ -109,8 +123,8 @@
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div>
                      <p>Type the node name and click show to update the graph:
-                        <input type="text" id="nodename" list="languageList" class="text-black">
-                        <datalist id="languageList">
+                        <input type="text" id="nodename" list="NodeList" class="text-black">
+                        <datalist id="NodeList">
                            <!-- For loop logic of jinja template -->
                            {%for node in node_names %}
                            <option>{{node}}</option>
@@ -125,9 +139,9 @@
 
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div>
-                     <p>Type the pod name and click show to update the graph:
-                        <input type="text" id="podname" list="languageList" class="text-black">
-                        <datalist id="languageList">
+                     <p>Type the pod name or IP and click show to update the graph:
+                        <input type="text" id="podname" list="PodList" class="text-black">
+                        <datalist id="PodList">
                            <!-- For loop logic of jinja template -->
                            {%for pod in pod_names %}
                            <option>{{pod}}</option>

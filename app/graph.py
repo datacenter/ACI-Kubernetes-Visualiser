@@ -149,7 +149,7 @@ class vkaci_build_topology(object):
 
             # lldp_neighbour.id == Interface ID 
                     
-                node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id)
+                node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id) # + '-' + lldp_neighbour.chassisIdV)
 
             #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
             # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
@@ -238,6 +238,13 @@ class vkaci_build_topology(object):
                 pod_names.append(pod)
         return pod_names
 
+    def get_namespaces(self):
+        namespaces = []
+        for node in self.topology.keys():
+            for k,v in self.topology[node]["pods"].items():
+                namespaces.append(v["ns"])
+        return list(set(namespaces))
+
 #There is too much data to visualize in a single graph so we have a few options:
 
 class vkaci_graph(object):
@@ -254,10 +261,13 @@ class vkaci_graph(object):
 
     MERGE (node:Node {id:n.node_name}) ON CREATE
     SET node.name = n.node_name, node.ip = n.node_ip
-    FOREACH (podName IN n.pods | MERGE (pod:Pod {name:podName}) MERGE (pod)-[:RUNNING_IN]->(node))
+
+    FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
+    SET pod.ip = p.ip, pod.ns = p.ns 
+    MERGE (pod)-[:RUNNING_IN]->(node))
 
     MERGE (vmh:VM_Host{name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
-    FOREACH (switchName IN v.switches | MERGE (switch:Switch {name:switchName}) MERGE (vmh)-[:CONNECTED_TO]->(switch))
+    FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch))
 
     FOREACH (switchName IN n.bgp_peers | MERGE (switch: Switch {name:switchName}) MERGE (node)-[:PEERED_INTO]->(switch))
     """
@@ -270,12 +280,19 @@ class vkaci_graph(object):
         for node in topology.keys():
             vm_hosts = []
             for lldpn, switches in topology[node]["lldp_neighbours"].items():
-                vm_hosts.append({"host_name": lldpn, "switches": list(switches.keys())})
+                switch_list = []
+                for switchName, interfaces in switches.items():  
+                    switch_list.append({"name": switchName, "interface": next(iter(interfaces or []), "")})     
+                vm_hosts.append({"host_name": lldpn, "switches": switch_list})
+            
+            pods = []
+            for pod_name, pod in topology[node]["pods"].items():
+                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"]})
 
             data["items"].append({
                 "node_name": node,
                 "node_ip": topology[node]["node_ip"],
-                "pods": list(topology[node]["pods"].keys()),
+                "pods": pods,
                 "vm_hosts": vm_hosts,
                 "bgp_peers": list(topology[node]["bgp_peers"])
             })
