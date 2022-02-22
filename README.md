@@ -18,7 +18,7 @@ vkaci needs to connect to the APIC via certificate based authetication. It is ex
   - CERT_NAME:     Name of the certificate configured in the APIC
   - TENANT:        Tenant where the cluster VRF is deployed
   - VRF:           Name of the VRF used by the cluster
-  - NEO4J_URL:     URL to the neo4j database
+  - NEO4J_URL:     URL to the neo4j database. eg. neo4j://my-neo4j-release-neo4j:7687, you may have to configure a DNS entry for this.
   - NEO4J_USER:    Add neo4j username
   - NEO4J_PASSWORD: Add neo4j password
 
@@ -36,7 +36,7 @@ The same environemntvariables can be set to run the application locally. In addi
 For example to run the application you can
 
 ```bash
-export MODE=LOCAL APIC_IPS="10.67.185.102,10.67.185.42,10.67.185.41" CERT_NAME=ansible.crt CERT_USER=ansible TENANT=calico2 VRF=vrf KEY_PATH=/home/cisco/Coding/ansible.key KUBE_CONFIG=/home/cisco/Coding/vkaci/calico-2.config NEO4J_URL=http://localhost:7474/db/data/ NEO4J_USER=neo4j NEO4J_PASSWORD=me-change
+export MODE=LOCAL APIC_IPS="10.67.185.102,10.67.185.42,10.67.185.41" CERT_NAME=ansible.crt CERT_USER=ansible TENANT=calico2 VRF=vrf KEY_PATH=/home/cisco/Coding/ansible.key KUBE_CONFIG=/home/cisco/Coding/vkaci/calico-2.config NEO4J_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=me-change
 ```
 
 - Execute the init.py script to load the ACI metadata used by pyaci (this is needed only the 1st time)
