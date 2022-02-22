@@ -6,94 +6,157 @@
    <title>VK ACI</title>
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+   <!-- <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/bootstrap.min.css"> -->
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/cui-standard.min.css">
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/frame.css">
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/style.css">
-   <style>
-      .chevron ul.tabs li.active a {
-         background-color: #017cad !important;
-         opacity: 1 !important;
-         color: #ffffff;
-         box-shadow: none !important;
-      }
 
-      .chevron ul.tabs li a {
-         height: 56px min-width: 90% !important;
-         padding: 10px 6px;
-         background-color: #ffffff;
-         opacity: 1 !important;
-         color: #58585d;
-         text-align: center;
-         position: relative;
-         line-height: 16px;
-         font-size: 12px;
-         cursor: pointer;
-         flex: 1 !important;
-         flex-shrink: 1 !important;
-         flex-wrap: wrap !important;
-         display: flex !important;
-         justify-content: center !important;
-      }
-   </style>
+   <script src="./assets/cui-2.0.0/js/vkaci.js"></script>
+
+   <script>
+      server_url = "{{ env.neo4j_url }}";
+      server_user = "{{ env.neo4j_user }}";
+      server_password = "{{ env.neo4j_password }}";
+   </script>
+
 </head>
 
-<body class="cui cui--animated cui--compressed" data-theme="">
+<body onload="draw_without_pods()" class="cui cui--animated cui--compressed" data-theme="dark">
    <div id="VK ACI">
       <!-- Main Content -->
-      <main class="c549">
+      <main>
          <div></div>
          <header class="header" id="_uid1092c8c8">
             <div class="container">
                <div class="header-panels">
-                  <div class="header-panel"><a href="http://www.cisco.com" target="_blank" class="header__logo" id="_uid5f5ccc10"><span class="icon-cisco"></span></a><img src="data:image/jpeg;base64,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" class="c8203">
-                     <div class="header__title"><b>VK ACI {{ version }}</b></div>
+                  <div class="header-panel">
+                     <a href="http://www.cisco.com" target="_blank" class="header__logo" id="_uid5f5ccc10">
+                        <span class="icon-cisco"></span>
+                     </a>
+                     <img src="./assets/cui-2.0.0/img/K8s.svg" width="48" height="48" class="c8203">
+                     <div><b>VK ACI {{ version }}</b></div>
                   </div>
-                  <div class="header-panel header-panel--right"><a data-hreftarget="_self" target="_self" data-hreflink="https://aci-github.cisco.com/camrossi/vkaci" href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Source Code" title="Source Code" class="header-item" id="_uidb14b144f">GitHub</a><a data-hreftarget="_self" target="_self" data-hreflink="https://aci-github.cisco.com/camrossi/vkaci" href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Open An Issue" title="Open An Issue" class="header-item" id="_uid2e094e7e">Open An Issue</a></div>
+                  <div class="header-panel header-panel--right"><a data-hreftarget="_self" target="_self"
+                        data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
+                        href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Source Code"
+                        title="Source Code" class="header-item" id="_uidb14b144f">GitHub</a><a data-hreftarget="_self"
+                        target="_self" data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
+                        href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Open An Issue"
+                        title="Open An Issue" class="header-item" id="_uid2e094e7e">Open An Issue</a></div>
                </div>
             </div>
          </header>
          <div class="container">
-            <h2 id="ij8p">How to:</h2>
-            <p id="i41kb">This app lets you quickly build K8s and ACI end to end topologies. The Cluster Topology shows the complete clsuter, hit refresh to generate/update it. The Pod Topology focus on a single POD.
-               Submi re-generate the whole cluster topology and update the POD info this is slow. Quick update uses the last cluster/ACI collected info. </p>
+            <h2>How to:</h2>
+            <p>This app lets you quickly build K8s and ACI end to end topologies.<br>
+               The Cluster Topology tab shows the complete clsuter along with filtered views of the pods,nodes and
+               leaves.
+               The Pod Topology tab shows a single POD and its relationships. </p>
+
+            <div class="c10713">
+
+               <form action="/re-generate" method="post">
+                  <p>The image has tool tips on the pods and links! Click Regenerate to update it.
+                     <input class="btn btn--small" type="submit" , value="Regenerate">
+                  </p>
+               </form>
+            </div>
          </div>
-         <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568">
+
+         <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568 container">
             <ul class="tabs" id="_uidb6d8fe4a">
-               <li data-cubextabs="tabs" class="tabs-click tab active"><a data-hreftarget="_self" data-hreflink="" data-hreftitle="" title="" class="tabs-click" id="_uid950bb1b6">
-                     <p class="tabs-click tab__heading"><span id="" class="icon-insights icon-small mr5 gjs-comp-selected"></span> <span>Cluster Topology</span></p>
+               <li data-cubextabs="tabs" class="tabs-click tab active"><a data-hreftarget="_self" data-hreflink=""
+                     data-hreftitle="" title="" class="tabs-click" id="_uid950bb1b6">
+                     <p class="tabs-click tab__heading"><span id=""
+                           class="icon-insights icon-small mr5 gjs-comp-selected"></span> <span>Cluster Topology</span>
+                     </p>
                   </a></li>
-               <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink="" data-hreftitle="" title="" class="tabs-click" id="_uida7b3d088">
-                     <p class="tabs-click tab__heading"><span data-highlightable="1" id="" class="icon-apps icon-small mr5"></span> <span data-highlightable="1" class="gjs-comp-selected">Pod Topology</span></p>
+
+               <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink=""
+                     data-hreftitle="" title="" class="tabs-click" id="_uida7b3d088">
+                     <p class="tabs-click tab__heading"><span data-highlightable="1" id=""
+                           class="icon-cog icon-small mr5"></span> <span data-highlightable="1"
+                           class="gjs-comp-selected">Node Topology</span></p>
+                  </a></li>
+
+               <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink=""
+                     data-hreftitle="" title="" class="tabs-click" id="_uida7b3d088">
+                     <p class="tabs-click tab__heading"><span data-highlightable="1" id=""
+                           class="icon-apps icon-small mr5"></span> <span data-highlightable="1"
+                           class="gjs-comp-selected">Pod Topology</span></p>
                   </a></li>
             </ul>
             <div class="tab-content">
                <div notcomponent="" data-cubextabs="panel" class="tab-pane active">
-                  <div class="c10713">
-                     
-                     <form action="/" method="post">
-                        <p id="i1rhp">The image has tool tips on the pods and links! Hit refresh to update it.</p>
-                        <input class="btn btn--small" type="submit", value="Refresh">
-                    </form>
-                        
+                  <div class="btn-group btn-group--large btn-group--square">
+                     <div class="dropdown">
+                        <button class="btn btn--white btn--dropdown selected view">Different Views</button>
+                        <div id="selected_views" class="dropdown__menu dropdown__menu--openleft">
+                           <a id="PodsAndNodes" onclick="draw_pods_and_nodes()">Pods & Nodes</a>
+                           <a id="WithoutBgpPeers" onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
+                           <a id="WithoutPods" onclick="draw_without_pods()">Without Pods</a>
+                           <a id="OnlyBgpPeers" onclick="draw_only_bgp_peers()">BGP Peers</a>
+                           <div class="dropdown__divider"></div>
+                           <a id="All" onclick="draw_all()">View All</a>
+                        </div>
                      </div>
-                     <object id="svg1" data="./assets/cluster.svg" type="image/svg+xml" class="topology"></object>
-               </div>
-               <div notcomponent="" data-cubextabs="panel" class="tab-pane">
-                  <div class="c10751">
-                     <p id="ik79f">Type the pod name and hit refresh to update the image</p>
-                     <form action="/" method="post">
-                        Pod Name: <input type="text" name="podname">
-                        <input class="btn btn--small" name="submit_button" type="submit">
-                        <input class="btn btn--small" name="submit_button" type="submit" value="Quick Submit">
-                  </form>
-               </div>
-                  
-               <object id="svg1" data="./assets/pod.svg" type="image/svg+xml" class="topology"></object>
+                  </div>
+
+                  <div class="btn-group btn-group--large btn-group--square">
+                     <div class="dropdown">
+                        <button class="btn btn--white btn--dropdown selected view">Namespaces</button>
+                        <div id="selected_namespace" class="dropdown__menu dropdown__menu--openleft">
+                           <!-- For loop logic of jinja template -->
+                           {%for namespace in namespaces %}
+                           <a id="{{namespace}}" onclick="draw_namespace('{{namespace}}')">{{namespace}}</a>
+                           {%endfor%}
+                           <div class="dropdown__divider"></div>
+                           <a id=".*" onclick="draw_namespace('.*')">All</a>
+                        </div>
+                     </div>
+                  </div>
+
+                  <div id="viz" class="viz"></div>
 
                </div>
+
+               <div notcomponent="" data-cubextabs="panel" class="tab-pane">
+                  <div>
+                     <p>Type the node name and click show to update the graph:
+                        <input type="text" id="nodename" list="NodeList" class="text-black">
+                        <datalist id="NodeList">
+                           <!-- For loop logic of jinja template -->
+                           {%for node in node_names %}
+                           <option>{{node}}</option>
+                           {%endfor%}
+
+                        </datalist>
+                        <button class="btn btn--small" onclick="draw_node()">Show</button>
+                  </div>
+                  <div id="viz_node" class="viz"></div>
+
+               </div>
+
+               <div notcomponent="" data-cubextabs="panel" class="tab-pane">
+                  <div>
+                     <p>Type the pod name or IP and click show to update the graph:
+                        <input type="text" id="podname" list="PodList" class="text-black">
+                        <datalist id="PodList">
+                           <!-- For loop logic of jinja template -->
+                           {%for pod in pod_names %}
+                           <option>{{pod}}</option>
+                           {%endfor%}
+
+                        </datalist>
+                        <button class="btn btn--small" onclick="draw_pod()">Show</button>
+                  </div>
+                  <div id="viz_pod" class="viz"></div>
+
+               </div>
+
+
             </div>
-            <div>
-            </div>
+
          </div>
       </main>
       <!-- End Main Content -->
@@ -105,34 +168,8 @@
    <script src="./assets/cui-2.0.0/js/highcharts.js"></script>
    <script src="./assets/cui-2.0.0/js/exporting.js"></script>
    <script src="./assets/cui-2.0.0/js/html2canvas.js"></script>
-   <div id="canvas"></div>
-   <script>
-      $(document).ready(function() {
-         $('body').find('[data-oneuihighcharts="container"]').each((key, val) => {
-            var finalJson = val.getAttribute('data-highchartfinaljson') || '[]';
-            var myChart = Highcharts.chart(val, JSON.parse(finalJson));
-         })
-      })
-      $('#canvas').on('click', function() {
-         html2canvas(document.body, {}).then(canvas => {
-            html2canvas(document.body, {}).then(canvas => {
-               document.body.appendChild(canvas);
-               getCanvas = canvas;
-               var imgageData = getCanvas.toDataURL('image/png');
-               var newData = imgageData.replace(
-                  /^data:image\/png/,
-                  'data:application/octet-stream'
-               );
-               // console.log(newData);
-               document.getElementById('canvas').setAttribute("data-title", newData);
-               /**
-                * remove canvas and link after download
-                */
-               document.querySelector('canvas').remove();
-            });
-         });
-      });
-   </script>
+   <script src="./assets/cui-2.0.0/js/neovis.js"></script>
+
 </body>
 
 </html>

@@ -285,7 +285,7 @@ body.cui .gauge {
 body.cui .header {
   --cui-header-background: var(--cui-background-color);
   --cui-header-border-bottom: var(--cui-border);
-  --cui-header-logo-font-size: 2.4rem;
+  --cui-header-logo-font-size: 3rem;
   --cui-header-padding: 0 var(--cui-spacing);
   --cui-header-title-font-size: 20px;
   --cui-header-title-font-weight: 200;

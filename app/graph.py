@@ -1,13 +1,14 @@
 #!/usr/local/bin/python3
 import os
 import re
-from kubernetes import client, config
-from pyaci import Node, options, filters
 import random
-import pygraphviz as pgv
 import logging
 import concurrent.futures
 import time
+from py2neo import Graph
+from kubernetes import client, config
+from pyaci import Node, options, filters
+
 
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
@@ -44,6 +45,11 @@ class vkaci_env_variables(object):
         self.cert_user= self.enviro().get("CERT_USER")
         self.cert_name= self.enviro().get("CERT_NAME")
         self.key_path= self.enviro().get("KEY_PATH")
+
+        self.neo4j_url = self.enviro().get("NEO4J_URL", "http://localhost:7474/db/data/")
+        self.neo4j_user = self.enviro().get("NEO4J_USER","neo4j")
+        self.neo4j_password = self.enviro().get("NEO4J_PASSWORD")
+
 
     def enviro(self):
         if self.dict_env == None:
@@ -143,7 +149,7 @@ class vkaci_build_topology(object):
 
             # lldp_neighbour.id == Interface ID 
                     
-                node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id)
+                node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id) # + '-' + lldp_neighbour.chassisIdV)
 
             #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
             # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
@@ -219,63 +225,87 @@ class vkaci_build_topology(object):
 
     def get(self):
         return self.topology
+
+    def get_nodes(self):
+        al=list(self.topology.keys())
+        al.sort()
+        return al
+
+    def get_pods(self):
+        pod_names = []
+        for node in self.topology.keys():
+            for pod in self.topology[node]["pods"].keys():
+                pod_names.append(pod)
+        return pod_names
+
+    def get_namespaces(self):
+        namespaces = []
+        for node in self.topology.keys():
+            for k,v in self.topology[node]["pods"].items():
+                namespaces.append(v["ns"])
+        return list(set(namespaces))
+
 #There is too much data to visualize in a single graph so we have a few options:
 
-class vkaci_draw(object):
-    def __init__(self, topology) -> None:
+class vkaci_graph(object):
+    def __init__(self, env:vkaci_env_variables, topology:vkaci_build_topology) -> None:
         super().__init__()
-        self.gRoot = pgv.AGraph(directed=True)
-        self.gBgpPeers = self.gRoot.add_subgraph(name='BgpPeers')
-        self.gLldpHost = self.gRoot.add_subgraph(name='LldpHost', rank ='same')
-        self.gLldpSwitch = self.gRoot.add_subgraph(name='LldpSwitch', rank ='same')
-        self.gLldpAdj = self.gRoot.add_subgraph(name='LldpAdj')
-        self.gK8sNodes = self.gRoot.add_subgraph(name='K8sNodes', rank ='same')
-        self.gPods = self.gRoot.add_subgraph(name='Pods', rank ='min')
-        self.gPodsToNodes = self.gRoot.add_subgraph(name='PodsToNodes')
-        self.gBgpPeering = self.gRoot.add_subgraph(name='BgpPeering')
+        self.env      = env
         self.topology = topology
 
-    def add_node(self, node, nodeV, pods):
-        self.gK8sNodes.add_node(node, tooltip="Pods on the node:\n" + pods, label = node + '\n' + nodeV['node_ip'])
-        for bgp_peer in nodeV['bgp_peers']:
-            ebgpNodeName = 'eBGP Peer\n' + bgp_peer
-            self.gBgpPeers.add_node(ebgpNodeName, shape='box')
-            self.gBgpPeering.add_edge(node,ebgpNodeName,style='dotted',color='red', tooltip='eBGP Peering' )
-        for lldp_host, lldpV in nodeV['lldp_neighbours'].items():
-            self.gLldpHost.add_node(lldp_host)
-            self.gLldpAdj.add_edge(node,lldp_host, color='blue')
-            for switch, interface in lldpV.items():
-                self.gLldpSwitch.add_node(switch, shape='box')
-                self.gLldpAdj.add_edge(lldp_host, switch, color='blue', tooltip='\n'.join(map(str, list(interface))))
-    
-    def add_nodes(self):
-        for node, nodeV in self.topology.items():
-            pods = '\n'.join(map(str, list(nodeV['pods'].keys())))
-            self.add_node(node, nodeV,pods)
+    # Build query.
+    query = """
+    WITH $json as data
+    UNWIND data.items as n
+    UNWIND n.vm_hosts as v
+
+    MERGE (node:Node {id:n.node_name}) ON CREATE
+    SET node.name = n.node_name, node.ip = n.node_ip
+
+    FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
+    SET pod.ip = p.ip, pod.ns = p.ns 
+    MERGE (pod)-[:RUNNING_IN]->(node))
+
+    MERGE (vmh:VM_Host{name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
+    FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch))
+
+    FOREACH (switchName IN n.bgp_peers | MERGE (switch: Switch {name:switchName}) MERGE (node)-[:PEERED_INTO]->(switch))
+    """
+
+    def update_database(self): 
+        graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
+        topology = self.topology.update()
+        data = { "items": [] }
+
+        for node in topology.keys():
+            vm_hosts = []
+            for lldpn, switches in topology[node]["lldp_neighbours"].items():
+                switch_list = []
+                for switchName, interfaces in switches.items():  
+                    switch_list.append({"name": switchName, "interface": next(iter(interfaces or []), "")})     
+                vm_hosts.append({"host_name": lldpn, "switches": switch_list})
             
-    def add_pod(self, pod_name):
-        for node, nodeV in self.topology.items():
-            if pod_name in nodeV['pods'].keys():
-                pods = '\n'.join(map(str, list(nodeV['pods'].keys())))
-                self.add_node(node, nodeV,pods)
-                self.gPods.add_node(pod_name, label=pod_name + '\n ip=' + nodeV['pods'][pod_name]['ip'] + '\n ns=' + nodeV['pods'][pod_name]['ns'])
-                self.gPodsToNodes.add_edge(pod_name,node)
-        if self.gPods.number_of_nodes() == 0:
-            self.gRoot.clear()
-            if not pod_name:
-                pod_name = "Pod Name Not Specified"
-                # THis is the graphiz add_node function :D 
-                self.gRoot.add_node(pod_name, label=pod_name +'\nNOT FOUND')
-            else:
-                self.gRoot.add_node(pod_name, label=pod_name +'\nNOT FOUND')
+            pods = []
+            for pod_name, pod in topology[node]["pods"].items():
+                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"]})
+
+            data["items"].append({
+                "node_name": node,
+                "node_ip": topology[node]["node_ip"],
+                "pods": pods,
+                "vm_hosts": vm_hosts,
+                "bgp_peers": list(topology[node]["bgp_peers"])
+            })
+
+        graph.run("MATCH (n) DETACH DELETE n")
+        results = graph.run(self.query,json=data)
+
+        tx = graph.begin()
+        graph.commit(tx)
+
+
+
 
             
-    
-    def svg(self, fn):
-        #logger.info(self.gRoot.string())
-        self.gRoot.layout("dot")  # layout with dot
-        self.gRoot.draw(fn + ".svg")  # write to file
-    
-    def get_gRoot(self):
-        return self.gRoot
+
 

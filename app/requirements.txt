@@ -1,4 +1,4 @@
 kubernetes
 flask
-pygraphviz
+py2neo
 https://github.com/datacenter/pyaci/archive/master.zip

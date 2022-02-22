@@ -45,6 +45,12 @@ spec:
              value: "calico2"
            - name: VRF
              value: "vrf"
+           - name: "NEO4J_URL"
+             value: "http://localhost:7474/db/data/"
+           - name: "NEO4J_USER"
+             value: "neo4j"
+           - name: "NEO4J_PASSWORD"
+             value: "me-change"
          volumeMounts:
            - name: aci-user-cert-volume
              mountPath: /usr/local/etc/aci-cert/
