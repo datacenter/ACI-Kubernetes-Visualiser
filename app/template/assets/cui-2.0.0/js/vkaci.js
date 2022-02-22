@@ -77,6 +77,14 @@ function neo_viz_config(showPodName, container, cypher) {
                 "caption" : "interface"
             },
 
+            "RUNNING_IN": {
+                "color": "#0047AB"
+            },
+
+            "RUNNING_ON": {
+                "color": "#DAA520"
+            },
+
             [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
                 "thickness": "defaultThicknessProperty",
                 "caption": "defaultCaption"

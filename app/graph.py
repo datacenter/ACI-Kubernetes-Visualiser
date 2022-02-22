@@ -46,7 +46,7 @@ class vkaci_env_variables(object):
         self.cert_name= self.enviro().get("CERT_NAME")
         self.key_path= self.enviro().get("KEY_PATH")
 
-        self.neo4j_url = self.enviro().get("NEO4J_URL", "http://localhost:7474/db/data/")
+        self.neo4j_url = self.enviro().get("NEO4J_URL", "neo4j://my-neo4j-release-neo4j:7687")
         self.neo4j_user = self.enviro().get("NEO4J_USER","neo4j")
         self.neo4j_password = self.enviro().get("NEO4J_PASSWORD")
 
@@ -264,7 +264,7 @@ class vkaci_graph(object):
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns 
-    MERGE (pod)-[:RUNNING_IN]->(node))
+    MERGE (pod)-[:RUNNING_ON]->(node))
 
     MERGE (vmh:VM_Host{name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
     FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch))
