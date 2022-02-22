@@ -18,7 +18,7 @@ vkaci needs to connect to the APIC via certificate based authetication. It is ex
   - CERT_NAME:     Name of the certificate configured in the APIC
   - TENANT:        Tenant where the cluster VRF is deployed
   - VRF:           Name of the VRF used by the cluster
-  - NEO4J_URL:     URL to the neo4j database. eg. neo4j://my-neo4j-release-neo4j:7687, you may have to configure a DNS entry for this.
+  - NEO4J_URL:     URL to the neo4j database. eg. neo4j://my-neo4j-release-neo4j:7687, your browser needs to be able to resolve this name to the K8s Service IP
   - NEO4J_USER:    Add neo4j username
   - NEO4J_PASSWORD: Add neo4j password
 
