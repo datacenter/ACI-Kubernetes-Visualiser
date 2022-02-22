@@ -137,19 +137,19 @@ class vkaci_build_topology(object):
 
                 # Get the LLD Host that shoudl be either the same as the K8s node or a Hypervisor host name. 
 
-                for lldp_neighbour_hostname in lldp_neighbour.lldpAdjEp:
-                    if lldp_neighbour_hostname.sysName not in node['lldp_neighbours'].keys():
-                        node['lldp_neighbours'][lldp_neighbour_hostname.sysName] = {}
+                for lldp_neighbour_adj in lldp_neighbour.lldpAdjEp:
+                    if lldp_neighbour_adj.sysName not in node['lldp_neighbours'].keys():
+                        node['lldp_neighbours'][lldp_neighbour_adj.sysName] = {}
 
                 # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
                 switch = lldp_neighbour.sysDesc.split('/')[2].replace("node", "leaf")
-                if switch not in node['lldp_neighbours'][lldp_neighbour_hostname.sysName].keys() and lldp_neighbour_hostname:
+                if switch not in node['lldp_neighbours'][lldp_neighbour_adj.sysName].keys() and lldp_neighbour_adj:
                     # Add the swithc ID as a key and create a set to hold the interfaces this shoudl be uniqe and I do not need to be an dictionary.
-                    node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch] = set()
+                    node['lldp_neighbours'][lldp_neighbour_adj.sysName][switch] = set()
 
             # lldp_neighbour.id == Interface ID 
                     
-                node['lldp_neighbours'][lldp_neighbour_hostname.sysName][switch].add(lldp_neighbour.id) # + '-' + lldp_neighbour.chassisIdV)
+                node['lldp_neighbours'][lldp_neighbour_adj.sysName][switch].add(lldp_neighbour_adj.chassisIdV + '-' + lldp_neighbour.id  )
 
             #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
             # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
