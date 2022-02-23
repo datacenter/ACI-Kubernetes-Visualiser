@@ -2,7 +2,7 @@ var server_url = "";
 var server_user = "";
 var server_password = "";
 
-function neo_viz_config(showPodName, container, cypher) {
+function neo_viz_config(showPodName, container, cypher, seed=null) {
     var podCaption = "pod"
     if (showPodName) {
         podCaption = "name"
@@ -16,6 +16,11 @@ function neo_viz_config(showPodName, container, cypher) {
         initial_cypher: cypher,
         arrows: showPodName,
         fix_nodes_in_place_on_drag: true,
+
+        layout: {
+            improvedLayout: true,
+        },
+
         physics: {
 
             adaptiveTimestep: true,
@@ -91,6 +96,10 @@ function neo_viz_config(showPodName, container, cypher) {
             },
         }
     };
+
+    if (seed) {
+        config.layout.randomSeed = seed
+    }
 
     return config
 }
@@ -179,21 +188,33 @@ function draw(query, pods = false) {
     console.log(viz);
 }
 
+
 function draw_node() {
     var str = $("#nodename").val();
-    var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *')
+    var seed = 1645580358235
+    var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
     var viz_node = new NeoVis.default(config_node);
     viz_node.render();
+    // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645580358235
+    // viz_node.registerOnEvent("completed", function (){
+    //     console.log(viz_node._network.getSeed())
+    // })
 }
+
 
 function draw_pod() {
     var str = $("#podname").val();
-    var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.name= "' + str + '" RETURN p, r,m')
+    var seed = 1645578356529
+    var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.name= "' + str + '" RETURN p, r,m', seed)
     if (checkIfValidIP(str)) {
-        var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.ip= "' + str + '" RETURN p, r,m')
+        var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.ip= "' + str + '" RETURN p, r,m', seed)
     }
     var viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();
+    // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529
+    // viz_pod.registerOnEvent("completed", function (){
+    //     console.log(viz_pod._network.getSeed())
+    // })
 }
 
 
