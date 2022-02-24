@@ -2,7 +2,7 @@ var server_url = "";
 var server_user = "";
 var server_password = "";
 
-function neo_viz_config(showPodName, container, cypher, seed=null) {
+function neo_viz_config(showPodName, container, cypher, seed = null) {
     var podCaption = "pod"
     if (showPodName) {
         podCaption = "name"
@@ -79,7 +79,7 @@ function neo_viz_config(showPodName, container, cypher, seed=null) {
 
             "CONNECTED_TO": {
                 "color": "#7A8A24",
-                "caption" : "interface"
+                "caption": "interface"
             },
 
             "RUNNING_IN": {
@@ -125,41 +125,41 @@ selectedNamespace = ".*"
 function draw_all() {
     selectedView = View.All
     // draw("MATCH (n)-[r]-(m) RETURN n,r,m")
-    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '"+selectedNamespace+"' return *")
+    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
     // draw("MATCH (n:Node)-[r*1..2]->(m) Return n,m,r")
-    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '"+selectedNamespace+"' return m,r2,a")
+    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return m,r2,a")
 }
 
 function draw_without_bgp_peers() {
     selectedView = View.WithoutBgpPeers
     // draw("MATCH (n1)-[r1:RUNNING_IN]-(n2)-[r2:CONNECTED_TO]-(n3) RETURN r1, r2, n1, n2, n3")
-    draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '"+selectedNamespace+"' RETURN r, r1, n, v, l")
+    draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, r1, n, v, l")
 }
 
 function draw_pods_and_nodes() {
     selectedView = View.PodsAndNodes
     // draw("MATCH (n1:Pod)-[r]->(n2) RETURN r, n1, n2", true)
-    draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '"+selectedNamespace+"' RETURN *", true)
+    draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
 function draw_only_bgp_peers() {
     selectedView = View.OnlyBgpPeers
     // draw("MATCH (n1)-[r:PEERED_INTO]->(n2) RETURN r, n1, n2")
-    draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '"+selectedNamespace+"' RETURN r, n,s")
+    draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, n,s")
 }
 
-function draw_namespace(namespace){
+function draw_namespace(namespace) {
     selectedNamespace = namespace
     selectedView.drawFunc()
 }
 
 function selectView() {
     $("#selected_views").find("a").each(function () {
-        var a = $( this )
+        var a = $(this)
         if (a.attr("id") == selectedView.name) {
             a.addClass("selected")
         }
@@ -169,7 +169,7 @@ function selectView() {
     })
 
     $("#selected_namespace").find("a").each(function () {
-        var a = $( this )
+        var a = $(this)
         if (a.attr("id") == selectedNamespace) {
             a.addClass("selected")
         }
@@ -191,20 +191,20 @@ function draw(query, pods = false) {
 
 function draw_node() {
     var str = $("#nodename").val();
-    var seed = 1645580358235
+    var seed = "0.7578607868826415:1645663636870"
     var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
     var viz_node = new NeoVis.default(config_node);
     viz_node.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645580358235
-    // viz_node.registerOnEvent("completed", function (){
-    //     console.log(viz_node._network.getSeed())
-    // })
+    //viz_node.registerOnEvent("completed", function (){
+        //console.log(viz_node._network.getSeed())
+     //})
 }
 
 
 function draw_pod() {
     var str = $("#podname").val();
-    var seed = 1645578356529
+    var seed = "0.8660747593468698:1645662423690"
     var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.name= "' + str + '" RETURN p, r,m', seed)
     if (checkIfValidIP(str)) {
         var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.ip= "' + str + '" RETURN p, r,m', seed)
@@ -212,9 +212,9 @@ function draw_pod() {
     var viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529
-    // viz_pod.registerOnEvent("completed", function (){
-    //     console.log(viz_pod._network.getSeed())
-    // })
+    //viz_pod.registerOnEvent("completed", function (){
+        //console.log(viz_pod._network.getSeed())
+    //})
 }
 
 
