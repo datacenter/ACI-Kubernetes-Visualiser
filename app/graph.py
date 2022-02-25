@@ -70,6 +70,9 @@ class apic_methods_resolve(object):
     def get_lldpif(self, apic:Node, pathDn): 
         return apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathDn)) & options.rspSubtreeClass('lldpAdjEp'))
 
+    def get_cdpif(self, apic:Node, pathDn): 
+        return apic.methods.ResolveClass('cdpIf').GET(**options.filter(filters.Eq('cdpIf.locDesc',pathDn)) & options.rspSubtreeClass('cdpAdjEp'))
+
     def get_bgppeerentry(self, apic:Node, vrf: str, node_ip: str): 
         return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
     
@@ -104,7 +107,34 @@ class vkaci_build_topology(object):
 
     def is_cluster_mode(self): 
         return self.env.mode.casefold() == "CLUSTER".casefold()
+    
+    def add_neighbour(self, node, neighbour):
+        
+        # Get the Host that should be either the same as the K8s node or a Hypervisor host name. 
+        # I try to get the LLDP adj, if fails I get the CDP one. I do expect to have at least one of the 2
+        AdjEp = getattr(neighbour, 'lldpAdjEp', None)
+        if not AdjEp:
+            AdjEp = getattr(neighbour, 'cdpAdjEp', None)
 
+        for neighbour_adj in AdjEp:
+                    if neighbour_adj.sysName not in node['neighbours'].keys():
+                        node['neighbours'][neighbour_adj.sysName] = {}
+    
+        # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
+        switch = neighbour.dn.split('/')[2].replace("node", "leaf")
+        if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
+            node['neighbours'][neighbour_adj.sysName][switch] = set()
+
+        #LLDP Class is portId (I.E. VMNICX)
+        neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
+        if not neighbour_adj_port:
+            # CDP Class is portId
+            neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
+        
+        # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
+        # Have a neighbour_adj_port and not None.
+        if neighbour_adj_port:
+            node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
     def update_node(self, apic, node):
 
         # double filter is very slow, not sure why but retuirning all the enpoints and child is 
@@ -125,36 +155,35 @@ class vkaci_build_topology(object):
         path =  self.apic_methods.get_fvcep_mac(apic, node['mac'])
         
         #Get Path, there should be only one...need to add checks
+        # i.e I get topology/pod-1/protpaths-101-102/pathep-[esxi1_PolGrp] 
         for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
             pathtDn = fvRsCEpToPathEp.tDn
 
         #logger.info("The K8s Node is physically connected to: {}".format(pathtDn))
-        #Get all LLDP Neighbors for that interface
+        #Get all LLDP and CDP Neighbors for that interface, since I am using the path
+        #This return a list of all the interfaces in that proto path 
         lldp_neighbours = self.apic_methods.get_lldpif(apic, pathtDn)
-
+        cdp_neighbours = self.apic_methods.get_cdpif(apic, pathtDn)
+        
+        # IF LLDP is UP and CDP is DOWN
         for lldp_neighbour in lldp_neighbours:
             if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
+                logger.info("LLDP ADD")
+                self.add_neighbour(node, lldp_neighbour)
 
-                # Get the LLD Host that shoudl be either the same as the K8s node or a Hypervisor host name. 
 
-                for lldp_neighbour_adj in lldp_neighbour.lldpAdjEp:
-                    if lldp_neighbour_adj.sysName not in node['lldp_neighbours'].keys():
-                        node['lldp_neighbours'][lldp_neighbour_adj.sysName] = {}
+        # IF CDP is UP and LLDP is DOWN
+        for cdp_neighbour in cdp_neighbours:
+            if cdp_neighbour.operSt == "up":
+                logger.info("CDP ADD")
+                self.add_neighbour(node, cdp_neighbour)
+        
+        #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
+        # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
+        # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
+        #and extract the common and calico part. 
+    
 
-                # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
-                switch = lldp_neighbour.sysDesc.split('/')[2].replace("node", "leaf")
-                if switch not in node['lldp_neighbours'][lldp_neighbour_adj.sysName].keys() and lldp_neighbour_adj:
-                    # Add the swithc ID as a key and create a set to hold the interfaces this shoudl be uniqe and I do not need to be an dictionary.
-                    node['lldp_neighbours'][lldp_neighbour_adj.sysName][switch] = set()
-
-            # lldp_neighbour.id == Interface ID 
-                    
-                node['lldp_neighbours'][lldp_neighbour_adj.sysName][switch].add(lldp_neighbour_adj.chassisIdV + '-' + lldp_neighbour.id  )
-
-            #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
-            # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
-            # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
-            #and extract the common and calico part. 
             vrf=re.split('/|-',self.aci_vrf)
             vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
             bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
@@ -189,7 +218,7 @@ class vkaci_build_topology(object):
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
             if i.spec.node_name not in self.topology.keys():
-               self.topology[i.spec.node_name] = { "node_ip": i.status.host_ip, "pods" : {}, 'bgp_peers': set(), 'lldp_neighbours': {} }
+               self.topology[i.spec.node_name] = { "node_ip": i.status.host_ip, "pods" : {}, 'bgp_peers': set(), 'neighbours': {} }
             self.topology[i.spec.node_name]['pods'][i.metadata.name] = {"ip": i.status.pod_ip, "ns": i.metadata.namespace}
         
         start = time.time()
@@ -279,11 +308,11 @@ class vkaci_graph(object):
 
         for node in topology.keys():
             vm_hosts = []
-            for lldpn, switches in topology[node]["lldp_neighbours"].items():
+            for neighbour, switches in topology[node]["neighbours"].items():
                 switch_list = []
                 for switchName, interfaces in switches.items():  
                     switch_list.append({"name": switchName, "interface": next(iter(interfaces or []), "")})     
-                vm_hosts.append({"host_name": lldpn, "switches": switch_list})
+                vm_hosts.append({"host_name": neighbour, "switches": switch_list})
             
             pods = []
             for pod_name, pod in topology[node]["pods"].items():
