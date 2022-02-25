@@ -6,11 +6,12 @@
    <title>VK ACI</title>
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-   <!-- <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/bootstrap.min.css"> -->
+   <script src="https://kit.fontawesome.com/4ac61d38da.js" crossorigin="anonymous"></script>
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/cui-standard.min.css">
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/frame.css">
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/style.css">
 
+   <script src="./assets/cui-2.0.0/js/jquery-3.0.0.min.js"></script>
    <script src="./assets/cui-2.0.0/js/vkaci.js"></script>
 
    <script>
@@ -22,6 +23,14 @@
 </head>
 
 <body onload="draw_without_pods()" class="cui cui--animated cui--compressed" data-theme="dark">
+
+   <script>
+      var mode = localStorage.getItem('mode');
+      if (mode) {
+         $("body").attr("data-theme", mode)
+      }
+   </script>
+
    <div id="VK ACI">
       <!-- Main Content -->
       <main>
@@ -33,16 +42,25 @@
                      <a href="http://www.cisco.com" target="_blank" class="header__logo" id="_uid5f5ccc10">
                         <span class="icon-cisco"></span>
                      </a>
-                     <img src="./assets/cui-2.0.0/img/K8s.svg" width="48" height="48" class="c8203">
+                     <img src="./assets/cui-2.0.0/img/K8s.svg" width="48" height="48">
                      <div><b>VK ACI {{ version }}</b></div>
                   </div>
-                  <div class="header-panel header-panel--right"><a data-hreftarget="_self" target="_self"
+                  <div class="header-panel header-panel--right">
+
+                     <a title="Change theme mode" class="header-item"><i id="colour-mode-button"
+                           onclick="toggleColourMode()" class="fa-brands fa-galactic-republic fa-2x"></i></a>
+
+                     <a data-hreftarget="_self" target="_self"
                         data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
                         href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Source Code"
-                        title="Source Code" class="header-item" id="_uidb14b144f">GitHub</a><a data-hreftarget="_self"
-                        target="_self" data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
+                        title="Source Code" class="header-item" id="_uidb14b144f"><i
+                           class="fa-brands fa-github fa-2x"></i></a>
+
+                     <a data-hreftarget="_self" target="_self"
+                        data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
                         href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Open An Issue"
-                        title="Open An Issue" class="header-item" id="_uid2e094e7e">Open An Issue</a></div>
+                        title="Open An Issue" class="header-item" id="_uid2e094e7e">Open An Issue</a>
+                  </div>
                </div>
             </div>
          </header>
@@ -70,6 +88,13 @@
                      <p class="tabs-click tab__heading"><span id=""
                            class="icon-insights icon-small mr5 gjs-comp-selected"></span> <span>Cluster Topology</span>
                      </p>
+                  </a></li>
+
+               <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink=""
+                     data-hreftitle="" title="" class="tabs-click" id="_uida7b3d088">
+                     <p class="tabs-click tab__heading"><span data-highlightable="1" id=""
+                           class="icon-layers icon-small mr5"></span> <span data-highlightable="1"
+                           class="gjs-comp-selected">Leaf Topology</span></p>
                   </a></li>
 
                <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink=""
@@ -122,6 +147,23 @@
 
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div>
+                     <p>Type the leaf name and click show to update the graph:
+                        <input type="text" id="leafname" list="LeafList" class="text-black">
+                        <datalist id="LeafList">
+                           <!-- For loop logic of jinja template -->
+                           {%for leaf in leaf_names %}
+                           <option>{{leaf}}</option>
+                           {%endfor%}
+
+                        </datalist>
+                        <button class="btn btn--small" onclick="draw_leaf()">Show</button>
+                  </div>
+                  <div id="viz_leaf" class="viz"></div>
+
+               </div>
+
+               <div notcomponent="" data-cubextabs="panel" class="tab-pane">
+                  <div>
                      <p>Type the node name and click show to update the graph:
                         <input type="text" id="nodename" list="NodeList" class="text-black">
                         <datalist id="NodeList">
@@ -161,7 +203,7 @@
       </main>
       <!-- End Main Content -->
    </div>
-   <script src="./assets/cui-2.0.0/js/jquery-3.0.0.min.js"></script>
+
    <script src="./assets/cui-2.0.0/js/lodash.min.js"></script>
    <script src="./assets/cui-2.0.0/js/clipboard.js"></script>
    <script src="./assets/cui-2.0.0/js/styleguide.js"></script>

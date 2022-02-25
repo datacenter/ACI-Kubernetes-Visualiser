@@ -255,6 +255,15 @@ class vkaci_build_topology(object):
     def get(self):
         return self.topology
 
+    def get_leafs(self):
+        leafs = []
+        for node in self.topology.keys():
+            for v in self.topology[node]["bgp_peers"]:
+                leafs.append(v)
+        al=list(set(leafs))
+        al.sort()
+        return al
+        
     def get_nodes(self):
         al=list(self.topology.keys())
         al.sort()
