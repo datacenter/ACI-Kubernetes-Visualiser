@@ -41,6 +41,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 "font": {
                     "size": 20,
                     "color": "#6e1313",
+                    strokeWidth: 5
                 },
             },
             "Pod": {
@@ -50,6 +51,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 "font": {
                     "size": 18,
                     "color": "#41136e",
+                    strokeWidth: 5
                 },
             },
             "VM_Host": {
@@ -58,7 +60,8 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 image: './assets/cui-2.0.0/img/esxi.png',
                 "font": {
                     "size": 22,
-                    "color": "#000000"
+                    "color": "#000000",
+                    strokeWidth: 5
                 },
             },
             "Switch": {
@@ -67,7 +70,8 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 image: './assets/cui-2.0.0/img/switch.png',
                 "font": {
                     "size": 22,
-                    "color": "#000000"
+                    "color": "#000000",
+                    strokeWidth: 5
                 },
             },
         },
@@ -79,7 +83,12 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
 
             "CONNECTED_TO": {
                 "color": "#7A8A24",
-                "caption": "interface"
+                "caption": "interface",
+                "font": {
+                    "size": 18,
+                    "color": "#000099", 
+                    strokeWidth: 5
+                },
             },
 
             "RUNNING_IN": {
@@ -178,7 +187,7 @@ function selectView() {
         }
     })
 }
-
+// draw cluster topology with different views
 function draw(query, pods = false) {
     selectView()
     var config = neo_viz_config(pods, "viz", query)
@@ -188,6 +197,17 @@ function draw(query, pods = false) {
     console.log(viz);
 }
 
+function draw_leaf() {
+    var str = $("#leafname").val();
+    var seed = "0.8455348811333163:1645676676633"
+    var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
+    var viz_leaf = new NeoVis.default(config_leaf);
+    viz_leaf.render();
+    // //Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 
+    // viz_leaf.registerOnEvent("completed", function (){
+    //     console.log(viz_leaf._network.getSeed())
+    //  })
+}
 
 function draw_node() {
     var str = $("#nodename").val();
@@ -197,8 +217,8 @@ function draw_node() {
     viz_node.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645580358235
     //viz_node.registerOnEvent("completed", function (){
-        //console.log(viz_node._network.getSeed())
-     //})
+    //console.log(viz_node._network.getSeed())
+    //})
 }
 
 
@@ -213,7 +233,7 @@ function draw_pod() {
     viz_pod.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529
     //viz_pod.registerOnEvent("completed", function (){
-        //console.log(viz_pod._network.getSeed())
+    //console.log(viz_pod._network.getSeed())
     //})
 }
 
@@ -226,3 +246,19 @@ function checkIfValidIP(str) {
     return regexExp.test(str);
 }
 
+function toggleColourMode() {
+    mode = $("body").attr("data-theme")
+    button = $("#colour-mode-button")
+    if (mode === "dark") {
+        $("body").attr("data-theme", "light")
+        button.addClass("fa-old-republic")   
+        button.removeClass("fa-galactic-republic")
+        localStorage.setItem('mode', 'light');       
+    }
+    else {
+        $("body").attr("data-theme", "dark")
+        button.removeClass("fa-old-republic")
+        button.addClass("fa-galactic-republic")
+        localStorage.setItem('mode', 'dark');
+    }
+}

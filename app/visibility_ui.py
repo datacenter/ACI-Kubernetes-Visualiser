@@ -15,7 +15,7 @@ topology.update()
 
 @app.route('/')
 def index():
-    return render_template('index.html', version=__build__, env=env, pod_names = topology.get_pods(), node_names = topology.get_nodes(), namespaces = topology.get_namespaces())
+    return render_template('index.html', version=__build__, env=env, pod_names = topology.get_pods(), node_names = topology.get_nodes(), namespaces = topology.get_namespaces(), leaf_names = topology.get_leafs())
 
 @app.route('/re-generate',methods=['GET', 'POST'])
 def regenerate():
