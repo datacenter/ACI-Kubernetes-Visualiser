@@ -117,15 +117,6 @@ body {
    justify-content: center !important;
 }
 
-.viz {
-   width: 80%;
-   height: 800px;
-   border: 0.5px solid grey;
-   font: 22pt arial;
-   background-color: rgb(1, 25, 29);
-   margin: auto;
-}
-
 .view {
    margin: 5px 5px 10px 5px;
 }

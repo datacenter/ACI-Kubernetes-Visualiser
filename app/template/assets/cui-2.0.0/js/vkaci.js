@@ -2,7 +2,7 @@ var server_url = "";
 var server_user = "";
 var server_password = "";
 
-function neo_viz_config(showPodName, container, cypher) {
+function neo_viz_config(showPodName, container, cypher, seed = null) {
     var podCaption = "pod"
     if (showPodName) {
         podCaption = "name"
@@ -16,6 +16,11 @@ function neo_viz_config(showPodName, container, cypher) {
         initial_cypher: cypher,
         arrows: showPodName,
         fix_nodes_in_place_on_drag: true,
+
+        layout: {
+            improvedLayout: true,
+        },
+
         physics: {
 
             adaptiveTimestep: true,
@@ -36,6 +41,7 @@ function neo_viz_config(showPodName, container, cypher) {
                 "font": {
                     "size": 20,
                     "color": "#6e1313",
+                    strokeWidth: 5
                 },
             },
             "Pod": {
@@ -45,6 +51,7 @@ function neo_viz_config(showPodName, container, cypher) {
                 "font": {
                     "size": 18,
                     "color": "#41136e",
+                    strokeWidth: 5
                 },
             },
             "VM_Host": {
@@ -53,7 +60,8 @@ function neo_viz_config(showPodName, container, cypher) {
                 image: './assets/cui-2.0.0/img/esxi.png',
                 "font": {
                     "size": 22,
-                    "color": "#000000"
+                    "color": "#000000",
+                    strokeWidth: 5
                 },
             },
             "Switch": {
@@ -62,7 +70,8 @@ function neo_viz_config(showPodName, container, cypher) {
                 image: './assets/cui-2.0.0/img/switch.png',
                 "font": {
                     "size": 22,
-                    "color": "#000000"
+                    "color": "#000000",
+                    strokeWidth: 5
                 },
             },
         },
@@ -74,7 +83,12 @@ function neo_viz_config(showPodName, container, cypher) {
 
             "CONNECTED_TO": {
                 "color": "#7A8A24",
-                "caption" : "interface"
+                "caption": "interface",
+                "font": {
+                    "size": 18,
+                    "color": "#000099", 
+                    strokeWidth: 5
+                },
             },
 
             "RUNNING_IN": {
@@ -91,6 +105,10 @@ function neo_viz_config(showPodName, container, cypher) {
             },
         }
     };
+
+    if (seed) {
+        config.layout.randomSeed = seed
+    }
 
     return config
 }
@@ -116,41 +134,41 @@ selectedNamespace = ".*"
 function draw_all() {
     selectedView = View.All
     // draw("MATCH (n)-[r]-(m) RETURN n,r,m")
-    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '"+selectedNamespace+"' return *")
+    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
     // draw("MATCH (n:Node)-[r*1..2]->(m) Return n,m,r")
-    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '"+selectedNamespace+"' return m,r2,a")
+    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return m,r2,a")
 }
 
 function draw_without_bgp_peers() {
     selectedView = View.WithoutBgpPeers
     // draw("MATCH (n1)-[r1:RUNNING_IN]-(n2)-[r2:CONNECTED_TO]-(n3) RETURN r1, r2, n1, n2, n3")
-    draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '"+selectedNamespace+"' RETURN r, r1, n, v, l")
+    draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, r1, n, v, l")
 }
 
 function draw_pods_and_nodes() {
     selectedView = View.PodsAndNodes
     // draw("MATCH (n1:Pod)-[r]->(n2) RETURN r, n1, n2", true)
-    draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '"+selectedNamespace+"' RETURN *", true)
+    draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
 function draw_only_bgp_peers() {
     selectedView = View.OnlyBgpPeers
     // draw("MATCH (n1)-[r:PEERED_INTO]->(n2) RETURN r, n1, n2")
-    draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '"+selectedNamespace+"' RETURN r, n,s")
+    draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, n,s")
 }
 
-function draw_namespace(namespace){
+function draw_namespace(namespace) {
     selectedNamespace = namespace
     selectedView.drawFunc()
 }
 
 function selectView() {
     $("#selected_views").find("a").each(function () {
-        var a = $( this )
+        var a = $(this)
         if (a.attr("id") == selectedView.name) {
             a.addClass("selected")
         }
@@ -160,7 +178,7 @@ function selectView() {
     })
 
     $("#selected_namespace").find("a").each(function () {
-        var a = $( this )
+        var a = $(this)
         if (a.attr("id") == selectedNamespace) {
             a.addClass("selected")
         }
@@ -169,7 +187,7 @@ function selectView() {
         }
     })
 }
-
+// draw cluster topology with different views
 function draw(query, pods = false) {
     selectView()
     var config = neo_viz_config(pods, "viz", query)
@@ -179,21 +197,44 @@ function draw(query, pods = false) {
     console.log(viz);
 }
 
+function draw_leaf() {
+    var str = $("#leafname").val();
+    var seed = "0.8455348811333163:1645676676633"
+    var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
+    var viz_leaf = new NeoVis.default(config_leaf);
+    viz_leaf.render();
+    // //Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 
+    // viz_leaf.registerOnEvent("completed", function (){
+    //     console.log(viz_leaf._network.getSeed())
+    //  })
+}
+
 function draw_node() {
     var str = $("#nodename").val();
-    var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *')
+    var seed = "0.7578607868826415:1645663636870"
+    var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
     var viz_node = new NeoVis.default(config_node);
     viz_node.render();
+    // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645580358235
+    //viz_node.registerOnEvent("completed", function (){
+    //console.log(viz_node._network.getSeed())
+    //})
 }
+
 
 function draw_pod() {
     var str = $("#podname").val();
-    var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.name= "' + str + '" RETURN p, r,m')
+    var seed = "0.8660747593468698:1645662423690"
+    var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.name= "' + str + '" RETURN p, r,m', seed)
     if (checkIfValidIP(str)) {
-        var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.ip= "' + str + '" RETURN p, r,m')
+        var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.ip= "' + str + '" RETURN p, r,m', seed)
     }
     var viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();
+    // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529
+    //viz_pod.registerOnEvent("completed", function (){
+    //console.log(viz_pod._network.getSeed())
+    //})
 }
 
 
@@ -205,3 +246,19 @@ function checkIfValidIP(str) {
     return regexExp.test(str);
 }
 
+function toggleColourMode() {
+    mode = $("body").attr("data-theme")
+    button = $("#colour-mode-button")
+    if (mode === "dark") {
+        $("body").attr("data-theme", "light")
+        button.addClass("fa-old-republic")   
+        button.removeClass("fa-galactic-republic")
+        localStorage.setItem('mode', 'light');       
+    }
+    else {
+        $("body").attr("data-theme", "dark")
+        button.removeClass("fa-old-republic")
+        button.addClass("fa-galactic-republic")
+        localStorage.setItem('mode', 'dark');
+    }
+}
