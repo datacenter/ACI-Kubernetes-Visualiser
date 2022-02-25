@@ -135,6 +135,7 @@ class vkaci_build_topology(object):
         # Have a neighbour_adj_port and not None.
         if neighbour_adj_port:
             node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
+
     def update_node(self, apic, node):
 
         # double filter is very slow, not sure why but retuirning all the enpoints and child is 
@@ -168,29 +169,26 @@ class vkaci_build_topology(object):
         # IF LLDP is UP and CDP is DOWN
         for lldp_neighbour in lldp_neighbours:
             if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
-                logger.info("LLDP ADD")
+                # logger.info("LLDP ADD")
                 self.add_neighbour(node, lldp_neighbour)
-
 
         # IF CDP is UP and LLDP is DOWN
         for cdp_neighbour in cdp_neighbours:
             if cdp_neighbour.operSt == "up":
-                logger.info("CDP ADD")
+                # logger.info("CDP ADD")
                 self.add_neighbour(node, cdp_neighbour)
         
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
         # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
         # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
-        #and extract the common and calico part. 
-    
-
-            vrf=re.split('/|-',self.aci_vrf)
-            vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
-            bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
-            
-            for bgpPeer in bgpPeerEntry:
-                if bgpPeer.operSt == "established":
-                    node['bgp_peers'].add( bgpPeer.dn.split("/")[2].replace("node", "leaf") )
+        #and extract the common and calico part.
+        vrf=re.split('/|-',self.aci_vrf)
+        vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
+        bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
+        
+        for bgpPeer in bgpPeerEntry:
+            if bgpPeer.operSt == "established":
+                node['bgp_peers'].add( bgpPeer.dn.split("/")[2].replace("node", "leaf") )
 
     def update(self):
         
