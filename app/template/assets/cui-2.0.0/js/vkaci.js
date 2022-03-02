@@ -24,11 +24,14 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
         physics: {
 
             adaptiveTimestep: true,
+            timestep: 0.3,
             barnesHut: {
+                //avoidOverlap: 0.3,
+                gravitationalConstant: -3000,
             },
 
             stabilization: {
-                iterations: 350, // CHANGEME: If want different stabilisation,
+                iterations: 400, // CHANGEME: If want different stabilisation,
                 fit: true
             }
         },

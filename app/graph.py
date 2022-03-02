@@ -169,13 +169,13 @@ class vkaci_build_topology(object):
         # IF LLDP is UP and CDP is DOWN
         for lldp_neighbour in lldp_neighbours:
             if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
-                # logger.info("LLDP ADD")
+                logger.debug("LLDP ADD")
                 self.add_neighbour(node, lldp_neighbour)
 
         # IF CDP is UP and LLDP is DOWN
         for cdp_neighbour in cdp_neighbours:
             if cdp_neighbour.operSt == "up":
-                # logger.info("CDP ADD")
+                logger.debug("CDP ADD")
                 self.add_neighbour(node, cdp_neighbour)
         
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
