@@ -6,7 +6,7 @@
    <title>VK ACI</title>
    <meta name="viewport" content="width=device-width, initial-scale=1.0">
    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-   <script src="https://kit.fontawesome.com/4ac61d38da.js" crossorigin="anonymous"></script>
+   <script src="./assets/cui-2.0.0/js/font-awesome.js" crossorigin="anonymous"></script>
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/cui-standard.min.css">
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/frame.css">
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/style.css">
@@ -65,16 +65,11 @@
             </div>
          </header>
          <div class="container">
-            <h2>How to:</h2>
-            <p>This app lets you quickly build K8s and ACI end to end topologies.<br>
-               The Cluster Topology tab shows the complete clsuter along with filtered views of the pods,nodes and
-               leaves.
-               The Pod Topology tab shows a single POD and its relationships. </p>
-
+            <button class="btn" onclick="openModal('modal-default')">How To</button>
             <div class="c10713">
 
                <form action="/re-generate" method="post">
-                  <p>The image has tool tips on the pods and links! Click Regenerate to update it.
+                  <p>Click Regenerate to update it.
                      <input class="btn btn--small" type="submit" , value="Regenerate">
                   </p>
                </form>
@@ -93,7 +88,7 @@
                <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink=""
                      data-hreftitle="" title="" class="tabs-click" id="_uida7b3d088">
                      <p class="tabs-click tab__heading"><span data-highlightable="1" id=""
-                           class="icon-layers icon-small mr5"></span> <span data-highlightable="1"
+                           class="icon-switch-outline icon-small mr5"></span> <span data-highlightable="1"
                            class="gjs-comp-selected">Leaf Topology</span></p>
                   </a></li>
 
@@ -107,7 +102,7 @@
                <li data-cubextabs="tabs" class="tabs-click tab"><a data-hreftarget="_self" data-hreflink=""
                      data-hreftitle="" title="" class="tabs-click" id="_uida7b3d088">
                      <p class="tabs-click tab__heading"><span data-highlightable="1" id=""
-                           class="icon-apps icon-small mr5"></span> <span data-highlightable="1"
+                           class="icon-spinner icon-small mr5"></span> <span data-highlightable="1"
                            class="gjs-comp-selected">Pod Topology</span></p>
                   </a></li>
             </ul>
@@ -199,6 +194,39 @@
 
             </div>
 
+         </div>
+         <div class="modal hide" id="modal-default">
+            <div class="modal__dialog">
+               <div class="modal__content">
+                  <a class="modal__close" onclick="closeModal('modal-default')"><span class="icon-close"></span></a>
+                  <div class="modal__header">
+                     <div class="modal__title text-center">VKACI Information</div>
+                  </div>
+                  <div class="modal__body">
+                     <p><strong>This app lets you quickly build K8s and ACI end to end topologies.</strong><br>
+                     <div class="subheader"><i>Topology Views</i></div>
+                     <ul>
+                        <li>The Cluster Topology: This view shows the complete clsuter along with filtered views of the
+                           pods,nodes and leaves.</li>
+                        <li>Leaf Topology: This view will show all the eBGP peers and hosts (Physical K8s Nodes or
+                           Hypervisors) connected
+                           to the selected leaf</li>
+                        <li>Node Topology: This view will show the node where the pod resides and how the node is
+                           connected to the fabric
+                        </li>
+                        <li>Pod Topology: This view will show the PODs, Hypervisor and eBGP peers the node interacts
+                           with</li>
+                     </ul>
+                     <div class="subheader"><i>Hints</i></div>
+                     <ul>
+                        <li>The graphs have tooltips on the pods and links!</li>
+                     </ul>
+                  </div>
+                  <div class="modal__footer">
+                     <button class="btn" onclick="closeModal('modal-default')">Ok</button>
+                  </div>
+               </div>
+            </div>
          </div>
       </main>
       <!-- End Main Content -->

@@ -26,7 +26,6 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
             adaptiveTimestep: true,
             timestep: 0.3,
             barnesHut: {
-                //avoidOverlap: 0.3,
                 gravitationalConstant: -3000,
             },
 
