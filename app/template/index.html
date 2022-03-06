@@ -64,16 +64,9 @@
                </div>
             </div>
          </header>
-         <div class="container">
-            <button class="btn" onclick="openModal('modal-default')">How To</button>
-            <div class="c10713">
-
-               <form action="/re-generate" method="post">
-                  <p>Click Regenerate to update it.
-                     <input class="btn btn--small" type="submit" , value="Regenerate">
-                  </p>
-               </form>
-            </div>
+         <div class="container base-margin-top dbl-margin-left">
+            <button class="btn btn--circle btn--large" onclick="openModal('modal-default')" data-balloon="Open VKACI information" data-balloon-pos="down"><i class="fa-solid fa-question"></i></button>
+            <button class="btn btn--circle btn--large" onclick="openModal('modal-small')" data-balloon="Regenerate Topology" data-balloon-pos="down"><i class="fa-solid fa-arrows-rotate"></i></button>
          </div>
 
          <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568 container">
@@ -228,6 +221,24 @@
                </div>
             </div>
          </div>
+         <div class="modal modal--small hide" id="modal-small">
+            <div class="modal__dialog">
+                <div class="modal__content">
+                    <a class="modal__close" onclick="closeModal('modal-small')"><span class="icon-close"></span></a>
+                    <div class="modal__header">
+                        <div class="modal__title">Regenerate</div>
+                    </div>
+                    <div class="modal__body">
+                       <p><i>Update and show the current topology?</i></p>
+                    </div>
+                    <div class="modal__footer">
+                     <form action="/re-generate" method="post">
+                        <input class="btn btn--small" type="submit" , value="Confirm">
+                     </form>
+                    </div>
+                </div>
+            </div>
+        </div>
       </main>
       <!-- End Main Content -->
    </div>
