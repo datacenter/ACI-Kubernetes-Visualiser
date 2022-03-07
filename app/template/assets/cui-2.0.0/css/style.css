@@ -78,10 +78,6 @@ body {
    padding-left: 20px;
 }
 
-.form-group__text {
-   max-width: 30%;
-}
-
 .form-group.base-margin-bottom {
    position: static;
    display: inline;

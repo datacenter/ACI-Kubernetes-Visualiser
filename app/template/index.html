@@ -65,11 +65,16 @@
             </div>
          </header>
          <div class="container base-margin-top dbl-margin-left">
-            <button class="btn btn--circle btn--large" onclick="openModal('modal-default')" data-balloon="Open VKACI information" data-balloon-pos="down"><i class="fa-solid fa-question"></i></button>
-            <button class="btn btn--circle btn--large" onclick="openModal('modal-small')" data-balloon="Regenerate Topology" data-balloon-pos="down"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <button class="btn btn--circle btn--large" onclick="openModal('modal-default')"
+               data-balloon="Open VKACI information" data-balloon-pos="down"><i
+                  class="fa-solid fa-question"></i></button>
+            <button class="btn btn--circle btn--large" onclick="openModal('modal-small')"
+               data-balloon="Regenerate Topology" data-balloon-pos="down"><i
+                  class="fa-solid fa-arrows-rotate"></i></button>
          </div>
 
          <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568 container">
+
             <ul class="tabs" id="_uidb6d8fe4a">
                <li data-cubextabs="tabs" class="tabs-click tab active"><a data-hreftarget="_self" data-hreflink=""
                      data-hreftitle="" title="" class="tabs-click" id="_uid950bb1b6">
@@ -100,6 +105,7 @@
                   </a></li>
             </ul>
             <div class="tab-content">
+
                <div notcomponent="" data-cubextabs="panel" class="tab-pane active">
                   <div class="btn-group btn-group--large btn-group--square">
                      <div class="dropdown">
@@ -128,66 +134,89 @@
                         </div>
                      </div>
                   </div>
-
                   <div id="viz" class="viz"></div>
-
                </div>
 
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
-                  <div>
-                     <p>Type the leaf name and click show to update the graph:
-                        <input type="text" id="leafname" list="LeafList" class="text-black">
-                        <datalist id="LeafList">
-                           <!-- For loop logic of jinja template -->
-                           {%for leaf in leaf_names %}
-                           <option>{{leaf}}</option>
-                           {%endfor%}
-
-                        </datalist>
-                        <button class="btn btn--small" onclick="draw_leaf()">Show</button>
+                  <div class="row">
+                     <!-- <input type="text" id="leafname" list="LeafList" class="text-black"> -->
+                     <div class="col-md-3">
+                        <div class="form-group input--icon base-margin-bottom">
+                           <div class="form-group__text">
+                              <input id="leafname" type="search" list="LeafList">
+                              <button type="button" id="leafBttn" onclick="draw_leaf()" class="link">
+                                 <span class="icon-search"></span>
+                              </button>
+                           </div>
+                           <div class="form-group__help">
+                              <span>Type the leaf name and click the search icon to update the graph</span>
+                           </div>
+                        </div>
+                     </div>
+                     <datalist id="LeafList">
+                        <!-- For loop logic of jinja template -->
+                        {%for leaf in leaf_names %}
+                        <option>{{leaf}}</option>
+                        {%endfor%}
+                     </datalist>
                   </div>
                   <div id="viz_leaf" class="viz"></div>
-
                </div>
 
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div>
-                     <p>Type the node name and click show to update the graph:
-                        <input type="text" id="nodename" list="NodeList" class="text-black">
-                        <datalist id="NodeList">
-                           <!-- For loop logic of jinja template -->
-                           {%for node in node_names %}
-                           <option>{{node}}</option>
-                           {%endfor%}
-
-                        </datalist>
-                        <button class="btn btn--small" onclick="draw_node()">Show</button>
+                     <div class="col-md-3">
+                        <div class="form-group input--icon base-margin-bottom">
+                           <div class="form-group__text">
+                              <input id="nodename" type="search" list="NodeList">
+                              <button type="button" id="nodeBttn" onclick="draw_node()" class="link">
+                                 <span class="icon-search"></span>
+                              </button>
+                           </div>
+                           <div class="form-group__help">
+                              <span>Type the node name and click the search icon to update the graph</span>
+                           </div>
+                        </div>
+                     </div>
+                     <datalist id="NodeList">
+                        <!-- For loop logic of jinja template -->
+                        {%for node in node_names %}
+                        <option>{{node}}</option>
+                        {%endfor%}
+                     </datalist>
                   </div>
                   <div id="viz_node" class="viz"></div>
-
                </div>
 
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div>
-                     <p>Type the pod name or IP and click show to update the graph:
-                        <input type="text" id="podname" list="PodList" class="text-black">
-                        <datalist id="PodList">
-                           <!-- For loop logic of jinja template -->
-                           {%for pod in pod_names %}
-                           <option>{{pod}}</option>
-                           {%endfor%}
-
-                        </datalist>
-                        <button class="btn btn--small" onclick="draw_pod()">Show</button>
+                     <div class="col-md-3">
+                        <div class="form-group input--icon base-margin-bottom">
+                           <div class="form-group__text">
+                              <input id="podname" type="search" list="PodList">
+                              <button type="button" id="podBttn" onclick="draw_pod()" class="link">
+                                 <span class="icon-search"></span>
+                              </button>
+                           </div>
+                           <div class="form-group__help">
+                              <span>Type the node name and click the search icon to update the graph</span>
+                           </div>
+                        </div>
+                     </div>
+                     <datalist id="PodList">
+                        <!-- For loop logic of jinja template -->
+                        {%for pod in pod_names %}
+                        <option>{{pod}}</option>
+                        {%endfor%}
+                     </datalist>
                   </div>
                   <div id="viz_pod" class="viz"></div>
-
                </div>
-
 
             </div>
 
          </div>
+
          <div class="modal hide" id="modal-default">
             <div class="modal__dialog">
                <div class="modal__content">
@@ -221,26 +250,28 @@
                </div>
             </div>
          </div>
+
          <div class="modal modal--small hide" id="modal-small">
             <div class="modal__dialog">
-                <div class="modal__content">
-                    <a class="modal__close" onclick="closeModal('modal-small')"><span class="icon-close"></span></a>
-                    <div class="modal__header">
-                        <div class="modal__title">Regenerate</div>
-                    </div>
-                    <div class="modal__body">
-                       <p><i>Update and show the current topology?</i></p>
-                    </div>
-                    <div class="modal__footer">
+               <div class="modal__content">
+                  <a class="modal__close" onclick="closeModal('modal-small')"><span class="icon-close"></span></a>
+                  <div class="modal__header">
+                     <div class="modal__title">Regenerate</div>
+                  </div>
+                  <div class="modal__body">
+                     <p><i>Update and show the current topology?</i></p>
+                  </div>
+                  <div class="modal__footer">
                      <form action="/re-generate" method="post">
                         <input class="btn btn--small" type="submit" , value="Confirm">
                      </form>
-                    </div>
-                </div>
+                  </div>
+               </div>
             </div>
-        </div>
+         </div>
       </main>
       <!-- End Main Content -->
+
    </div>
 
    <script src="./assets/cui-2.0.0/js/lodash.min.js"></script>
@@ -250,6 +281,26 @@
    <script src="./assets/cui-2.0.0/js/exporting.js"></script>
    <script src="./assets/cui-2.0.0/js/html2canvas.js"></script>
    <script src="./assets/cui-2.0.0/js/neovis.js"></script>
+
+   <script>
+      $("#leafname").keypress(function (event) {
+         if (event.keyCode === 13) {
+            $("#leafBttn").click();
+         }
+      });
+
+      $("#nodename").keypress(function (event) {
+         if (event.keyCode === 13) {
+            $("#nodeBttn").click();
+         }
+      });
+
+      $("#podname").keypress(function (event) {
+         if (event.keyCode === 13) {
+            $("#podBttn").click();
+         }
+      });
+   </script>
 
 </body>
 
