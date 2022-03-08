@@ -169,13 +169,13 @@ class vkaci_build_topology(object):
         # IF LLDP is UP and CDP is DOWN
         for lldp_neighbour in lldp_neighbours:
             if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
-                # logger.info("LLDP ADD")
+                logger.debug("LLDP ADD")
                 self.add_neighbour(node, lldp_neighbour)
 
         # IF CDP is UP and LLDP is DOWN
         for cdp_neighbour in cdp_neighbours:
             if cdp_neighbour.operSt == "up":
-                # logger.info("CDP ADD")
+                logger.debug("CDP ADD")
                 self.add_neighbour(node, cdp_neighbour)
         
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
@@ -258,6 +258,8 @@ class vkaci_build_topology(object):
         for node in self.topology.keys():
             for v in self.topology[node]["bgp_peers"]:
                 leafs.append(v)
+            for v, n in self.topology[node]["neighbours"].items():
+                leafs.extend(n.keys())    
         al=list(set(leafs))
         al.sort()
         return al
@@ -284,9 +286,9 @@ class vkaci_build_topology(object):
 #There is too much data to visualize in a single graph so we have a few options:
 
 class vkaci_graph(object):
-    def __init__(self, env:vkaci_env_variables, topology:vkaci_build_topology) -> None:
+    def __init__(self, env: vkaci_env_variables, topology: vkaci_build_topology) -> None:
         super().__init__()
-        self.env      = env
+        self.env = env
         self.topology = topology
 
     # Build query.
@@ -311,6 +313,15 @@ class vkaci_graph(object):
     def update_database(self): 
         graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
         topology = self.topology.update()
+        data = self.build_graph_data(topology)
+
+        graph.run("MATCH (n) DETACH DELETE n")
+        results = graph.run(self.query,json=data)
+
+        tx = graph.begin()
+        graph.commit(tx)
+
+    def build_graph_data(self, topology):
         data = { "items": [] }
 
         for node in topology.keys():
@@ -332,12 +343,37 @@ class vkaci_graph(object):
                 "vm_hosts": vm_hosts,
                 "bgp_peers": list(topology[node]["bgp_peers"])
             })
+            
+        return data
 
-        graph.run("MATCH (n) DETACH DELETE n")
-        results = graph.run(self.query,json=data)
+class vkaci_table (object):
+    def __init__(self, topology: vkaci_build_topology) -> None:
+        super().__init__()
+        self.topology = topology
 
-        tx = graph.begin()
-        graph.commit(tx)
+    def get_table(self):
+        topology=self.topology.get()
+        data = { "parent":0, "data": [] }
+        i=1
+        for node_name, node in topology.items():
+            pods = []
+            y = 1
+            for pod_name, pod in node["pods"].items():
+                pods.append({"id": str(i)+"."+str(y), "value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod"})
+                y=y+1 
+            data["data"].append({
+                "id": i,
+                "value": node_name,
+                "ip"   : node["node_ip"],
+                "image":"node",
+                "data" : pods
+            })
+            i=i+1
+        return data 
+        
+
+
+
 
 
 

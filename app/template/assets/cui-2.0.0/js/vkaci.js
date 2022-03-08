@@ -24,11 +24,13 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
         physics: {
 
             adaptiveTimestep: true,
+            timestep: 0.3,
             barnesHut: {
+                gravitationalConstant: -3000,
             },
 
             stabilization: {
-                iterations: 350, // CHANGEME: If want different stabilisation,
+                iterations: 400, // CHANGEME: If want different stabilisation,
                 fit: true
             }
         },
@@ -203,7 +205,7 @@ function draw_leaf() {
     var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
     var viz_leaf = new NeoVis.default(config_leaf);
     viz_leaf.render();
-    // //Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 
+    // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 
     // viz_leaf.registerOnEvent("completed", function (){
     //     console.log(viz_leaf._network.getSeed())
     //  })
