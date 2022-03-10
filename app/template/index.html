@@ -69,8 +69,13 @@
                data-balloon="Open VKACI information" data-balloon-pos="down"><i
                   class="fa-solid fa-question"></i></button>
             <button class="btn btn--circle btn--large" onclick="openModal('modal-small')"
-               data-balloon="Regenerate Topology" data-balloon-pos="down"><i
-                  class="fa-solid fa-arrows-rotate"></i></button>
+               data-balloon="Regenerate Topology" data-balloon-pos="down">
+               <i class="fa-solid fa-arrows-rotate"></i></button>
+
+            <button class="btn btn--circle btn--large" onclick="openModal('modal-legend')" data-balloon="Graph Legend"
+               data-balloon-pos="down">
+               <i class="fa-solid fa-chart-column"></i></button>
+
          </div>
 
          <div data-cubextabs="container" data-oneuitabtype="tab" class="tabs-main c10568 container">
@@ -138,7 +143,7 @@
                </div>
 
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
-                  <div class="row">
+                  <div>
                      <!-- <input type="text" id="leafname" list="LeafList" class="text-black"> -->
                      <div class="col-md-3">
                         <div class="form-group input--icon base-margin-bottom">
@@ -269,6 +274,109 @@
                </div>
             </div>
          </div>
+         <div class="modal hide" id="modal-legend">
+            <div class="modal__dialog">
+               <div class="modal__content">
+                  <a class="modal__close" onclick="closeModal('modal-legend')"><span class="icon-close"></span></a>
+                  <div class="modal__header">
+                     <div class="modal__title">Graph Legend</div>
+                  </div>
+                  <div class="modal__body">
+                     <table>
+                     <div class="Legend">
+                        <tr>
+                        <th><h5><em>Objects</em></h5></th>
+                        <th><h5><em>Relationships</em></h5></th>
+                        </tr>
+                        <td>
+                        <table>
+                           <tr>
+                              <div class="Legend-item">
+                                 <td><img src="./assets/cui-2.0.0/img/esxi.png" width="25" height="25"></td>
+                                 <td><span class="Legend-label dbl-margin-right">
+                                       Hypervisor
+                                    </span></td>
+                              </div>
+                           </tr>
+                           <tr>
+                              <div class="Legend-item">
+                                 <td><img src="./assets/cui-2.0.0/img/switch.png" width="25" height="25"></td>
+                                 <td><span class="Legend-label">
+                                       Leaf
+                                    </span></td>
+                              </div>
+                           </tr>
+                           <tr>
+                              <div class="Legend-item">
+                                 <td><img src="./assets/cui-2.0.0/img/node.svg" width="25" height="25"></td>
+                                 <td><span class="Legend-label">
+                                       K8s Node
+                                    </span>
+                                 </td>
+                              </div>
+                           </tr>
+                           <tr>
+                              <div class="Legend-item">
+                                 <td><img src="./assets/cui-2.0.0/img/pod.svg" width="25" height="25"></td>
+                                 <td><span class="Legend-label"></span>
+                                    K8s Pod
+                                    </span>
+                                 </td>
+                              </div>
+                           </tr>
+                        </table>
+                     </div>
+                     </td>
+                     <td>
+                     <h5><em></em></h5>
+                     <table>
+                        <tr>
+                           <div class="Legend-item">
+                              <td><img src="./assets/cui-2.0.0/img/connected_to.svg" width="128" height="30"></td>
+                              <td><span class="Legend-label">
+                                    Hypervisor connected to leaf
+                                 </span>
+                              </td>
+                           </div>
+                        </tr>
+                        <tr>
+                           <div class="Legend-item">
+                              <td><img src="./assets/cui-2.0.0/img/peered_into.svg" width="128" height="30"></td>
+                              <td><span class="Legend-label">
+                                    k8s nodes BGP peering to leaf
+                                 </span>
+                              </td>
+                           </div>
+                        </tr>
+                        <tr>
+                           <div class="Legend-item">
+                              <td><img src="./assets/cui-2.0.0/img/running_in.svg" width="128" height="30"></td>
+                              <td><span class="Legend-label">
+                                    K8s Pod running in Node
+                                 </span>
+                              </td>
+                           </div>
+                        </tr>
+                        <tr>
+                           <div class="Legend-item">
+                              <td><img src="./assets/cui-2.0.0/img/running_on.svg" width="128" height="30"></td>
+                              <td><span class="Legend-label">
+                                    K8s Node running on Hypervisor
+                                 </span>
+                              </td>
+                           </div>
+                        </tr>
+                     </table>
+                  </td></tr>
+                  </table>
+                  </div>
+                  <div class="modal__footer">
+                     <button class="btn" onclick="closeModal('modal-legend')">Ok</button>
+                  </div>
+               </div>
+            </div>
+         </div>
+
       </main>
       <!-- End Main Content -->
 
