@@ -47,6 +47,8 @@ spec:
              value: "vrf"
            - name: "NEO4J_URL"
              value: "neo4j://my-neo4j-release-neo4j:7687"
+           - name: "NEO4J_BROWSER_URL"
+             value: "neo4j://my-neo4j-release-neo4j:7687"
            - name: "NEO4J_USER"
              value: "neo4j"
            - name: "NEO4J_PASSWORD"

@@ -47,6 +47,7 @@ class vkaci_env_variables(object):
         self.key_path= self.enviro().get("KEY_PATH")
 
         self.neo4j_url = self.enviro().get("NEO4J_URL", "neo4j://my-neo4j-release-neo4j:7687")
+        self.neo4j_browser_url = self.enviro().get("NEO4J_BROWSER_URL", self.neo4j_url)
         self.neo4j_user = self.enviro().get("NEO4J_USER","neo4j")
         self.neo4j_password = self.enviro().get("NEO4J_PASSWORD")
 
@@ -283,7 +284,6 @@ class vkaci_build_topology(object):
                 namespaces.append(v["ns"])
         return list(set(namespaces))
 
-#There is too much data to visualize in a single graph so we have a few options:
 
 class vkaci_graph(object):
     def __init__(self, env: vkaci_env_variables, topology: vkaci_build_topology) -> None:
