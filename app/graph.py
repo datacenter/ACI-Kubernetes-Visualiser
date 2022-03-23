@@ -116,26 +116,26 @@ class vkaci_build_topology(object):
         AdjEp = getattr(neighbour, 'lldpAdjEp', None)
         if not AdjEp:
             AdjEp = getattr(neighbour, 'cdpAdjEp', None)
-
-        for neighbour_adj in AdjEp:
-                    if neighbour_adj.sysName not in node['neighbours'].keys():
-                        node['neighbours'][neighbour_adj.sysName] = {}
     
-        # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
-        switch = neighbour.dn.split('/')[2].replace("node", "leaf")
-        if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
-            node['neighbours'][neighbour_adj.sysName][switch] = set()
+        for neighbour_adj in AdjEp:
+            if neighbour_adj.sysName not in node['neighbours'].keys():
+                node['neighbours'][neighbour_adj.sysName] = {}
+    
+            # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
+            switch = neighbour.dn.split('/')[2].replace("node", "leaf")
+            if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
+                node['neighbours'][neighbour_adj.sysName][switch] = set()
 
-        #LLDP Class is portId (I.E. VMNICX)
-        neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
-        if not neighbour_adj_port:
-            # CDP Class is portId
-            neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
-        
-        # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
-        # Have a neighbour_adj_port and not None.
-        if neighbour_adj_port:
-            node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
+            #LLDP Class is portId (I.E. VMNICX)
+            neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
+            if not neighbour_adj_port:
+                # CDP Class is portId
+                neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
+            
+            # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
+            # Have a neighbour_adj_port and not None.
+            if neighbour_adj_port:
+                node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
 
     def update_node(self, apic, node):
 
