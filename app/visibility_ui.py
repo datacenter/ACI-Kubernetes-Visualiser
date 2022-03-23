@@ -11,8 +11,6 @@ graph = vkaci_graph(env,topology)
 f = open("version.txt", "r")
 __build__ = f.read()
 
-topology.update()
-
 graph.update_database()
 
 @app.route('/')

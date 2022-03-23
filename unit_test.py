@@ -37,7 +37,7 @@ class MockMo(object):
         self.fvRsCEpToPathEp[0].tDn = pathtDn
 
 
-def create_lldp_neighbour(on:bool = True):
+def create_lldp_neighbour(on: bool = True):
     n = Expando()
     n.operTxSt = n.operRxSt = "down"
     if (on):
@@ -50,7 +50,7 @@ def create_lldp_neighbour(on:bool = True):
     return n
 
 
-def create_cdp_neighbour(on:bool = False):
+def create_cdp_neighbour(on: bool = False):
     n = Expando()
     n.operSt = "down"
     if (on):
@@ -58,6 +58,17 @@ def create_cdp_neighbour(on:bool = False):
         n.cdpAdjEp = [Expando()]
         n.cdpAdjEp[0].sysName = "esxi5"
         n.cdpAdjEp[0].chassisIdV = "vmxnic2"
+        n.sysDesc = n.dn = "topology/pod-1/node-203"
+        n.id = "eth1/1"
+    return n
+
+
+def create_cdp_no_neighbour(on: bool = False):
+    n = Expando()
+    n.operSt = "down"
+    if (on):
+        n.operSt = "up"
+        n.cdpAdjEp = []
         n.sysDesc = n.dn = "topology/pod-1/node-203"
         n.id = "eth1/1"
     return n
@@ -99,6 +110,16 @@ class apic_methods_mock(apic_methods_resolve):
 
 class testvkacigraph(unittest.TestCase):
 
+    vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
+            "TENANT": "Ciscolive",
+            "VRF": "vrf-01",
+            "MODE": "cluster",
+            "KUBE_CONFIG": "$HOME/.kube/config",
+            "CERT_USER": "useX509",
+            "CERT_NAME": "test",
+            "KEY_PATH": " 101/1/1-2"
+            }
+
     def test_no_env_variables(self):
         """Test that no environment variables are handled"""
         # Arange
@@ -112,7 +133,6 @@ class testvkacigraph(unittest.TestCase):
         self.assertIsNone(build.aci_vrf)
         self.assertEqual(len(build.env.apic_ip), 0)
 
-
     @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
     @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
     @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
@@ -122,24 +142,14 @@ class testvkacigraph(unittest.TestCase):
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
             'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
-        vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
-                "TENANT": "Ciscolive",
-                "VRF": "vrf-01",
-                "MODE": "cluster",
-                "KUBE_CONFIG": "$HOME/.kube/config",
-                "CERT_USER": "useX509",
-                "CERT_NAME": "test",
-                "KEY_PATH": " 101/1/1-2"
-                }
         build = vkaci_build_topology(
-            vkaci_env_variables(vars), apic_methods_mock())
+            vkaci_env_variables(self.vars), apic_methods_mock())
         # Act
         result = build.update()
         # Assert
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-    
     @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
     @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
     @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
@@ -149,20 +159,31 @@ class testvkacigraph(unittest.TestCase):
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
             'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
-        vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
-                "TENANT": "Ciscolive",
-                "VRF": "vrf-01",
-                "MODE": "cluster",
-                "KUBE_CONFIG": "$HOME/.kube/config",
-                "CERT_USER": "useX509",
-                "CERT_NAME": "test",
-                "KEY_PATH": " 101/1/1-2"
-                }
         mock = apic_methods_mock()
         mock.lldps = [create_lldp_neighbour(False)]
         mock.cdpns = [create_cdp_neighbour(True)]
         build = vkaci_build_topology(
-            vkaci_env_variables(vars), mock)
+            vkaci_env_variables(self.vars), mock)
+        # Act
+        result = build.update()
+        # Assert
+        self.assertDictEqual(result, expected)
+        self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
+
+    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
+    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
+    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+    def test_valid_topology_no_neighbours(self):
+        """Test that a valid topology is created with no neighbours"""
+        # Arrange
+        expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
+
+        mock = apic_methods_mock()
+        mock.lldps = []
+        mock.cdpns = [create_cdp_no_neighbour(True)]
+        build = vkaci_build_topology(
+            vkaci_env_variables(self.vars), mock)
         # Act
         result = build.update()
         # Assert
