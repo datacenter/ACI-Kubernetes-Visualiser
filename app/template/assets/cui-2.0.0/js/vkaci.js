@@ -253,14 +253,14 @@ function toggleColourMode() {
     button = $("#colour-mode-button")
     if (mode === "dark") {
         $("body").attr("data-theme", "light")
-        button.addClass("fa-old-republic")   
-        button.removeClass("fa-galactic-republic")
+        button.addClass("fa-dragon")   
+        button.removeClass("fa-dungeon")
         localStorage.setItem('mode', 'light');       
     }
     else {
         $("body").attr("data-theme", "dark")
-        button.removeClass("fa-old-republic")
-        button.addClass("fa-galactic-republic")
+        button.removeClass("fa-dragon")
+        button.addClass("fa-dungeon")
         localStorage.setItem('mode', 'dark');
     }
 }
