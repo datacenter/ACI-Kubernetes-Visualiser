@@ -1,4 +1,5 @@
 kubernetes
 flask
 py2neo
+prettyprint
 https://github.com/datacenter/pyaci/archive/master.zip
