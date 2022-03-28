@@ -1,6 +1,5 @@
 #!/usr/local/bin/python3
 import os
-from platform import node
 import re
 import random
 import logging
