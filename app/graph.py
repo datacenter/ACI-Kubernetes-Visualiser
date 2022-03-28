@@ -297,8 +297,8 @@ class vkaci_graph(object):
     UNWIND data.items as n
     UNWIND n.vm_hosts as v
 
-    MERGE (node:Node {id:n.node_name}) ON CREATE
-    SET node.name = n.node_name, node.ip = n.node_ip
+    MERGE (node:Node {name:n.node_name}) ON CREATE
+    SET node.ip = n.node_ip
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns 
@@ -351,6 +351,38 @@ class vkaci_table (object):
         super().__init__()
         self.topology = topology
 
+    def get_leaf_table(self):
+        topology=self.topology.get()
+        leafs=self.topology.get_leafs()
+        data = { "parent":0, "data": [] }
+        for leaf_name in leafs: 
+            bgp_peers = []
+            vm_hosts = {}
+            for node_name, node in topology.items():
+                if leaf_name in node["bgp_peers"]:
+                    bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+                
+                for neighbour_name, neighbour in node["neighbours"].items():
+                    if leaf_name in neighbour.keys():
+                        pods = []
+                        for pod_name, pod in node["pods"].items():
+                            pods.append({"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
+                        if neighbour_name not in vm_hosts:
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                        vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg", "data": pods})
+            
+            leaf_data = list(vm_hosts.values())
+            if len(bgp_peers) > 0:
+                leaf_data.append({"value": "BGP peers", "image": "bgp.png", "data": bgp_peers})
+            data["data"].append({
+                "value": leaf_name,
+                "ip"   : "",
+                "image":"switch.png",
+                "data" : leaf_data
+            })
+        return data 
+
+
     def get_table(self):
         topology=self.topology.get()
         data = { "parent":0, "data": [] }
@@ -359,13 +391,13 @@ class vkaci_table (object):
             pods = []
             y = 1
             for pod_name, pod in node["pods"].items():
-                pods.append({"id": str(i)+"."+str(y), "value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod"})
+                pods.append({"id": str(i)+"."+str(y), "value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
                 y=y+1 
             data["data"].append({
                 "id": i,
                 "value": node_name,
                 "ip"   : node["node_ip"],
-                "image":"node",
+                "image":"node.svg",
                 "data" : pods
             })
             i=i+1
