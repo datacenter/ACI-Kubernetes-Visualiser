@@ -1,12 +1,12 @@
 #!/usr/local/bin/python3
 from flask import Flask, render_template, request, redirect
-from  graph import vkaci_graph, vkaci_build_topology, vkaci_env_variables, apic_methods_resolve
+from  graph import VkaciGraph, VkaciBuilTopology, VkaciEnvVariables, ApicMethodsResolve
 
 
 app = Flask(__name__, template_folder='template',static_folder='template/assets')
-env = vkaci_env_variables()
-topology = vkaci_build_topology(env, apic_methods_resolve())
-graph = vkaci_graph(env,topology)
+env = VkaciEnvVariables()
+topology = VkaciBuilTopology(env, ApicMethodsResolve())
+graph = VkaciGraph(env,topology)
 
 f = open("version.txt", "r")
 __build__ = f.read()
