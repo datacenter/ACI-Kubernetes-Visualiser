@@ -1,8 +1,8 @@
-from app.graph import ApicMethodsResolve, VkaciBuilTopology, VkaciEnvVariables
 import unittest
 from pyaci import Node, core
 from unittest.mock import patch, MagicMock
 from kubernetes import client
+from app.graph import ApicMethodsResolve, VkaciBuilTopology, VkaciEnvVariables, VkaciTable
 
 core.aciClassMetas = {"topRoot": {
     "properties": {}, "rnFormat": "something"}}
@@ -81,7 +81,7 @@ def create_bgpPeer():
     return b
 
 
-class apic_methods_mock(ApicMethodsResolve):
+class ApicMethodsMock(ApicMethodsResolve):
     def __init__(self) -> None:
         super().__init__()
 
@@ -108,7 +108,7 @@ class apic_methods_mock(ApicMethodsResolve):
         return self.bgpPeers
 
 
-class testvkacigraph(unittest.TestCase):
+class TestVkaciGraph(unittest.TestCase):
 
     vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
             "TENANT": "Ciscolive",
@@ -124,7 +124,7 @@ class testvkacigraph(unittest.TestCase):
         """Test that no environment variables are handled"""
         # Arange
         build = VkaciBuilTopology(
-            VkaciEnvVariables({}), apic_methods_mock())
+            VkaciEnvVariables({}), ApicMethodsMock())
         # Act
         result = build.update()
         # Assert
@@ -143,7 +143,7 @@ class testvkacigraph(unittest.TestCase):
             'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
         build = VkaciBuilTopology(
-            VkaciEnvVariables(self.vars), apic_methods_mock())
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
         # Act
         result = build.update()
         # Assert
@@ -159,7 +159,7 @@ class testvkacigraph(unittest.TestCase):
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
             'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
-        mock = apic_methods_mock()
+        mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(False)]
         mock.cdpns = [create_cdp_neighbour(True)]
         build = VkaciBuilTopology(
@@ -179,7 +179,7 @@ class testvkacigraph(unittest.TestCase):
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
             'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
 
-        mock = apic_methods_mock()
+        mock = ApicMethodsMock()
         mock.lldps = []
         mock.cdpns = [create_cdp_no_neighbour(True)]
         build = VkaciBuilTopology(
@@ -190,6 +190,46 @@ class testvkacigraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
+    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
+    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
+    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+    def test_leaf_table(self):
+        """Test that a leaf table is correctly created"""
+        # Arrange
+        expected = {
+            'data': [{'data': [{'data': [{'data': [{'image': 'pod.svg',
+                                         'ip': '192.158.1.3',
+                                                    'ns': 'dockerimage',
+                                                    'value': 'dateformat'}],
+                               'image': 'node.svg',
+                                          'ip': '192.168.1.2',
+                                          'ns': '',
+                                          'value': '1234abc'}],
+                     'image': 'esxi.png',
+                                'interface': ['vmxnic1-eth1/1'],
+                                'ns': '',
+                                'value': 'esxi4.cam.ciscolabs.com'},
+                               {'data': [{'image': 'node.svg',
+                                          'ip': '192.168.1.2',
+                                          'ns': '',
+                                          'value': '1234abc'}],
+                                'image': 'bgp.png',
+                                'value': 'BGP peers'}],
+                      'image': 'switch.png',
+                      'ip': '',
+                      'value': 'leaf-204'}],
+            'parent': 0}
+
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        table = VkaciTable(build)
+        # Act
+        build.update()
+        result = table.get_leaf_table()
+
+        # Assert
+        self.assertDictEqual(result, expected)
+        
 
 if __name__ == '__main__':
     unittest.main()

@@ -418,6 +418,8 @@ class VkaciTable ():
                 "image":"switch.png",
                 "data" : leaf_data
             })
+        logger.debug("Topology Table View:")
+        logger.debug(pformat(data))
         return data 
 
 
