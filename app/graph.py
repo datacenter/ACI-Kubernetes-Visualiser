@@ -8,8 +8,7 @@ import time
 from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
-
-
+from pprint import pformat
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
 #logging.getLogger('pyaci').setLevel(logging.DEBUG)
@@ -17,12 +16,13 @@ from pyaci import Node, options, filters
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 formatter = logging.Formatter(
-        '%(asctime)s %(name)-1s %(levelname)-1s %(message)s')
+        '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-class vkaci_env_variables(object):
+class VkaciEnvVariables(object):
+    '''Parse the environment variables'''
     def __init__(self, dict_env:dict = None):
         """Constructor with real environment variables"""
         super().__init__()
@@ -50,123 +50,135 @@ class vkaci_env_variables(object):
         self.neo4j_browser_url = self.enviro().get("NEO4J_BROWSER_URL", self.neo4j_url)
         self.neo4j_user = self.enviro().get("NEO4J_USER","neo4j")
         self.neo4j_password = self.enviro().get("NEO4J_PASSWORD")
-
+        logger.info("Parsed Environment Variables %s", pformat(vars(self)))
 
     def enviro(self):
+        '''Return the Dictionary with all the Environment Variables'''
         if self.dict_env == None:
             return os.environ
         else:
             return self.dict_env
 
-class apic_methods_resolve(object):
+class ApicMethodsResolve(object):
+    '''Class to execute APIC Call to resolve Objects'''
     def __init__(self) -> None:
         super().__init__()
         
-    def get_fvcep(self, apic: Node, aci_vrf: str): 
-        return apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & options.subtreeFilter(filters.Eq('fvIp.vrfDn', aci_vrf)))
+    def get_fvcep(self, apic: Node, aci_vrf: str):
+        '''Return all the Mac addresses and the Child objects in a VRF '''
+        return apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren &
+            options.subtreeFilter(filters.Eq('fvIp.vrfDn', aci_vrf)))
 
-    def get_fvcep_mac(self, apic: Node, mac: str): 
-        return apic.methods.ResolveClass('fvCEp').GET(**options.filter(filters.Eq('fvCEp.mac', mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
+    def get_fvcep_mac(self, apic: Node, mac: str):
+        '''Return the fvRsCEpToPathEp of the specified mac address  '''
+        return apic.methods.ResolveClass('fvCEp').GET(**options.filter(
+            filters.Eq('fvCEp.mac', mac)) & options.rspSubtreeClass('fvRsCEpToPathEp'))[0]
 
-    def get_lldpif(self, apic:Node, pathDn): 
-        return apic.methods.ResolveClass('lldpIf').GET(**options.filter(filters.Eq('lldpIf.portDesc',pathDn)) & options.rspSubtreeClass('lldpAdjEp'))
+    def get_lldpif(self, apic:Node, pathDn):
+        '''Return the LLDP Interfaces for a specific port'''
+        return apic.methods.ResolveClass('lldpIf').GET(**options.filter(
+            filters.Eq('lldpIf.portDesc',pathDn)) & options.rspSubtreeClass('lldpAdjEp'))
 
-    def get_cdpif(self, apic:Node, pathDn): 
-        return apic.methods.ResolveClass('cdpIf').GET(**options.filter(filters.Eq('cdpIf.locDesc',pathDn)) & options.rspSubtreeClass('cdpAdjEp'))
+    def get_cdpif(self, apic:Node, pathDn):
+        '''Return the CDP Interfaces for a specific port'''
+        return apic.methods.ResolveClass('cdpIf').GET(**options.filter(
+            filters.Eq('cdpIf.locDesc',pathDn)) & options.rspSubtreeClass('cdpAdjEp'))
 
-    def get_bgppeerentry(self, apic:Node, vrf: str, node_ip: str): 
-        return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
-    
+    def get_bgppeerentry(self, apic:Node, vrf: str, node_ip: str):
+        '''Return the BGP Peer of the specified BGP neighbor (K8s node)'''
+        return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(
+            filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
 
-class vkaci_build_topology(object):
-    def __init__(self, env:vkaci_env_variables, apic_methods:apic_methods_resolve) -> None:
+
+class VkaciBuilTopology(object):
+    ''' Class to build the topology'''
+    def __init__(self, env:VkaciEnvVariables, apic_methods:ApicMethodsResolve) -> None:
         super().__init__()
         self.pod = {}
         self.topology = {}
         self.env = env
         self.apic_methods = apic_methods
-        
+
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
         else: 
             self.aci_vrf = None
             logger.error("Invalid Tenant or VRF.")
-    
+
         ## Configs can be set in Configuration class directly or using helper utility
         if self.is_local_mode(): 
             config.load_kube_config(config_file = self.env.kube_config)
         elif self.is_cluster_mode():
             config.load_incluster_config()
         else:
-            logger.error("Invalid Mode, %s. Only LOCAL or CLUSTER is supported." % self.env.mode)
-        
-        #
+            logger.error("Invalid Mode, %s. Only LOCAL or CLUSTER is supported.", self.env.mode)
+
         self.v1 = client.CoreV1Api()
 
-    def is_local_mode(self): 
+    def is_local_mode(self):
+        '''Check if we are running in local mode: Not in a K8s cluster'''
         return self.env.mode.casefold() == "LOCAL".casefold()
 
-    def is_cluster_mode(self): 
+    def is_cluster_mode(self):
+        '''Check if we are running in cluster mode: in a K8s cluster'''
         return self.env.mode.casefold() == "CLUSTER".casefold()
-    
+    def check_path_health(self, path):
+        '''Check that the physical path is healthy'''
+
     def add_neighbour(self, node, neighbour):
-        
-        # Get the Host that should be either the same as the K8s node or a Hypervisor host name. 
-        # I try to get the LLDP adj, if fails I get the CDP one. I do expect to have at least one of the 2
+        ''' Get the Host that should be either the same as the K8s node or a Hypervisor host name.
+            I try to get the LLDP adj, if fails I get the CDP one.
+            I do expect to have at least one of the 2 '''
         AdjEp = getattr(neighbour, 'lldpAdjEp', None)
         if not AdjEp:
             AdjEp = getattr(neighbour, 'cdpAdjEp', None)
-    
+
         for neighbour_adj in AdjEp:
             if neighbour_adj.sysName not in node['neighbours'].keys():
                 node['neighbours'][neighbour_adj.sysName] = {}
-    
+                logger.info("Found the following Host as Neighbour %s", neighbour_adj.sysName)
+
             # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
             switch = neighbour.dn.split('/')[2].replace("node", "leaf")
             if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
                 node['neighbours'][neighbour_adj.sysName][switch] = set()
-
+                logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
             if not neighbour_adj_port:
                 # CDP Class is portId
                 neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
-            
+
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
                 node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
+                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
     def update_node(self, apic, node):
+        '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
 
-        # double filter is very slow, not sure why but retuirning all the enpoints and child is 
-        #ep = apic.methods.ResolveClass('fvCEp').GET(**options.rspSubtreeChildren & 
-        #                                            options.subtreeFilter(filters.Eq('fvIp.vrfDn',self.aci_vrf) & filters.Eq('fvIp.addr', node['node_ip'])))
-        #if len(ep) > 1:
-        #    logger.info("Detected Duplicate node IP {} with Macs".format(node['node_ip']))
-        #    for i in ep:
-        #        logger.info(i.mac)
-        #    logger.info("Terminating")
-        #    exit()
-        #elif len(ep) == 0:
-        #    logger.info("No nodes found, please check that the Tenant {} and VRF {} are correct".format(self.tenant, self.vrf))
-        #else:
-        #    ep = ep[0]
-        
-        #Find the mac to interface mapping 
+        #Find the mac to interface mapping
+        logger.info("Find the mac to interface mapping for Node %s with MAC %s", node['node_ip'], node['mac'])
         path =  self.apic_methods.get_fvcep_mac(apic, node['mac'])
-        
+
         #Get Path, there should be only one...need to add checks
         # i.e I get topology/pod-1/protpaths-101-102/pathep-[esxi1_PolGrp] 
+        if len(path.fvRsCEpToPathEp) > 1:
+            logger.error("Node %s %s is learned over multiple paths. This points to an ACI misconfiguration, i.e. port-channel/vPC operating in individual mode", node['node_ip'], node['mac'])
+
         for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
             pathtDn = fvRsCEpToPathEp.tDn
+            logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
 
-        #logger.info("The K8s Node is physically connected to: {}".format(pathtDn))
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
         lldp_neighbours = self.apic_methods.get_lldpif(apic, pathtDn)
         cdp_neighbours = self.apic_methods.get_cdpif(apic, pathtDn)
-        
+
+        if (len(lldp_neighbours) == 0 and len(cdp_neighbours) == 0 ):
+            logger.error("No LLDP or CDP neighbour detected, the topology will be incomplete. ")
+
         # IF LLDP is UP and CDP is DOWN
         for lldp_neighbour in lldp_neighbours:
             if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
@@ -178,7 +190,7 @@ class vkaci_build_topology(object):
             if cdp_neighbour.operSt == "up":
                 logger.debug("CDP ADD")
                 self.add_neighbour(node, cdp_neighbour)
-        
+
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
         # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
         # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
@@ -186,16 +198,17 @@ class vkaci_build_topology(object):
         vrf=re.split('/|-',self.aci_vrf)
         vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
         bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
-        
+
         for bgpPeer in bgpPeerEntry:
             if bgpPeer.operSt == "established":
                 node['bgp_peers'].add( bgpPeer.dn.split("/")[2].replace("node", "leaf") )
 
     def update(self):
-        
+        '''Update the topology by querying the APIC and K8s cluster'''
+        logger.info("Start Topology Generation")
         self.topology = { }
         self.apics = []
-        
+
         # Check APIC Ips
         if self.env.apic_ip is None or len(self.env.apic_ip) == 0:
             logger.error("Invalid APIC IP addresses.")
@@ -204,29 +217,45 @@ class vkaci_build_topology(object):
         #Create list of APICs and set the useX509CertAuth parameters
         for i in self.env.apic_ip:
             self.apics.append(Node('https://' + i))
+        logger.info("APICs To Probe %s", self.env.apic_ip)
         for apic in self.apics:
             if self.is_local_mode():
+                logger.info("Running in Local Mode, using %s as user name, %s as certificate name and %s as key path", self.env.cert_user, self.env.cert_name, self.env.key_path)
                 apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, self.env.key_path)
             elif self.is_cluster_mode():
+                logger.info("Running in Cluster Mode, using %s as user name, %s as certificate name and key is loaded as a K8s Secret ", self.env.cert_user, self.env.cert_name)
                 apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, '/usr/local/etc/aci-cert/user.key')
             else:
-                logger.error("MODE can only be LOCAL or CLUSTER but {} was given".format(self.env.mode))
+                logger.error("MODE can only be LOCAL or CLUSTER but %s was given", self.env.mode)
                 return
         
         ##Load all the POD and Nodes in Memory. 
+        logger.info("Loading K8s Pods in Memory")
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
             if i.spec.node_name not in self.topology.keys():
-               self.topology[i.spec.node_name] = { "node_ip": i.status.host_ip, "pods" : {}, 'bgp_peers': set(), 'neighbours': {} }
-            self.topology[i.spec.node_name]['pods'][i.metadata.name] = {"ip": i.status.pod_ip, "ns": i.metadata.namespace}
-        
+                self.topology[i.spec.node_name] = {
+                   "node_ip": i.status.host_ip,
+                   "pods" : {},
+                   'bgp_peers': set(),
+                   'neighbours': {}
+                   }
+
+            self.topology[i.spec.node_name]['pods'][i.metadata.name] = {
+                "ip": i.status.pod_ip,
+                "ns": i.metadata.namespace
+                }
+
+        logger.info("Pods Loaded, Current Topology %s", pformat(self.topology))
         start = time.time()
-        #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac. This is faster done locally. The same query where I filter by IP and VRF takes 0.4s per node
-        # Dumping 900 EPs takes 1.3s in total. 
+        #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac.
+        # This is faster done locally. 
+        # The same query where I filter by IP and VRF takes 0.4s per node
+        # Dumping 900 EPs takes 1.3s in total.
+        logger.info("Loading all the endpoints in %s VRF", self.aci_vrf)
         eps = self.apic_methods.get_fvcep(self.apics[0], self.aci_vrf)
-        logger.info("ACI EP completed after: {} seconds".format(time.time() - start))
+        logger.info("ACI EP completed after: %s seconds", (time.time() - start))
         #Find the K8s Node IP/Mac
-        
         # No Thread 50 nodes takes ~ 41 seconds
         #for k,v in self.topology.items():
         #    self.update_node(node=v)
@@ -247,14 +276,16 @@ class vkaci_build_topology(object):
         result = future.result()
         
         logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
-        #logger.info("Topology:")
-        #logger.info(self.topology)
+        logger.info("Topology:")
+        logger.info(pformat(self.topology))
         return self.topology
 
     def get(self):
+        '''return the topology'''
         return self.topology
 
     def get_leafs(self):
+        '''return all the ACI leaves'''
         leafs = []
         for node in self.topology.keys():
             for v in self.topology[node]["bgp_peers"]:
@@ -266,11 +297,13 @@ class vkaci_build_topology(object):
         return al
         
     def get_nodes(self):
+        '''return all the K8s nodes'''
         al=list(self.topology.keys())
         al.sort()
         return al
 
     def get_pods(self):
+        '''return all the pods'''
         pod_names = []
         for node in self.topology.keys():
             for pod in self.topology[node]["pods"].keys():
@@ -278,6 +311,7 @@ class vkaci_build_topology(object):
         return pod_names
 
     def get_namespaces(self):
+        '''return all the namespaces'''
         namespaces = []
         for node in self.topology.keys():
             for k,v in self.topology[node]["pods"].items():
@@ -285,8 +319,9 @@ class vkaci_build_topology(object):
         return list(set(namespaces))
 
 
-class vkaci_graph(object):
-    def __init__(self, env: vkaci_env_variables, topology: vkaci_build_topology) -> None:
+class VkaciGraph(object):
+    '''Class to build the Graph'''
+    def __init__(self, env: VkaciEnvVariables, topology: VkaciBuilTopology) -> None:
         super().__init__()
         self.env = env
         self.topology = topology
@@ -310,7 +345,8 @@ class vkaci_graph(object):
     FOREACH (switchName IN n.bgp_peers | MERGE (switch: Switch {name:switchName}) MERGE (node)-[:PEERED_INTO]->(switch))
     """
 
-    def update_database(self): 
+    def update_database(self):
+        '''Update the neo4j database with the data collected from ACI and K8s'''
         graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
         topology = self.topology.update()
         data = self.build_graph_data(topology)
@@ -322,6 +358,7 @@ class vkaci_graph(object):
         graph.commit(tx)
 
     def build_graph_data(self, topology):
+        '''generate the neo4j data to insert in the DB'''
         data = { "items": [] }
 
         for node in topology.keys():
@@ -346,8 +383,9 @@ class vkaci_graph(object):
             
         return data
 
-class vkaci_table (object):
-    def __init__(self, topology: vkaci_build_topology) -> None:
+class VkaciTable ():
+    '''Handle the table view'''
+    def __init__(self, topology: VkaciBuilTopology) -> None:
         super().__init__()
         self.topology = topology
 
@@ -384,6 +422,7 @@ class vkaci_table (object):
 
 
     def get_table(self):
+        '''Get the table data'''
         topology=self.topology.get()
         data = { "parent":0, "data": [] }
         i=1
@@ -391,7 +430,8 @@ class vkaci_table (object):
             pods = []
             y = 1
             for pod_name, pod in node["pods"].items():
-                pods.append({"id": str(i)+"."+str(y), "value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
+                pods.append({"id": str(i)+"."+str(y), "value": pod_name,
+                    "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
                 y=y+1 
             data["data"].append({
                 "id": i,
@@ -401,15 +441,4 @@ class vkaci_table (object):
                 "data" : pods
             })
             i=i+1
-        return data 
-        
-
-
-
-
-
-
-
-            
-
-
+        return data

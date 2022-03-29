@@ -1,4 +1,4 @@
-from app.graph import apic_methods_resolve, vkaci_build_topology, vkaci_env_variables
+from app.graph import ApicMethodsResolve, VkaciBuilTopology, VkaciEnvVariables
 import unittest
 from pyaci import Node, core
 from unittest.mock import patch, MagicMock
@@ -81,7 +81,7 @@ def create_bgpPeer():
     return b
 
 
-class apic_methods_mock(apic_methods_resolve):
+class apic_methods_mock(ApicMethodsResolve):
     def __init__(self) -> None:
         super().__init__()
 
@@ -123,8 +123,8 @@ class testvkacigraph(unittest.TestCase):
     def test_no_env_variables(self):
         """Test that no environment variables are handled"""
         # Arange
-        build = vkaci_build_topology(
-            vkaci_env_variables({}), apic_methods_mock())
+        build = VkaciBuilTopology(
+            VkaciEnvVariables({}), apic_methods_mock())
         # Act
         result = build.update()
         # Assert
@@ -142,8 +142,8 @@ class testvkacigraph(unittest.TestCase):
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
             'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
-        build = vkaci_build_topology(
-            vkaci_env_variables(self.vars), apic_methods_mock())
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), apic_methods_mock())
         # Act
         result = build.update()
         # Assert
@@ -162,8 +162,8 @@ class testvkacigraph(unittest.TestCase):
         mock = apic_methods_mock()
         mock.lldps = [create_lldp_neighbour(False)]
         mock.cdpns = [create_cdp_neighbour(True)]
-        build = vkaci_build_topology(
-            vkaci_env_variables(self.vars), mock)
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), mock)
         # Act
         result = build.update()
         # Assert
@@ -182,8 +182,8 @@ class testvkacigraph(unittest.TestCase):
         mock = apic_methods_mock()
         mock.lldps = []
         mock.cdpns = [create_cdp_no_neighbour(True)]
-        build = vkaci_build_topology(
-            vkaci_env_variables(self.vars), mock)
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), mock)
         # Act
         result = build.update()
         # Assert
