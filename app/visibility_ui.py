@@ -23,6 +23,18 @@ def index():
 def table_data():
     return table.get_leaf_table()
 
+@app.route('/table_data_bgp')
+def table_data_bgp():
+    return table.get_bgp_table()
+
+@app.route('/table_data_node')
+def table_data_node():
+    return table.get_node_table()
+
+@app.route('/table_data_pod')
+def table_data_pod():
+    return table.get_pod_table()
+
 @app.route('/re-generate',methods=['GET', 'POST'])
 def regenerate():
     if request.method == 'POST':

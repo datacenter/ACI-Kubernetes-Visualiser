@@ -214,7 +214,7 @@ class TestVkaciGraph(unittest.TestCase):
                                           'ns': '',
                                           'value': '1234abc'}],
                                 'image': 'bgp.png',
-                                'value': 'BGP peers'}],
+                                'value': 'BGP peering'}],
                       'image': 'switch.png',
                       'ip': '',
                       'value': 'leaf-204'}],
@@ -227,6 +227,65 @@ class TestVkaciGraph(unittest.TestCase):
         build.update()
         result = table.get_leaf_table()
 
+        # Assert
+        self.assertDictEqual(result, expected)
+
+    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
+    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
+    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+    def test_bgp_table(self):
+        """Test that a bgp table is correctly created"""
+        # Arrange
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
+            {'value': 'BGP peering', 'image': 'bgp.png', 'data': 
+                [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}}]}
+
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        table = VkaciTable(build)
+        # Act
+        build.update()
+        result = table.get_bgp_table()
+
+        # Assert
+        self.assertDictEqual(result, expected)
+
+    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
+    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
+    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+    def test_node_table(self):
+        """Test that a node table is correctly created"""
+        # Arrange
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
+        [{'value': 'esxi4.cam.ciscolabs.com', 'interface': ['vmxnic1-eth1/1'], 'ns': '', 'image': 'esxi.png', 'data': 
+        [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}]}]}
+
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        table = VkaciTable(build)
+        # Act
+        build.update()
+        result = table.get_node_table()
+        
+        # Assert
+        self.assertDictEqual(result, expected)
+
+    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
+    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
+    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+    def test_pod_table(self):
+        """Test that a pod table is correctly created"""
+        # Arrange
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
+        [{'value': 'dateformat', 'ip': '192.158.1.3', 'ns': 'dockerimage', 'image': 'pod.svg'}]}]}
+
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        table = VkaciTable(build)
+        # Act
+        build.update()
+        result = table.get_pod_table()
+        
         # Assert
         self.assertDictEqual(result, expected)
         

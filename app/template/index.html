@@ -231,7 +231,22 @@
                   <div id="viz_pod" class="viz"></div>
                </div>
 
-               <div notcomponent="" data-cubextabs="panel" class="tab-pane active">
+               <div notcomponent="" data-cubextabs="panel" class="tab-pane">
+                  <div class="flex flex-left">
+                     <div class="btn-group btn-group--large btn-group--square">
+                        <div class="dropdown">
+                           <button class="btn btn--white btn--dropdown selected view">Table Views</button>
+                           <div id="selected_table" class="dropdown__menu dropdown__menu--openleft">
+                              <a id="LeafsAndPods" onclick="table_leafs_pods()">Leafs & Pods</a>
+                              <a id="LeafsAndNodes" onclick="table_leafs_nodes()">Leafs & Nodes</a>
+                              <a id="BgpPeers" onclick="table_bgp_peers()">BGP Peers</a>
+                              <div class="dropdown__divider"></div>
+                              <a id="All" onclick="table_all()">View All</a>
+                           </div>
+                        </div>
+                     </div>
+                     <h5 id="table_title" class="half-margin text-italic">All</h5>
+                  </div>
                   <div class="col-11" id="table"></div>
                </div>
 
