@@ -4,14 +4,14 @@ function setTheme(mode) {
       $("body").attr("data-theme", "dark")
       button.removeClass("fa-dragon")
       button.addClass("fa-dungeon")
-      $('link[rel=stylesheet][href~="./assets/webix/skins/contrast.css"]').prop('disabled', false);
+      $('link[rel=stylesheet][href~="./assets/webix/skins/contrast.min.css"]').prop('disabled', false);
       localStorage.setItem('mode', 'dark');
     }
     else {
       $("body").attr("data-theme", "light")
       button.addClass("fa-dragon")
       button.removeClass("fa-dungeon")
-      $('link[rel=stylesheet][href~="./assets/webix/skins/contrast.css"]').prop('disabled', true);
+      $('link[rel=stylesheet][href~="./assets/webix/skins/contrast.min.css"]').prop('disabled', true);
       localStorage.setItem('mode', 'light');
     }
   }
