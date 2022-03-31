@@ -95,7 +95,7 @@ class ApicMethodsResolve(object):
         the LLDP/CDP path to be the one of the vPC interface, but the endpoint is learned on
         the physical interface for example:
         The end point is learned over          topology/pod-1/paths-2104/pathep-[eth1/11]
-        TheLLDP/CDP Adjagency is learned over  topology/pod-1/protpaths-2103-2104/pathep-[vpc_ucs-c1-1]
+        The LLDP/CDP Adjagency is learned over topology/pod-1/protpaths-2103-2104/pathep-[vpc_ucs-c1-1]
         So I need to normalize this
         '''
 
