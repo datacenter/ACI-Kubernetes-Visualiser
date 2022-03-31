@@ -11,7 +11,7 @@ from pyaci import Node, options, filters
 from pprint import pformat
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
-logging.getLogger('pyaci').setLevel(logging.DEBUG)
+#logging.getLogger('pyaci').setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
