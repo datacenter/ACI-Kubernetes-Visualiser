@@ -330,9 +330,11 @@ class VkaciGraph(object):
     query = """
     WITH $json as data
     UNWIND data.items as n
-    
-    MERGE (node:Node {id:n.node_name}) ON CREATE
-    SET node.name = n.node_name, node.ip = n.node_ip, node.mac = n.node_mac
+
+    UNWIND n.vm_hosts as v
+
+    MERGE (node:Node {name:n.node_name}) ON CREATE
+    SET node.ip = n.node_ip
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns 
@@ -388,24 +390,101 @@ class VkaciTable ():
         super().__init__()
         self.topology = topology
 
-    def get_table(self):
-        '''Get the table data'''
+    def get_leaf_table(self):
         topology=self.topology.get()
+        leafs=self.topology.get_leafs()
         data = { "parent":0, "data": [] }
-        i=1
-        for node_name, node in topology.items():
-            pods = []
-            y = 1
-            for pod_name, pod in node["pods"].items():
-                pods.append({"id": str(i)+"."+str(y), "value": pod_name,
-                    "ip": pod["ip"], "ns": pod["ns"], "image":"pod"})
-                y=y+1 
+        for leaf_name in leafs: 
+            bgp_peers = []
+            vm_hosts = {}
+            for node_name, node in topology.items():
+                if leaf_name in node["bgp_peers"]:
+                    bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+                
+                for neighbour_name, neighbour in node["neighbours"].items():
+                    if leaf_name in neighbour.keys():
+                        pods = []
+                        for pod_name, pod in node["pods"].items():
+                            pods.append({"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
+                        if neighbour_name not in vm_hosts:
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                        vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg", "data": pods})
+            
+            leaf_data = list(vm_hosts.values())
+            if len(bgp_peers) > 0:
+                leaf_data.append({"value": "BGP peering", "image": "bgp.png", "data": bgp_peers})
             data["data"].append({
-                "id": i,
-                "value": node_name,
-                "ip"   : node["node_ip"],
-                "image":"node",
-                "data" : pods
+                "value": leaf_name,
+                "ip"   : "",
+                "image":"switch.png",
+                "data" : leaf_data
             })
-            i=i+1
+        logger.debug("Topology Table View:")
+        logger.debug(pformat(data))
+        return data 
+
+    def get_bgp_table(self):
+        topology=self.topology.get()
+        leafs=self.topology.get_leafs()
+        data = { "parent":0, "data": [] }
+        for leaf_name in leafs: 
+            bgp_peers = []
+            for node_name, node in topology.items():
+                if leaf_name in node["bgp_peers"]:
+                    bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+            data["data"].append({
+                    "value": leaf_name,
+                    "ip"   : "",
+                    "image":"switch.png",
+                    "data" : {"value": "BGP peering", "image": "bgp.png", "data": bgp_peers}
+                })
+        logger.debug("BGP Table View:")
+        logger.debug(pformat(data))
+        return data
+
+    def get_node_table(self):
+        topology=self.topology.get()
+        leafs=self.topology.get_leafs()
+        data = { "parent":0, "data": [] }
+        for leaf_name in leafs: 
+            vm_hosts = {}
+            for node_name, node in topology.items():
+                for neighbour_name, neighbour in node["neighbours"].items():
+                    if leaf_name in neighbour.keys():
+                        if neighbour_name not in vm_hosts:
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                        vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+
+            if len(vm_hosts) > 0:
+                data["data"].append({
+                        "value": leaf_name,
+                        "ip"   : "",
+                        "image":"switch.png",
+                        "data" : list(vm_hosts.values())
+                    })
+        logger.debug("Node Table View:")
+        logger.debug(pformat(data))
+        return data
+
+    def get_pod_table(self):
+        topology=self.topology.get()
+        leafs=self.topology.get_leafs()
+        data = { "parent":0, "data": [] }
+        for leaf_name in leafs: 
+            pods = {}
+            for node_name, node in topology.items():
+                 for neighbour_name, neighbour in node["neighbours"].items():
+                    if leaf_name in neighbour.keys():
+                        for pod_name, pod in node["pods"].items():
+                            pods[pod_name] = {"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"}
+            
+            if len(pods) > 0:
+                data["data"].append({
+                        "value": leaf_name,
+                        "ip"   : "",
+                        "image":"switch.png",
+                        "data" : list(pods.values())
+                    })
+        logger.debug("Pod Table View:")
+        logger.debug(pformat(data))
         return data
