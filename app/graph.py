@@ -11,7 +11,7 @@ from pyaci import Node, options, filters
 from pprint import pformat
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
-#logging.getLogger('pyaci').setLevel(logging.DEBUG)
+logging.getLogger('pyaci').setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
@@ -89,6 +89,44 @@ class ApicMethodsResolve(object):
         return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(
             filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
 
+    def path_fixup(self,apic:Node, path):
+        '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
+        mac pinning and vPC we end up with LACP running in individual mode and the
+        the LLDP/CDP path to be the one of the vPC interface, but the endpoint is learned on
+        the physical interface for example:
+        The end point is learned over          topology/pod-1/paths-2104/pathep-[eth1/11]
+        TheLLDP/CDP Adjagency is learned over  topology/pod-1/protpaths-2103-2104/pathep-[vpc_ucs-c1-1]
+        So I need to normalize this
+        '''
+
+        if 'protpaths' in path:
+            # protpaths means the interface is a vPC/PC so I canjust return the path all good
+            return path
+
+        #Derive the physcal interface from the proto path topology/pod-1/paths-2104/pathep-[eth1/11] -->
+        #  topology/pod-1/node-2103/sys/phys-[eth1/11]
+        logger.info('Detected a non vPC/PC interface')
+
+        path_dn = path.replace('paths','node')
+        path_dn = path_dn.replace('pathep','sys/phys')
+        logger.info('Getting interface %s CDP and LLDP infos', path_dn)
+        #Get the interface and its relationships to the CDP/LLDP class
+        #Every interface should have them both even if disabled. But the only thing I care here is to find the 
+        # Mapping to the correct vPC path and seems this does the trick.
+        objs = apic.mit.FromDn(path_dn).GET(
+            **options.rspSubtreeInclude('relations')
+            & options.rspSubtreeClass('lldpIf,cdpIf'))
+        for obj in objs:
+            if obj.ClassName == 'lldpIf':
+                logger.info("Interface %s is Bundled under %s ", path, obj.portDesc)
+                return obj.portDesc
+            if obj.ClassName == 'cdpIf':
+                logger.info("Interface %s is Bundled under %s ", path, obj.locDesc)
+                return obj.locDesc
+
+        # If I do not find any path I return the original path this should not happen but at least 
+        #Like this shouldn't crash
+        return path
 
 class VkaciBuilTopology(object):
     ''' Class to build the topology'''
@@ -122,8 +160,6 @@ class VkaciBuilTopology(object):
     def is_cluster_mode(self):
         '''Check if we are running in cluster mode: in a K8s cluster'''
         return self.env.mode.casefold() == "CLUSTER".casefold()
-    def check_path_health(self, path):
-        '''Check that the physical path is healthy'''
 
     def add_neighbour(self, node, neighbour):
         ''' Get the Host that should be either the same as the K8s node or a Hypervisor host name.
@@ -173,6 +209,7 @@ class VkaciBuilTopology(object):
 
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
+        pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
         lldp_neighbours = self.apic_methods.get_lldpif(apic, pathtDn)
         cdp_neighbours = self.apic_methods.get_cdpif(apic, pathtDn)
 
