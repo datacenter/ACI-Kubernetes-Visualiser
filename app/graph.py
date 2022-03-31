@@ -330,6 +330,7 @@ class VkaciGraph(object):
     query = """
     WITH $json as data
     UNWIND data.items as n
+
     UNWIND n.vm_hosts as v
 
     MERGE (node:Node {name:n.node_name}) ON CREATE
@@ -339,10 +340,9 @@ class VkaciGraph(object):
     SET pod.ip = p.ip, pod.ns = p.ns 
     MERGE (pod)-[:RUNNING_ON]->(node))
 
-    MERGE (vmh:VM_Host{name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
-    FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch))
-
     FOREACH (switchName IN n.bgp_peers | MERGE (switch: Switch {name:switchName}) MERGE (node)-[:PEERED_INTO]->(switch))
+    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
+    FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch)))
     """
 
     def update_database(self):
@@ -376,6 +376,7 @@ class VkaciGraph(object):
             data["items"].append({
                 "node_name": node,
                 "node_ip": topology[node]["node_ip"],
+                "node_mac": topology[node]["mac"],
                 "pods": pods,
                 "vm_hosts": vm_hosts,
                 "bgp_peers": list(topology[node]["bgp_peers"])
