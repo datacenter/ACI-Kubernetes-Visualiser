@@ -247,20 +247,3 @@ function checkIfValidIP(str) {
 
     return regexExp.test(str);
 }
-
-function toggleColourMode() {
-    mode = $("body").attr("data-theme")
-    button = $("#colour-mode-button")
-    if (mode === "dark") {
-        $("body").attr("data-theme", "light")
-        button.addClass("fa-dragon")   
-        button.removeClass("fa-dungeon")
-        localStorage.setItem('mode', 'light');       
-    }
-    else {
-        $("body").attr("data-theme", "dark")
-        button.removeClass("fa-dragon")
-        button.addClass("fa-dungeon")
-        localStorage.setItem('mode', 'dark');
-    }
-}
