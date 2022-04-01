@@ -368,10 +368,8 @@ class VkaciGraph(object):
     WITH $json as data
     UNWIND data.items as n
 
-    UNWIND n.vm_hosts as v
-
     MERGE (node:Node {name:n.node_name}) ON CREATE
-    SET node.ip = n.node_ip
+    SET node.ip = n.node_ip, node.mac = n.node_mac
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns 
