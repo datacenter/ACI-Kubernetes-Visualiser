@@ -44,6 +44,7 @@ function renderAllTable() {
     view: "treetable",
     css: "webix_dark",
     container: "table",
+    id: "gridd",
     resizeColumn: true, resizeRow: true,
     columns: [
       {
@@ -68,6 +69,7 @@ function renderLeafPodTable() {
     view: "treetable",
     css: "webix_dark",
     container: "table",
+    id: "gridd",
     resizeColumn: true, resizeRow: true,
     columns: [
       {
@@ -91,6 +93,7 @@ function renderLeafNodeTable() {
     view: "treetable",
     css: "webix_dark",
     container: "table",
+    id: "gridd",
     resizeColumn: true, resizeRow: true,
     columns: [
       {
@@ -114,6 +117,7 @@ function renderBgpPeerTable() {
     view: "treetable",
     css: "webix_dark",
     container: "table",
+    id: "gridd",
     resizeColumn: true, resizeRow: true,
     columns: [
       {
@@ -148,4 +152,12 @@ function selectTable() {
     }
   });
   $("#table_title").text(selectedTable.displayName)
+}
+
+function openAll(){
+  $$("gridd").openAll()
+}
+
+function closeAll(){
+  $$("gridd").closeAll()
 }
