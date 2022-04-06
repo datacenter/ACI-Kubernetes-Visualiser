@@ -2,4 +2,6 @@ kubernetes
 flask
 py2neo
 prettyprint
+gunicorn
+gevent
 https://github.com/datacenter/pyaci/archive/master.zip
