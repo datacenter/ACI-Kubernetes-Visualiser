@@ -12,6 +12,7 @@
    <link rel="stylesheet" type="text/css" href="./assets/cui-2.0.0/css/style.css">
    <link rel="stylesheet" href="./assets/webix/webix.min.css" type="text/css">
    <link rel="stylesheet" href="./assets/webix/skins/contrast.min.css" type="text/css">
+   <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
    <script src="./assets/webix/webix.min.js" type="text/javascript"></script>
    <script src="./assets/cui-2.0.0/js/jquery-3.0.0.min.js"></script>
    <script src="./assets/cui-2.0.0/js/vkaci-theme.js"></script>
@@ -27,6 +28,9 @@
 
 <body onload="draw_without_pods()" class="cui cui--animated cui--compressed" data-theme="dark">
 
+   <div class="loader-wrapper">
+      <span class="loader"><span class="loader-inner"></span></span>
+   </div>
 
    <div id="VK ACI">
       <!-- Main Content -->
@@ -427,10 +431,17 @@
    <script src="./assets/cui-2.0.0/js/vkaci-table.js"></script>
 
    <script>
+      $(window).on("load",function(){
+        $(".loader-wrapper").fadeOut("slow");
+      });
+
       $("#leafname").keypress(function (event) {
          if (event.keyCode === 13) {
             $("#leafBttn").click();
          }
+      });
+      document.getElementById('leafname').addEventListener('input', function (event) {
+         if(!event.inputType) $("#leafBttn").click();
       });
 
       $("#nodename").keypress(function (event) {
@@ -438,12 +449,19 @@
             $("#nodeBttn").click();
          }
       });
+      document.getElementById('nodename').addEventListener('input', function (event) {
+         if(!event.inputType) $("#nodeBttn").click();
+      });
 
       $("#podname").keypress(function (event) {
          if (event.keyCode === 13) {
             $("#podBttn").click();
          }
       });
+      document.getElementById('podname').addEventListener('input', function (event) {
+         if(!event.inputType) $("#podBttn").click();
+      });
+
    </script>
 
 </body>
