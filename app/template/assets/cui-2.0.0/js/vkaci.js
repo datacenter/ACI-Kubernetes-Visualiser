@@ -201,6 +201,7 @@ function draw(query, pods = false) {
 
 function draw_leaf() {
     var str = $("#leafname").val();
+    if (!str.trim()) return;
     var seed = "0.8455348811333163:1645676676633"
     var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
     var viz_leaf = new NeoVis.default(config_leaf);
@@ -213,6 +214,7 @@ function draw_leaf() {
 
 function draw_node() {
     var str = $("#nodename").val();
+    if (!str.trim()) return;
     var seed = "0.7578607868826415:1645663636870"
     var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
     var viz_node = new NeoVis.default(config_node);
@@ -226,6 +228,7 @@ function draw_node() {
 
 function draw_pod() {
     var str = $("#podname").val();
+    if (!str.trim()) return;
     var seed = "0.8660747593468698:1645662423690"
     var config_pod = neo_viz_config(true, "viz_pod", 'MATCH (p:Pod)-[r*1..3]->(m) WHERE p.name= "' + str + '" RETURN p, r,m', seed)
     if (checkIfValidIP(str)) {
