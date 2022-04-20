@@ -5,6 +5,7 @@ import random
 import logging
 import concurrent.futures
 import time
+import ipaddress
 from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
@@ -89,6 +90,11 @@ class ApicMethodsResolve(object):
         return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(
             filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
 
+    def get_all_nexthops(self, apic:Node, dn:str):
+        '''Return the next hops of all the leafs'''
+        return apic.methods.ResolveClass('uribv4Nexthop').GET(**options.filter(
+            filters.Wcard('uribv4Nexthop.dn', dn)))
+
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
         mac pinning and vPC we end up with LACP running in individual mode and the
@@ -134,6 +140,7 @@ class VkaciBuilTopology(object):
         super().__init__()
         self.pod = {}
         self.topology = {}
+        self.bgp_info = {}
         self.env = env
         self.apic_methods = apic_methods
 
@@ -191,6 +198,22 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
+    def update_bgp_info(self, apic:Node):
+        '''Get the BGP information'''
+        self.bgp_info = {}
+        vrf = self.env.tenant + ":" + self.env.vrf
+        dn = "sys/uribv4/dom-" + vrf + "/db-rt"
+        hops = self.apic_methods.get_all_nexthops(apic, dn)
+        for hop in hops:
+            leaf = hop.dn.split('/')[2].replace("node", "leaf")
+            if leaf not in self.bgp_info.keys():
+                self.bgp_info[leaf] = {"prefixes": set()}
+            self.bgp_info[leaf]["prefixes"].add(hop.addr)
+        for leaf_name, leaf in self.bgp_info.items():
+            count = len(leaf["prefixes"])
+            leaf["prefix_count"] = count
+        logger.info("BGP Prefixes: " + pformat(self.bgp_info))
+
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
 
@@ -238,7 +261,12 @@ class VkaciBuilTopology(object):
 
         for bgpPeer in bgpPeerEntry:
             if bgpPeer.operSt == "established":
-                node['bgp_peers'].add( bgpPeer.dn.split("/")[2].replace("node", "leaf") )
+                name = bgpPeer.dn.split("/")[2].replace("node", "leaf")
+                if name not in node['bgp_peers'].keys():
+                    count = 0
+                    if name in self.bgp_info.keys():
+                        count = self.bgp_info[name]["prefix_count"]
+                    node['bgp_peers'][name] = {"prefix_count": count}
 
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
@@ -274,7 +302,7 @@ class VkaciBuilTopology(object):
                 self.topology[i.spec.node_name] = {
                    "node_ip": i.status.host_ip,
                    "pods" : {},
-                   'bgp_peers': set(),
+                   'bgp_peers': {},
                    'neighbours': {}
                    }
 
@@ -284,6 +312,9 @@ class VkaciBuilTopology(object):
                 }
 
         logger.info("Pods Loaded, Current Topology %s", pformat(self.topology))
+
+        self.update_bgp_info(self.apics[0])
+
         start = time.time()
         #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac.
         # This is faster done locally. 
@@ -320,6 +351,10 @@ class VkaciBuilTopology(object):
     def get(self):
         '''return the topology'''
         return self.topology
+    
+    def get_bgp_info(self):
+        '''return the bgp info'''
+        return self.bgp_info
 
     def get_leafs(self):
         '''return all the ACI leaves'''
@@ -375,7 +410,7 @@ class VkaciGraph(object):
     SET pod.ip = p.ip, pod.ns = p.ns 
     MERGE (pod)-[:RUNNING_ON]->(node))
 
-    FOREACH (switchName IN n.bgp_peers | MERGE (switch: Switch {name:switchName}) MERGE (node)-[:PEERED_INTO]->(switch))
+    FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
     FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
     FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch)))
     """
@@ -407,6 +442,10 @@ class VkaciGraph(object):
             pods = []
             for pod_name, pod in topology[node]["pods"].items():
                 pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"]})
+            
+            bgp_peers = []
+            for peer_name, peer in topology[node]["bgp_peers"].items():
+                bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})
 
             data["items"].append({
                 "node_name": node,
@@ -414,7 +453,7 @@ class VkaciGraph(object):
                 "node_mac": topology[node]["mac"],
                 "pods": pods,
                 "vm_hosts": vm_hosts,
-                "bgp_peers": list(topology[node]["bgp_peers"])
+                "bgp_peers": bgp_peers
             })
             
         return data
@@ -460,6 +499,7 @@ class VkaciTable ():
 
     def get_bgp_table(self):
         topology=self.topology.get()
+        bgp_info=self.topology.get_bgp_info()
         leafs=self.topology.get_leafs()
         data = { "parent":0, "data": [] }
         for leaf_name in leafs: 
@@ -467,11 +507,21 @@ class VkaciTable ():
             for node_name, node in topology.items():
                 if leaf_name in node["bgp_peers"]:
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+            bgp_prefixes = []
+            if leaf_name in bgp_info.keys():
+                prefixes = list(bgp_info[leaf_name]["prefixes"])
+                prefixes = sorted(prefixes, key=ipaddress.IPv4Network)
+                i=1
+                for prefix in prefixes:
+                    bgp_prefixes.append({"value": i, "ip":prefix})
+                    i=i+1
             data["data"].append({
                     "value": leaf_name,
                     "ip"   : "",
                     "image":"switch.png",
-                    "data" : {"value": "BGP peering", "image": "bgp.png", "data": bgp_peers}
+                    "data" : [
+                        {"value": "BGP peering", "image": "bgp.png", "data": bgp_peers},
+                        {"value": "BGP Prefixes", "image": "ip.png", "data": bgp_prefixes}]
                 })
         logger.debug("BGP Table View:")
         logger.debug(pformat(data))
