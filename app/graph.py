@@ -319,19 +319,22 @@ class VkaciBuilTopology(object):
         ##Load all the POD and Nodes in Memory. 
         logger.info("Loading K8s Pods in Memory")
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
+        logger.info(ret)
         for i in ret.items:
-            if i.spec.node_name not in self.topology.keys():
-                self.topology[i.spec.node_name] = {
-                   "node_ip": i.status.host_ip,
-                   "pods" : {},
-                   'bgp_peers': {},
-                   'neighbours': {}
-                   }
+            # Ensure the node has a name, if a POD is Pening there will be no node name.
+            if i.spec.node_name:
+                if i.spec.node_name not in self.topology.keys():
+                    self.topology[i.spec.node_name] = {
+                    "node_ip": i.status.host_ip,
+                    "pods" : {},
+                    'bgp_peers': {},
+                    'neighbours': {}
+                    }
 
-            self.topology[i.spec.node_name]['pods'][i.metadata.name] = {
-                "ip": i.status.pod_ip,
-                "ns": i.metadata.namespace
-                }
+                self.topology[i.spec.node_name]['pods'][i.metadata.name] = {
+                    "ip": i.status.pod_ip,
+                    "ns": i.metadata.namespace
+                    }
 
         logger.info("Pods Loaded, Current Topology %s", pformat(self.topology))
 
@@ -354,14 +357,14 @@ class VkaciBuilTopology(object):
         #Threaded picking APIC randomly 50 nodes takes ~ 8 seconds
         logger.info("Start querying ACI")
         start = time.time()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor() as executor:            
             for k,v in self.topology.items():
                 #find the mac for the IP of the node and add it to the topology file.
-                for ep in eps:
-                    for ip in ep.Children:
-                        if ip.addr == v['node_ip']:
-                            v['mac'] = ep.mac
-                future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+                    for ep in eps:
+                        for ip in ep.Children:
+                            if ip.addr == v['node_ip']:
+                                v['mac'] = ep.mac
+                        future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
         
