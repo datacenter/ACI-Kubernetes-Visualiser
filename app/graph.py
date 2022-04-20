@@ -364,7 +364,7 @@ class VkaciBuilTopology(object):
                         for ip in ep.Children:
                             if ip.addr == v['node_ip']:
                                 v['mac'] = ep.mac
-                        future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+                    future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
         
