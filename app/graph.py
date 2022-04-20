@@ -319,7 +319,6 @@ class VkaciBuilTopology(object):
         ##Load all the POD and Nodes in Memory. 
         logger.info("Loading K8s Pods in Memory")
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
-        logger.info(ret)
         for i in ret.items:
             # Ensure the node has a name, if a POD is Pening there will be no node name.
             if i.spec.node_name:
