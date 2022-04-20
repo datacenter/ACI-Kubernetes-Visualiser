@@ -90,10 +90,12 @@ class ApicMethodsResolve(object):
         return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(
             filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
 
-    def get_all_nexthops(self, apic:Node, dn:str):
-        '''Return the next hops of all the leafs'''
+    def get_all_nexthops(self, apic:Node, dn:str, k8s_as:str):
+        '''Get the routes, I need to also filter by AS'''
+
         return apic.methods.ResolveClass('uribv4Nexthop').GET(**options.filter(
-            filters.Wcard('uribv4Nexthop.dn', dn)))
+            filters.Wcard('uribv4Nexthop.dn', dn)
+            ))
 
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
@@ -159,6 +161,7 @@ class VkaciBuilTopology(object):
             logger.error("Invalid Mode, %s. Only LOCAL or CLUSTER is supported.", self.env.mode)
 
         self.v1 = client.CoreV1Api()
+        self.custom_obj = client.CustomObjectsApi()
 
     def is_local_mode(self):
         '''Check if we are running in local mode: Not in a K8s cluster'''
@@ -198,21 +201,40 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
+    def get_cluster_as(self):
+        ''' Get the AS from K8s Configuration this assumes Calico is used'''
+        res =  self.custom_obj.get_cluster_custom_object(
+            group="crd.projectcalico.org",
+            version="v1",
+            name="default",
+            plural="bgpconfigurations"
+        )
+        logger.info('detected AS %s', res['spec']['asNumber'])
+        return(str(res['spec']['asNumber']))
+
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
+        
+        k8s_as = self.get_cluster_as()
+
         self.bgp_info = {}
         vrf = self.env.tenant + ":" + self.env.vrf
         dn = "sys/uribv4/dom-" + vrf + "/db-rt"
-        hops = self.apic_methods.get_all_nexthops(apic, dn)
+        hops = self.apic_methods.get_all_nexthops(apic, dn, k8s_as)
         for hop in hops:
+            route = ('/'.join(hop.dn.split('/')[7:9])).split('-')[1][1:-1]
             leaf = hop.dn.split('/')[2].replace("node", "leaf")
             if leaf not in self.bgp_info.keys():
                 self.bgp_info[leaf] = {"prefixes": set()}
-            self.bgp_info[leaf]["prefixes"].add(hop.addr)
+            if hop.tag == k8s_as:
+                route_entry = route + " => " + hop.addr + " *"
+            else:
+                route_entry = route + " => " + hop.addr
+            self.bgp_info[leaf]["prefixes"].add(route_entry)
         for leaf_name, leaf in self.bgp_info.items():
             count = len(leaf["prefixes"])
             leaf["prefix_count"] = count
-        logger.info("BGP Prefixes: " + pformat(self.bgp_info))
+        logger.info("BGP Prefixes: %s", pformat(self.bgp_info))
 
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
@@ -510,7 +532,7 @@ class VkaciTable ():
             bgp_prefixes = []
             if leaf_name in bgp_info.keys():
                 prefixes = list(bgp_info[leaf_name]["prefixes"])
-                prefixes = sorted(prefixes, key=ipaddress.IPv4Network)
+                #prefixes = sorted(prefixes, key=ipaddress.IPv4Network)
                 i=1
                 for prefix in prefixes:
                     bgp_prefixes.append({"value": i, "ip":prefix})
