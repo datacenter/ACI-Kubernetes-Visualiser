@@ -226,11 +226,12 @@ class VkaciBuilTopology(object):
             leaf = hop.dn.split('/')[2].replace("node", "leaf")
             if leaf not in self.bgp_info.keys():
                 self.bgp_info[leaf] = {"prefixes": set()}
-            if hop.tag == k8s_as:
-                route_entry = route + " => " + hop.addr + " *"
-            else:
-                route_entry = route + " => " + hop.addr
-            self.bgp_info[leaf]["prefixes"].add(route_entry)
+            if route != hop.addr:
+                if hop.tag == k8s_as:
+                    route_entry = route + " => " + hop.addr + " *"
+                else:
+                    route_entry = route + " => " + hop.addr
+                self.bgp_info[leaf]["prefixes"].add(route_entry)
         for leaf_name, leaf in self.bgp_info.items():
             count = len(leaf["prefixes"])
             leaf["prefix_count"] = count
