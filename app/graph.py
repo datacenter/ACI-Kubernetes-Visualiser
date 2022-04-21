@@ -239,19 +239,22 @@ class VkaciBuilTopology(object):
             if route != hop.addr:
                 if route not in self.bgp_info[leaf].keys():
                     self.bgp_info[leaf][route] = {}
-                    self.bgp_info[leaf][route]['ip'] = set()
-                    self.bgp_info[leaf][route]['hostnames'] = set()
+                    self.bgp_info[leaf][route]['hosts'] = []
                     self.bgp_info[leaf][route]['k8s_route'] = True
                 if hop.tag == k8s_as:
-                    self.bgp_info[leaf][route]['ip'].add(next_hop)
+                    #self.bgp_info[leaf][route]['ip'].add(next_hop)
+                    host_name = ""
+                    image = "node.svg"
                     if next_hop in overlay_ip_to_switch.keys():
-                        self.bgp_info[leaf][route]['hostnames'].add(overlay_ip_to_switch[next_hop])
+                        host_name = overlay_ip_to_switch[next_hop]
+                        image = "switch.png"
                     for k, v in self.topology.items():
                         if next_hop == v['node_ip']:
-                            self.bgp_info[leaf][route]['hostnames'].add(k)
+                            host_name = k
+                    self.bgp_info[leaf][route]["hosts"].append({"ip": next_hop, "hostname": host_name, "image": image})
                 else:
                     self.bgp_info[leaf][route]['k8s_route'] = False
-                    self.bgp_info[leaf][route]['ip'].add(next_hop)
+                    self.bgp_info[leaf][route]["hosts"].append({"ip": next_hop, "hostname": "&lt;No Hostname&gt;", "image": "Nok8slogo.png"})
 
         for leaf_name, leaf in self.bgp_info.items():
             count = len(leaf.keys())
@@ -555,18 +558,19 @@ class VkaciTable ():
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
             bgp_prefixes = []
             if leaf_name in bgp_info.keys():
-                prefixes = list(bgp_info[leaf_name]["prefixes"])
-                #prefixes = sorted(prefixes, key=ipaddress.IPv4Network)
-                i=1
-                for prefix in prefixes:
-                    bgp_prefixes.append({"value": i, "ip":prefix})
-                    i=i+1
+                sorted_items = sorted(bgp_info[leaf_name].items())
+                for prefix, route in sorted_items:
+                    if prefix != "prefix_count":
+                        hosts = []
+                        for host in route["hosts"]:
+                            hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
+                        bgp_prefixes.append({"value": prefix, "k8s_route":str(route["k8s_route"]), "data": hosts})
             data["data"].append({
                     "value": leaf_name,
                     "ip"   : "",
                     "image":"switch.png",
                     "data" : [
-                        {"value": "BGP peering", "image": "bgp.png", "data": bgp_peers},
+                        {"value": "BGP Peering", "image": "bgp.png", "data": bgp_peers},
                         {"value": "BGP Prefixes", "image": "ip.png", "data": bgp_prefixes}]
                 })
         logger.debug("BGP Table View:")
