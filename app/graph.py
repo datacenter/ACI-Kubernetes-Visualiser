@@ -90,12 +90,18 @@ class ApicMethodsResolve(object):
         return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(
             filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
 
-    def get_all_nexthops(self, apic:Node, dn:str, k8s_as:str):
+    def get_all_nexthops(self, apic:Node, dn:str):
         '''Get the routes, I need to also filter by AS'''
-
         return apic.methods.ResolveClass('uribv4Nexthop').GET(**options.filter(
-            filters.Wcard('uribv4Nexthop.dn', dn)
-            ))
+            filters.Wcard('uribv4Nexthop.dn', dn)))
+        
+    def get_overlay_ip_to_switch_map(self, apic:Node):
+        '''Get a dict mapping the switch ID to it's overlay IP address'''
+        nodes = {}
+        fabricNodes = apic.methods.ResolveClass('fabricNode').GET()
+        for node in fabricNodes:
+            nodes[node.address] = node.name
+        return nodes
 
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
@@ -215,25 +221,40 @@ class VkaciBuilTopology(object):
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
         
+        # Get the K8s Cluster AS
         k8s_as = self.get_cluster_as()
-
+        overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
         self.bgp_info = {}
         vrf = self.env.tenant + ":" + self.env.vrf
         dn = "sys/uribv4/dom-" + vrf + "/db-rt"
-        hops = self.apic_methods.get_all_nexthops(apic, dn, k8s_as)
+        hops = self.apic_methods.get_all_nexthops(apic, dn)
         for hop in hops:
             route = ('/'.join(hop.dn.split('/')[7:9])).split('-')[1][1:-1]
+            
+            #Get only the IP without the Mask
+            next_hop = hop.addr.split('/')[0]
             leaf = hop.dn.split('/')[2].replace("node", "leaf")
             if leaf not in self.bgp_info.keys():
-                self.bgp_info[leaf] = {"prefixes": set()}
+                self.bgp_info[leaf] = {}
             if route != hop.addr:
+                if route not in self.bgp_info[leaf].keys():
+                    self.bgp_info[leaf][route] = {}
+                    self.bgp_info[leaf][route]['ip'] = set()
+                    self.bgp_info[leaf][route]['hostnames'] = set()
+                    self.bgp_info[leaf][route]['k8s_route'] = True
                 if hop.tag == k8s_as:
-                    route_entry = route + " => " + hop.addr + " *"
+                    self.bgp_info[leaf][route]['ip'].add(next_hop)
+                    if next_hop in overlay_ip_to_switch.keys():
+                        self.bgp_info[leaf][route]['hostnames'].add(overlay_ip_to_switch[next_hop])
+                    for k, v in self.topology.items():
+                        if next_hop == v['node_ip']:
+                            self.bgp_info[leaf][route]['hostnames'].add(k)
                 else:
-                    route_entry = route + " => " + hop.addr
-                self.bgp_info[leaf]["prefixes"].add(route_entry)
+                    self.bgp_info[leaf][route]['k8s_route'] = False
+                    self.bgp_info[leaf][route]['ip'].add(next_hop)
+
         for leaf_name, leaf in self.bgp_info.items():
-            count = len(leaf["prefixes"])
+            count = len(leaf.keys())
             leaf["prefix_count"] = count
         logger.info("BGP Prefixes: %s", pformat(self.bgp_info))
 
