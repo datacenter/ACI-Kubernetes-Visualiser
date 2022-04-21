@@ -5,7 +5,6 @@ import random
 import logging
 import concurrent.futures
 import time
-import ipaddress
 from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
@@ -564,14 +563,14 @@ class VkaciTable ():
                         hosts = []
                         for host in route["hosts"]:
                             hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
-                        bgp_prefixes.append({"value": prefix, "k8s_route":str(route["k8s_route"]), "data": hosts})
+                        bgp_prefixes.append({"value": prefix, "image": "route.png", "k8s_route":str(route["k8s_route"]), "data": hosts})
             data["data"].append({
                     "value": leaf_name,
                     "ip"   : "",
                     "image":"switch.png",
                     "data" : [
                         {"value": "BGP Peering", "image": "bgp.png", "data": bgp_peers},
-                        {"value": "BGP Prefixes", "image": "ip.png", "data": bgp_prefixes}]
+                        {"value": "Prefixes", "image": "ip.png", "data": bgp_prefixes}]
                 })
         logger.debug("BGP Table View:")
         logger.debug(pformat(data))

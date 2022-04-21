@@ -80,11 +80,11 @@ def create_bgpPeer():
     b.dn = "topology/pod-1/node-204"
     return b
 
-def create_nextHop():
+def create_nextHop(route:str, next_hop:str, tag = "56001"):
     h = Expando()
-    h.dn = "topology/pod-1/node-204/sys/uribv4/dom-calico1:vrf/db-rt/rt-[192.168.5.1/32]/nh-[bgp-65002]-[192.168.2.5/32]-[unspecified]-[calico1:vrf]"
-    h.addr = "192.168.2.5/32"
-    h.tag = 65003
+    h.dn = "topology/pod-1/node-204/sys/uribv4/dom-calico1:vrf/db-rt/rt-["+route+"]/nh-[bgp-65002]-["+next_hop+"/32]-[unspecified]-[calico1:vrf]"
+    h.addr = next_hop+"/32"
+    h.tag = tag
     return h
 
 class ApicMethodsMock(ApicMethodsResolve):
@@ -97,7 +97,11 @@ class ApicMethodsMock(ApicMethodsResolve):
     lldps = [create_lldp_neighbour()]
     cdpns = [create_cdp_neighbour()]
     bgpPeers = [create_bgpPeer()]
-    nextHops = [create_nextHop()]
+    nextHops = [
+        create_nextHop("192.168.5.1/32", "192.168.2.5"),
+        create_nextHop("192.168.5.1/32", "192.168.1.2"),
+        create_nextHop("0.0.0.0/0", "10.4.68.5", "65002")
+        ]
 
     def get_fvcep(self, apic: Node, aci_vrf: str):
         return self.eps
@@ -114,11 +118,15 @@ class ApicMethodsMock(ApicMethodsResolve):
     def get_bgppeerentry(self, apic: Node, vrf: str, node_ip: str):
         return self.bgpPeers
 
-    def get_all_nexthops(self, apic:Node, dn:str, k8s_as:str):
+    def get_all_nexthops(self, apic:Node, dn:str):
         return self.nextHops
     
     def path_fixup(self, apic:Node, path):
         return path
+    
+    def get_overlay_ip_to_switch_map(self, apic:Node):
+        nodes = {"192.168.2.5":"leaf 203"}
+        return nodes
 
 @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
 @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
@@ -154,7 +162,7 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a valid topology is created"""
         # Arrange
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 1}}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -169,7 +177,7 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a valid topology is created with cdp neighbours"""
         # Arrange
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 1}}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(False)]
@@ -187,7 +195,7 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a valid topology is created with no neighbours"""
         # Arrange
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 1}}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
 
         mock = ApicMethodsMock()
         mock.lldps = []
@@ -243,8 +251,11 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a bgp table is correctly created"""
         # Arrange
         expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
-        [{'value': 'BGP peering', 'image': 'bgp.png', 'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, 
-        {'value': 'BGP Prefixes', 'image': 'ip.png', 'data': [{'value': 1, 'ip': '192.168.5.1/32 => 192.168.2.5/32'}]}]}]}
+        [{'value': 'BGP Peering', 'image': 'bgp.png', 'data':
+        [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, {'value': 'Prefixes', 'image': 'ip.png', 'data': 
+        [{'value': '0.0.0.0/0', 'image': 'route.png', 'k8s_route': 'False', 'data': 
+        [{'value': '&lt;No Hostname&gt;', 'ip': '10.4.68.5', 'image': 'Nok8slogo.png'}]}, {'value': '192.168.5.1/32', 'image': 'route.png', 'k8s_route': 'True', 'data': 
+        [{'value': 'leaf 203', 'ip': '192.168.2.5', 'image': 'switch.png'}, {'value': '1234abc', 'ip': '192.168.1.2', 'image': 'node.svg'}]}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
