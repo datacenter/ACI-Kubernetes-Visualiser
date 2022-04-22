@@ -80,6 +80,12 @@ def create_bgpPeer():
     b.dn = "topology/pod-1/node-204"
     return b
 
+def create_nextHop(route:str, next_hop:str, tag = "56001"):
+    h = Expando()
+    h.dn = "topology/pod-1/node-204/sys/uribv4/dom-calico1:vrf/db-rt/rt-["+route+"]/nh-[bgp-65002]-["+next_hop+"/32]-[unspecified]-[calico1:vrf]"
+    h.addr = next_hop+"/32"
+    h.tag = tag
+    return h
 
 class ApicMethodsMock(ApicMethodsResolve):
     def __init__(self) -> None:
@@ -91,6 +97,11 @@ class ApicMethodsMock(ApicMethodsResolve):
     lldps = [create_lldp_neighbour()]
     cdpns = [create_cdp_neighbour()]
     bgpPeers = [create_bgpPeer()]
+    nextHops = [
+        create_nextHop("192.168.5.1/32", "192.168.2.5"),
+        create_nextHop("192.168.5.1/32", "192.168.1.2"),
+        create_nextHop("0.0.0.0/0", "10.4.68.5", "65002")
+        ]
 
     def get_fvcep(self, apic: Node, aci_vrf: str):
         return self.eps
@@ -107,7 +118,20 @@ class ApicMethodsMock(ApicMethodsResolve):
     def get_bgppeerentry(self, apic: Node, vrf: str, node_ip: str):
         return self.bgpPeers
 
+    def get_all_nexthops(self, apic:Node, dn:str):
+        return self.nextHops
+    
+    def path_fixup(self, apic:Node, path):
+        return path
+    
+    def get_overlay_ip_to_switch_map(self, apic:Node):
+        nodes = {"192.168.2.5":"leaf 203"}
+        return nodes
 
+@patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
+@patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
+@patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+@patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
 class TestVkaciGraph(unittest.TestCase):
 
     vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
@@ -133,14 +157,12 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertIsNone(build.aci_vrf)
         self.assertEqual(len(build.env.apic_ip), 0)
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_valid_topology(self):
         """Test that a valid topology is created"""
         # Arrange
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -150,14 +172,12 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_valid_topology_cdpn(self):
         """Test that a valid topology is created with cdp neighbours"""
         # Arrange
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(False)]
@@ -170,14 +190,12 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_valid_topology_no_neighbours(self):
         """Test that a valid topology is created with no neighbours"""
         # Arrange
         expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204'}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
+            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
 
         mock = ApicMethodsMock()
         mock.lldps = []
@@ -190,9 +208,7 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_leaf_table(self):
         """Test that a leaf table is correctly created"""
         # Arrange
@@ -230,15 +246,16 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_bgp_table(self):
         """Test that a bgp table is correctly created"""
         # Arrange
         expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
-            {'value': 'BGP peering', 'image': 'bgp.png', 'data': 
-                [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}}]}
+        [{'value': 'BGP Peering', 'image': 'bgp.png', 'data':
+        [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, {'value': 'Prefixes', 'image': 'ip.png', 'data': 
+        [{'value': '0.0.0.0/0', 'image': 'route.png', 'k8s_route': 'False', 'data': 
+        [{'value': '&lt;No Hostname&gt;', 'ip': '10.4.68.5', 'image': 'Nok8slogo.png'}]}, {'value': '192.168.5.1/32', 'image': 'route.png', 'k8s_route': 'True', 'data': 
+        [{'value': 'leaf 203', 'ip': '192.168.2.5', 'image': 'switch.png'}, {'value': '1234abc', 'ip': '192.168.1.2', 'image': 'node.svg'}]}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -246,13 +263,10 @@ class TestVkaciGraph(unittest.TestCase):
         # Act
         build.update()
         result = table.get_bgp_table()
-
         # Assert
         self.assertDictEqual(result, expected)
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_node_table(self):
         """Test that a node table is correctly created"""
         # Arrange
@@ -270,9 +284,7 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-    @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
-    @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
-    @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+
     def test_pod_table(self):
         """Test that a pod table is correctly created"""
         # Arrange

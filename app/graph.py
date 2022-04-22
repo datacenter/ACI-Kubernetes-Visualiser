@@ -89,6 +89,19 @@ class ApicMethodsResolve(object):
         return apic.methods.ResolveClass('bgpPeerEntry').GET(**options.filter(
             filters.Wcard('bgpPeerEntry.dn', vrf) & filters.Eq('bgpPeerEntry.addr', node_ip)))
 
+    def get_all_nexthops(self, apic:Node, dn:str):
+        '''Get the routes, I need to also filter by AS'''
+        return apic.methods.ResolveClass('uribv4Nexthop').GET(**options.filter(
+            filters.Wcard('uribv4Nexthop.dn', dn)))
+        
+    def get_overlay_ip_to_switch_map(self, apic:Node):
+        '''Get a dict mapping the switch ID to it's overlay IP address'''
+        nodes = {}
+        fabricNodes = apic.methods.ResolveClass('fabricNode').GET()
+        for node in fabricNodes:
+            nodes[node.address] = node.name
+        return nodes
+
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
         mac pinning and vPC we end up with LACP running in individual mode and the
@@ -134,6 +147,7 @@ class VkaciBuilTopology(object):
         super().__init__()
         self.pod = {}
         self.topology = {}
+        self.bgp_info = {}
         self.env = env
         self.apic_methods = apic_methods
 
@@ -152,6 +166,7 @@ class VkaciBuilTopology(object):
             logger.error("Invalid Mode, %s. Only LOCAL or CLUSTER is supported.", self.env.mode)
 
         self.v1 = client.CoreV1Api()
+        self.custom_obj = client.CustomObjectsApi()
 
     def is_local_mode(self):
         '''Check if we are running in local mode: Not in a K8s cluster'''
@@ -190,6 +205,60 @@ class VkaciBuilTopology(object):
             if neighbour_adj_port:
                 node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
+
+    def get_cluster_as(self):
+        ''' Get the AS from K8s Configuration this assumes Calico is used'''
+        res =  self.custom_obj.get_cluster_custom_object(
+            group="crd.projectcalico.org",
+            version="v1",
+            name="default",
+            plural="bgpconfigurations"
+        )
+        logger.info('detected AS %s', res['spec']['asNumber'])
+        return(str(res['spec']['asNumber']))
+
+    def update_bgp_info(self, apic:Node):
+        '''Get the BGP information'''
+        
+        # Get the K8s Cluster AS
+        k8s_as = self.get_cluster_as()
+        overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
+        self.bgp_info = {}
+        vrf = self.env.tenant + ":" + self.env.vrf
+        dn = "sys/uribv4/dom-" + vrf + "/db-rt"
+        hops = self.apic_methods.get_all_nexthops(apic, dn)
+        for hop in hops:
+            route = ('/'.join(hop.dn.split('/')[7:9])).split('-')[1][1:-1]
+            
+            #Get only the IP without the Mask
+            next_hop = hop.addr.split('/')[0]
+            leaf = hop.dn.split('/')[2].replace("node", "leaf")
+            if leaf not in self.bgp_info.keys():
+                self.bgp_info[leaf] = {}
+            if route != hop.addr:
+                if route not in self.bgp_info[leaf].keys():
+                    self.bgp_info[leaf][route] = {}
+                    self.bgp_info[leaf][route]['hosts'] = []
+                    self.bgp_info[leaf][route]['k8s_route'] = True
+                if hop.tag == k8s_as:
+                    #self.bgp_info[leaf][route]['ip'].add(next_hop)
+                    host_name = ""
+                    image = "node.svg"
+                    if next_hop in overlay_ip_to_switch.keys():
+                        host_name = overlay_ip_to_switch[next_hop]
+                        image = "switch.png"
+                    for k, v in self.topology.items():
+                        if next_hop == v['node_ip']:
+                            host_name = k
+                    self.bgp_info[leaf][route]["hosts"].append({"ip": next_hop, "hostname": host_name, "image": image})
+                else:
+                    self.bgp_info[leaf][route]['k8s_route'] = False
+                    self.bgp_info[leaf][route]["hosts"].append({"ip": next_hop, "hostname": "&lt;No Hostname&gt;", "image": "Nok8slogo.png"})
+
+        for leaf_name, leaf in self.bgp_info.items():
+            count = len(leaf.keys())
+            leaf["prefix_count"] = count
+        logger.info("BGP Prefixes: %s", pformat(self.bgp_info))
 
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
@@ -238,7 +307,12 @@ class VkaciBuilTopology(object):
 
         for bgpPeer in bgpPeerEntry:
             if bgpPeer.operSt == "established":
-                node['bgp_peers'].add( bgpPeer.dn.split("/")[2].replace("node", "leaf") )
+                name = bgpPeer.dn.split("/")[2].replace("node", "leaf")
+                if name not in node['bgp_peers'].keys():
+                    count = 0
+                    if name in self.bgp_info.keys():
+                        count = self.bgp_info[name]["prefix_count"]
+                    node['bgp_peers'][name] = {"prefix_count": count}
 
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
@@ -270,20 +344,25 @@ class VkaciBuilTopology(object):
         logger.info("Loading K8s Pods in Memory")
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
-            if i.spec.node_name not in self.topology.keys():
-                self.topology[i.spec.node_name] = {
-                   "node_ip": i.status.host_ip,
-                   "pods" : {},
-                   'bgp_peers': set(),
-                   'neighbours': {}
-                   }
+            # Ensure the node has a name, if a POD is Pening there will be no node name.
+            if i.spec.node_name:
+                if i.spec.node_name not in self.topology.keys():
+                    self.topology[i.spec.node_name] = {
+                    "node_ip": i.status.host_ip,
+                    "pods" : {},
+                    'bgp_peers': {},
+                    'neighbours': {}
+                    }
 
-            self.topology[i.spec.node_name]['pods'][i.metadata.name] = {
-                "ip": i.status.pod_ip,
-                "ns": i.metadata.namespace
-                }
+                self.topology[i.spec.node_name]['pods'][i.metadata.name] = {
+                    "ip": i.status.pod_ip,
+                    "ns": i.metadata.namespace
+                    }
 
         logger.info("Pods Loaded, Current Topology %s", pformat(self.topology))
+
+        self.update_bgp_info(self.apics[0])
+
         start = time.time()
         #Get all the mac and ips in the Cluster VRF, and map the node_ip to Mac.
         # This is faster done locally. 
@@ -301,14 +380,14 @@ class VkaciBuilTopology(object):
         #Threaded picking APIC randomly 50 nodes takes ~ 8 seconds
         logger.info("Start querying ACI")
         start = time.time()
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor() as executor:            
             for k,v in self.topology.items():
                 #find the mac for the IP of the node and add it to the topology file.
-                for ep in eps:
-                    for ip in ep.Children:
-                        if ip.addr == v['node_ip']:
-                            v['mac'] = ep.mac
-                future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+                    for ep in eps:
+                        for ip in ep.Children:
+                            if ip.addr == v['node_ip']:
+                                v['mac'] = ep.mac
+                    future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
         
@@ -320,6 +399,10 @@ class VkaciBuilTopology(object):
     def get(self):
         '''return the topology'''
         return self.topology
+    
+    def get_bgp_info(self):
+        '''return the bgp info'''
+        return self.bgp_info
 
     def get_leafs(self):
         '''return all the ACI leaves'''
@@ -375,7 +458,7 @@ class VkaciGraph(object):
     SET pod.ip = p.ip, pod.ns = p.ns 
     MERGE (pod)-[:RUNNING_ON]->(node))
 
-    FOREACH (switchName IN n.bgp_peers | MERGE (switch: Switch {name:switchName}) MERGE (node)-[:PEERED_INTO]->(switch))
+    FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
     FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
     FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch)))
     """
@@ -407,6 +490,10 @@ class VkaciGraph(object):
             pods = []
             for pod_name, pod in topology[node]["pods"].items():
                 pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"]})
+            
+            bgp_peers = []
+            for peer_name, peer in topology[node]["bgp_peers"].items():
+                bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})
 
             data["items"].append({
                 "node_name": node,
@@ -414,7 +501,7 @@ class VkaciGraph(object):
                 "node_mac": topology[node]["mac"],
                 "pods": pods,
                 "vm_hosts": vm_hosts,
-                "bgp_peers": list(topology[node]["bgp_peers"])
+                "bgp_peers": bgp_peers
             })
             
         return data
@@ -460,6 +547,7 @@ class VkaciTable ():
 
     def get_bgp_table(self):
         topology=self.topology.get()
+        bgp_info=self.topology.get_bgp_info()
         leafs=self.topology.get_leafs()
         data = { "parent":0, "data": [] }
         for leaf_name in leafs: 
@@ -467,11 +555,22 @@ class VkaciTable ():
             for node_name, node in topology.items():
                 if leaf_name in node["bgp_peers"]:
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+            bgp_prefixes = []
+            if leaf_name in bgp_info.keys():
+                sorted_items = sorted(bgp_info[leaf_name].items())
+                for prefix, route in sorted_items:
+                    if prefix != "prefix_count":
+                        hosts = []
+                        for host in route["hosts"]:
+                            hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
+                        bgp_prefixes.append({"value": prefix, "image": "route.png", "k8s_route":str(route["k8s_route"]), "data": hosts})
             data["data"].append({
                     "value": leaf_name,
                     "ip"   : "",
                     "image":"switch.png",
-                    "data" : {"value": "BGP peering", "image": "bgp.png", "data": bgp_peers}
+                    "data" : [
+                        {"value": "BGP Peering", "image": "bgp.png", "data": bgp_peers},
+                        {"value": "Prefixes", "image": "ip.png", "data": bgp_prefixes}]
                 })
         logger.debug("BGP Table View:")
         logger.debug(pformat(data))
