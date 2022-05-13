@@ -208,14 +208,32 @@ class VkaciBuilTopology(object):
 
     def get_cluster_as(self):
         ''' Get the AS from K8s Configuration this assumes Calico is used'''
-        res =  self.custom_obj.get_cluster_custom_object(
-            group="crd.projectcalico.org",
-            version="v1",
-            name="default",
-            plural="bgpconfigurations"
-        )
-        logger.info('detected AS %s', res['spec']['asNumber'])
-        return(str(res['spec']['asNumber']))
+
+        # Try to get Calico AS
+        try: 
+            res =  self.custom_obj.get_cluster_custom_object(
+                group="crd.projectcalico.org",
+                version="v1",
+                name="default",
+                plural="bgpconfigurations"
+            )
+            logger.info('Calico BGP Config Detected!')
+            asn = str(res['spec']['asNumber'])
+        except Exception as e:
+            pass
+        try: 
+            res =  self.custom_obj.get_cluster_custom_object(
+                group="crd.projectcalico.org",
+                version="v1",
+                name="default",
+                plural="bgpconfigurations"
+            )
+            logger.info('Calico BGP Config Detected!')
+            asn = str(res['spec']['asNumber'])
+        except Exception as e:
+            pass
+
+
 
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
@@ -262,7 +280,9 @@ class VkaciBuilTopology(object):
 
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
-
+        if 'mac' not in node:
+            logger.error("Could not resolved the mac address of node with ip %s", node['node_ip'] )
+            exit()
         #Find the mac to interface mapping
         logger.info("Find the mac to interface mapping for Node %s with MAC %s", node['node_ip'], node['mac'])
         path =  self.apic_methods.get_fvcep_mac(apic, node['mac'])
@@ -382,12 +402,14 @@ class VkaciBuilTopology(object):
         start = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:            
             for k,v in self.topology.items():
+                logger.info("Updating node %s", k)
                 #find the mac for the IP of the node and add it to the topology file.
-                    for ep in eps:
-                        for ip in ep.Children:
-                            if ip.addr == v['node_ip']:
-                                v['mac'] = ep.mac
-                    future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+                for ep in eps:
+                    for ip in ep.Children:
+                        if ip.addr == v['node_ip']:
+                            logger.info("Node %s: Updated MAC address %s", ip.addr, ep.mac)
+                            v['mac'] = ep.mac           
+                future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
         
@@ -422,12 +444,18 @@ class VkaciBuilTopology(object):
         al.sort()
         return al
 
-    def get_pods(self):
-        '''return all the pods'''
+    def get_pods(self, ns = ""):
+        '''return all the pods in all namespaces by default or filtered by ns'''
         pod_names = []
-        for node in self.topology.keys():
-            for pod in self.topology[node]["pods"].keys():
-                pod_names.append(pod)
+        if ns == "":
+            for node in self.topology.keys():
+                for pod in self.topology[node]["pods"].keys():
+                    pod_names.append(pod)
+        else:
+            for node in self.topology.keys():
+                for pod ,v in self.topology[node]["pods"].items():
+                    if ns == v["ns"]:
+                        pod_names.append(pod)
         return pod_names
 
     def get_namespaces(self):

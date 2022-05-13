@@ -1,0 +1,486 @@
+<!--
+
+Copyright 2018 Bloomberg Finance L.P.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+-->
+
+<!doctype html>
+<html>
+<head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+        <title>Goldpinger</title>
+
+        <!-- Utilities -->
+        <script type="text/javascript" src="static/jquery/3.1.0/jquery.min.js"></script>
+
+        <!-- Sigma.js -->
+        <script type="text/javascript" src="static/sigma.js/1.1.0/sigma.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.exporters.svg.min.js"></script>:
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.layout.forceAtlas2.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.neo4j.cypher.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.parsers.cypher.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.parsers.gexf.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.parsers.json.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.pathfinding.astar.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.plugins.animate.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.plugins.dragNodes.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.plugins.filter.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.plugins.neighborhoods.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.plugins.relativeSize.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.renderers.customEdgeShapes.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.renderers.customShapes.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.renderers.edgeLabels.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.renderers.parallelEdges.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.renderers.snapshot.min.js"></script>
+        <script type="text/javascript" src="static/sigma.js/1.1.0/plugins/sigma.statistics.HITS.min.js"></script>
+
+        <!-- Bootstrap -->
+        <link rel="stylesheet" href="static/bootstrap/3.3.7/css/bootstrap.min.css" crossorigin="anonymous">
+        <link rel="stylesheet" href="static/bootstrap/3.3.7/css/bootstrap-theme.min.css" crossorigin="anonymous">
+        <script src="static/bootstrap/3.3.7/js/bootstrap.min.js" crossorigin="anonymous"></script>
+
+        <style type="text/css">
+                body {
+                        margin: 0;
+                }
+                #container {
+                }
+                #graph-container {
+                        position: absolute;
+                        top: 0px;
+                        bottom: 0px;
+                        left: 0px;
+                        right: 0px;
+                        /*background-color: white;*/
+                }
+        </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Goldpinger</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Graph</a></li>
+            <li><a href="#" id="show-data">Data</a></li>
+            <li><a href="#" id="show-heatmap">Heatmap</a></li>
+            <li><a href="check_all" >Raw</a></li>
+            <li><a href="metrics" >Metrics</a></li>
+          </ul>
+        <div class="navbar-form navbar-left" role="search">
+          <div class="form-group">
+            <!-- <input id="timeout" type="number" step="any" class="form-control" placeholder="5.0" value="5.0"> -->
+          </div>
+          <button id="reload-graph" class="btn btn-default">reload</button>
+        </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container">
+
+        <div id="graph-container"></div>
+</div>
+
+    </div>
+
+    <div id="modal-window-code" class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                        <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title" id="modal-title">title</h4>
+                        </div>
+                        <div class="modal-body" id="modal-body">
+                        body
+                        </div>
+                        <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                </div>
+        </div>
+</div>
+
+
+<div id="modal-window-heatmap" class="modal fade bs-example-modal-lg" tabindex="-2" role="dialog" aria-labelledby="myLargeModalLabel">
+        <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                        <div class="modal-header">
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                                <h4 class="modal-title" id="modal-title">Heatmap</h4>
+                        </div>
+                        <div class="modal-body">
+
+                                <div id="heatmap-body" style="padding: 10px"></div>
+
+                                <div class="input-group">
+                                        <span class="input-group-addon" style="width: 200px">Good threshold</span>
+                                        <input id="t0" type="number" step="1" class="form-control" placeholder="2" value="2">
+                                        <span class="input-group-addon">milliseconds</span>
+                                </div>
+                                <div class="input-group">
+                                        <span class="input-group-addon" style="width: 200px">Warning threshold</span>
+                                        <input id="t1" type="number" step="1" class="form-control" placeholder="5" value="5">
+                                        <span class="input-group-addon">milliseconds</span>
+                                </div>
+                                <div class="input-group">
+                                        <span class="input-group-addon" style="width: 200px">Problem threshold</span>
+                                        <input id="t2" type="number" step="1" class="form-control" placeholder="100" value="100">
+                                        <span class="input-group-addon">milliseconds</span>
+                                </div>
+                        </div>
+                        <div class="modal-footer">
+                                <button class="btn btn-success" id="update-heatmap" type="button">refresh</button>
+                                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        </div>
+                </div>
+        </div>
+</div>
+
+
+<script>
+
+var getHeatmapUrl = function(){
+        return "heatmap.png?"
+                +  "t0=" + Number($("#t0").val())
+                + "&t1=" + Number($("#t1").val())
+                + "&t2=" + Number($("#t2").val())
+                + "&now=" + Date.now();
+}
+
+var fetchJSON = function(url) {
+        return new Promise(function(resolve, reject) {
+                console.log("calling " + url);
+                var req = new XMLHttpRequest();
+                req.open('get', url, true);
+                req.responseType = 'json';
+                req.onload = function() {
+                        if (req.status == 200) {
+                                resolve(req.response);
+                        } else {
+                                reject({
+                                    status: req.status,
+                                    response: req.response,
+                                    statusText: req.statusText
+                                });
+                        }
+                };
+                req.send();
+        });
+};
+
+var prepareJSON = function(subject){
+        return "<code style='white-space: pre;'>"
+                + JSON.stringify(subject, undefined, 4)
+                + "</code>"
+}
+
+var loadingDialog = function(enable){
+        $('#modal-title').html("Loading");
+        $('#modal-body').html(prepareJSON({stuff:{will_be_there:true, soon: "Math.random() > 0.5"}}));
+
+        // show the things
+        if (enable){
+                $('#modal-window-code').modal('show');
+        } else {
+                $('#modal-window-code').modal('hide');
+        }
+};
+
+var global_data = undefined;
+var s; // the sigma graph
+
+var main = function(timeout){
+
+        timeout = timeout || Number($("#timeout").val()) || 5.0;
+
+        loadingDialog(true);
+
+        fetchJSON("check_all?timeout="+timeout)
+        .then(function(data){
+
+                loadingDialog(false);
+
+                //console.log(data);
+                global_data = data;
+
+                // prepare nodes
+                var nodes = [];
+                var dnsCheckNodes = [];
+                var podIPs = [];
+                var resp = data.responses;
+                for (let podIP in resp) {
+                        let value = resp[podIP];
+                        nodes.push({
+                                "label": podIP + " (" + value.HostIP + ")",
+                                "id": podIP,
+                                "x": 0,
+                                "y": 0,
+                                _data: value,
+                        });
+                        podIPs.push(podIP);
+                };
+
+                // prepare the edges
+                var edges = [];
+                var resp = data.responses;
+                for (let callId in resp) {
+                        // If there was an error, the response can be undefined,
+                        // especially if there was a timeout/context exceeded
+                        if (resp[callId].response !== undefined) {
+                                var call = resp[callId].response['podResults'];
+                                if (typeof call !== 'string'){
+                                        for (let target in call) {
+                                                edges.push({
+                                                        source: callId,
+                                                        target: target,
+                                                        _data: call[target]
+                                                });
+                                        };
+                                }
+                        }
+                };
+
+                console.log(edges);
+                console.log(nodes);
+
+                // if running goldpinger with PING_NUMBER, then we need to add nodes for the edges
+                // that are not reporting but are reported to
+                edges.forEach(function(edge) {
+                        [edge.source, edge.target].forEach(function(value) {
+                                if (podIPs.indexOf(value) == -1){
+                                        nodes.push({
+                                                "label": value,
+                                                "id": value,
+                                                "x": 0,
+                                                "y": 0,
+                                                _data: {},
+                                        });
+                                        podIPs.push(value);
+                                }
+                        })
+                })
+                console.log(nodes);
+
+                if ('dnsResults' in data) {
+                    var yoffset = 0;
+                    for (let checkedHost in data.dnsResults) {
+                        let value = data.dnsResults[checkedHost];
+                        var allOk = true;
+                        for (let pod in value) {
+                            var podData = value[pod];
+                            var elapsed = 0;
+                            if ('response-time-ms' in podData) {
+                                elapsed = podData['response-time-ms'];
+                            }
+                            var podOk = (!('error' in podData));
+                            allOk = allOk && podOk
+                            edges.push({
+                                source: pod,
+                                target: checkedHost,
+                                _data: {
+                                    "OK": podOk,
+                                    "elapsed": elapsed,
+                                    "isDNSCheckNode": true,
+                                }
+                            });
+                        }
+                        value["OK"] = allOk
+                        dnsCheckNodes.push({
+                            "label": checkedHost,
+                            "id": checkedHost,
+                            "x": 0,
+                            "y": 0,
+                            _data: value,
+                        });
+                    }
+                }
+
+                // build the actual graph
+                s = new sigma({
+                        graph: {
+                                nodes: [],
+                                edges: []
+                        },
+                        renderer: {
+                                container: document.getElementById('graph-container'),
+                                type: 'canvas'
+                        },
+                        settings: {
+                                edgeLabelSize: 'proportional',
+                                minArrowSize: 7,
+                                minNodeSize: 10,
+                                sideMargin: 0.45
+                        }
+                });
+
+                // generate the nodes on the graph
+                nodes.forEach(function(node, i, a){
+                        node.x = Math.cos(Math.PI * 2 * i / a.length);
+                        node.y = Math.sin(Math.PI * 2 * i / a.length);
+                        node.size = 10;
+                        node.color = "#4CC40B";
+                        if (!node._data.OK) {
+                                node.color = "red";
+                        }
+                        //console.log(node);
+                        s.graph.addNode(node);
+                });
+
+                // generate any dns nodes on the graph
+                dnsCheckNodes.forEach(function(node, i, a){
+                        node.x = 2;
+                        node.y = (0.6 * i / a.length) - 0.8;
+                        node.size = 10;
+                        node.color = "#4CC40B";
+                        if (!node._data.OK) {
+                                node.color = "red";
+                        }
+                        //console.log(node);
+                        s.graph.addNode(node);
+                });
+
+                // generate the edges
+                edges.forEach(function(edge, i){
+                        var color = "#ccc";
+                        var type = "curvedArrow";
+                        if (edge.source == edge.target){
+                                color = "gray";
+                                type = "curve";
+                        }
+                        if (!edge._data.OK) {
+                                color = "red";
+                        }
+                        if ("isDNSCheckNode" in edge._data) {
+                                type = "dashed";
+                        }
+                        var edge = {
+                                id: "e" + i,
+                                source: edge.source,
+                                target: edge.target,
+                                type: type,
+                                color: color,
+                                label: edge._data.elapsed,
+                                size: 7
+                        }
+                        //console.log(edge);
+                        s.graph.addEdge(edge)
+                });
+
+                console.log(s.graph.nodes());
+                console.log(s.graph.edges());
+
+                s.refresh();
+
+                var hideNotTouching = function(dst){
+                        s.graph.edges().forEach(function(edge){
+                                if (dst == undefined) {
+                                        // revert everything to the original state
+                                        if (edge._color){
+                                                edge.color = edge._color;
+                                                delete edge._color;
+                                        }
+                                } else if (edge.source != dst){
+                                        // hide
+                                        if (!edge._color){
+                                                edge._color = edge.color;
+                                        }
+                                        edge.color = "#faf8f6";
+                                } else {
+                                        // show
+                                        if (edge._color) {
+                                                edge.color = edge._color;
+                                        }
+                                }
+                        });
+                        s.refresh();
+                }
+
+                s.bind("clickNode", function (e) {
+                        var node = e.data.node;
+                        hideNotTouching(node.id);
+
+                        // fill the voids
+                        $('#modal-title').html(node.id);
+                        $('#modal-body').html(prepareJSON(node._data));
+
+                        // show the things
+                        $('#modal-window-code').modal('show');
+                });
+                s.bind("clickStage", function (e) {
+                        hideNotTouching();
+                });
+
+                s.bind("clickEdge", function (e) {
+                        var edge = e.data.edge;
+
+                        console.log(edge);
+
+                        // fill the voids
+                        $('#modal-title').html(edge.id);
+                        $('#modal-body').html(prepareJSON(edge._data));
+
+                        // show the things
+                        $('#modal-window-code').modal('show');
+                });
+        })
+        .catch(function(err){
+            console.error(err);
+            $('#modal-title').html("Error");
+            $('#modal-body').html(prepareJSON(err));
+            $('#modal-window-code').modal('show');
+        });
+};
+
+main();
+
+$("#show-data").click(function (e) {
+        // fill the voids
+        $('#modal-title').html("check_all");
+        $('#modal-body').html(prepareJSON(global_data));
+
+        // show the things
+        $('#modal-window-code').modal('show');
+});
+$("#reload-graph").click(function (e) {
+        s.kill();
+        main();
+});
+$("#show-heatmap").click(function (e) {
+        updateHeatmap();
+        $('#modal-window-heatmap').modal('show');
+});
+var updateHeatmap = function(){
+        $('#heatmap-body').html(
+                '<img src="' + getHeatmapUrl() + '" />'
+        );
+}
+$("#update-heatmap").click(function (e) {
+        updateHeatmap();
+});
+</script>
+</body>
+</html>
