@@ -456,18 +456,13 @@ class VkaciBuilTopology(object):
         al.sort()
         return al
 
-    def get_pods(self, ns = ""):
+    def get_pods(self, ns = None):
         '''return all the pods in all namespaces by default or filtered by ns'''
         pod_names = []
-        if ns == "":
-            for node in self.topology.keys():
-                for pod in self.topology[node]["pods"].keys():
+        for node in self.topology.keys():
+            for pod, v in self.topology[node]["pods"].items():
+                if ns == None or ns == v["ns"]:
                     pod_names.append(pod)
-        else:
-            for node in self.topology.keys():
-                for pod ,v in self.topology[node]["pods"].items():
-                    if ns == v["ns"]:
-                        pod_names.append(pod)
         return pod_names
 
     def get_namespaces(self):
