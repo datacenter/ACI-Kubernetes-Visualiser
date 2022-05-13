@@ -209,7 +209,7 @@ class VkaciBuilTopology(object):
     def get_cluster_as(self):
         ''' Get the AS from K8s Configuration this assumes Calico is used'''
         asn = 0
-        # Try to get Calico AS
+        # Try to get Cluster AS from Calico Config
         try: 
             res =  self.custom_obj.get_cluster_custom_object(
                 group="crd.projectcalico.org",
@@ -222,7 +222,7 @@ class VkaciBuilTopology(object):
         except Exception as e:
             # The the CRD does not exists I get an 404 not found exeption
             pass
-         # Try to get Calico AS
+         # Try to get Cluster AS from kube-rotuer Config
         try: 
             pods = self.get_pods(ns='kube-system')
             for pod in pods:
