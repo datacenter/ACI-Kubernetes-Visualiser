@@ -225,11 +225,12 @@ class VkaciBuilTopology(object):
          # Try to get Cluster AS from kube-rotuer Config
         try: 
             pods = self.get_pods(ns='kube-system')
+            kr_pod = False
             for pod in pods:
                 if "kube-router" in pod:
                     #I just need one so I break immediately
+                    kr_pod = self.v1.read_namespaced_pod(pod,'kube-system')
                     break
-            kr_pod = self.v1.read_namespaced_pod(pod,'kube-system')
             if kr_pod:
                 for arg in kr_pod.spec.containers[0].args:
                     if "--cluster-asn=" in arg:
