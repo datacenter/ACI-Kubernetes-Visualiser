@@ -19,7 +19,7 @@ formatter = logging.Formatter(
         '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 class VkaciEnvVariables(object):
     '''Parse the environment variables'''
@@ -208,7 +208,7 @@ class VkaciBuilTopology(object):
 
     def get_cluster_as(self):
         ''' Get the AS from K8s Configuration this assumes Calico is used'''
-
+        asn = 0
         # Try to get Calico AS
         try: 
             res =  self.custom_obj.get_cluster_custom_object(
@@ -220,18 +220,26 @@ class VkaciBuilTopology(object):
             logger.info('Calico BGP Config Detected!')
             asn = str(res['spec']['asNumber'])
         except Exception as e:
+            # The the CRD does not exists I get an 404 not found exeption
             pass
+         # Try to get Calico AS
         try: 
-            res =  self.custom_obj.get_cluster_custom_object(
-                group="crd.projectcalico.org",
-                version="v1",
-                name="default",
-                plural="bgpconfigurations"
-            )
-            logger.info('Calico BGP Config Detected!')
-            asn = str(res['spec']['asNumber'])
+            pods = self.get_pods(ns='kube-system')
+            for pod in pods:
+                if "kube-router" in pod:
+                    #I just need one so I break immediately
+                    break
+            kr_pod = self.v1.read_namespaced_pod(pod,'kube-system')
+            if kr_pod:
+                for arg in kr_pod.spec.containers[0].args:
+                    if "--cluster-asn=" in arg:
+                        asn = arg[14:]
+                logger.info('Kube-Router Detected! Cluster AS=%s',asn)
         except Exception as e:
             pass
+        if asn == 0:
+            logger.error("Can't detect K8s Cluster AS, BGP topology will not work corectly")
+        return asn
 
 
 
@@ -319,11 +327,14 @@ class VkaciBuilTopology(object):
 
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
         # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
-        # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
-        #and extract the common and calico part.
-        vrf=re.split('/|-',self.aci_vrf)
-        vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
-        bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
+        # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by /.
+        #Then we can trim the strings as the tn- and ctx- are fixed. DO NOT split by - as - is a valid char for an APIC object
+        tmp=re.split('/',self.aci_vrf)
+        tenant=tmp[1][3:]
+        vrf = tmp[2][4:]
+        dn_filter = '.*/dom-' + tenant + ':' + vrf + '/.*'
+        bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, dn_filter, node['node_ip'])
+        logger.debug("bgpPeerEntry %s %s %s %s", bgpPeerEntry, apic, dn_filter, node['node_ip'])
 
         for bgpPeer in bgpPeerEntry:
             if bgpPeer.operSt == "established":
