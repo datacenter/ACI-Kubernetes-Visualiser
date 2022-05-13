@@ -19,7 +19,7 @@ formatter = logging.Formatter(
         '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class VkaciEnvVariables(object):
     '''Parse the environment variables'''
@@ -418,15 +418,15 @@ class VkaciBuilTopology(object):
                 for ep in eps:
                     for ip in ep.Children:
                         if ip.addr == v['node_ip']:
-                            logger.info("Node %s: Updated MAC address %s", ip.addr, ep.mac)
+                            logger.debug("Node %s: Updated MAC address %s", ip.addr, ep.mac)
                             v['mac'] = ep.mac           
                 future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
         
         logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
-        logger.info("Topology:")
-        logger.info(pformat(self.topology))
+        logger.debug("Topology:")
+        logger.debug(pformat(self.topology))
         return self.topology
 
     def get(self):
