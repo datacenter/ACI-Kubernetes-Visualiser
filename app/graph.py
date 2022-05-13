@@ -193,7 +193,9 @@ class VkaciBuilTopology(object):
 
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
-
+        if 'mac' not in node:
+            logger.error("Could not resolved the mac address of node with ip %s", node['node_ip'] )
+            exit()
         #Find the mac to interface mapping
         logger.info("Find the mac to interface mapping for Node %s with MAC %s", node['node_ip'], node['mac'])
         path =  self.apic_methods.get_fvcep_mac(apic, node['mac'])
@@ -303,11 +305,13 @@ class VkaciBuilTopology(object):
         start = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             for k,v in self.topology.items():
+                logger.info("Updating node %s", k)
                 #find the mac for the IP of the node and add it to the topology file.
                 for ep in eps:
                     for ip in ep.Children:
                         if ip.addr == v['node_ip']:
-                            v['mac'] = ep.mac
+                            logger.info("Node %s: Updated MAC address %s", ip.addr, ep.mac)
+                            v['mac'] = ep.mac           
                 future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
