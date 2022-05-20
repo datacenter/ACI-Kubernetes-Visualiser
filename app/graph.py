@@ -208,14 +208,41 @@ class VkaciBuilTopology(object):
 
     def get_cluster_as(self):
         ''' Get the AS from K8s Configuration this assumes Calico is used'''
-        res =  self.custom_obj.get_cluster_custom_object(
-            group="crd.projectcalico.org",
-            version="v1",
-            name="default",
-            plural="bgpconfigurations"
-        )
-        logger.info('detected AS %s', res['spec']['asNumber'])
-        return(str(res['spec']['asNumber']))
+        asn = 0
+        # Try to get Cluster AS from Calico Config
+        try: 
+            res =  self.custom_obj.get_cluster_custom_object(
+                group="crd.projectcalico.org",
+                version="v1",
+                name="default",
+                plural="bgpconfigurations"
+            )
+            logger.info('Calico BGP Config Detected!')
+            asn = str(res['spec']['asNumber'])
+        except Exception as e:
+            # The the CRD does not exists I get an 404 not found exeption
+            pass
+         # Try to get Cluster AS from kube-rotuer Config
+        try: 
+            pods = self.get_pods(ns='kube-system')
+            kr_pod = False
+            for pod in pods:
+                if "kube-router" in pod:
+                    #I just need one so I break immediately
+                    kr_pod = self.v1.read_namespaced_pod(pod,'kube-system')
+                    break
+            if kr_pod:
+                for arg in kr_pod.spec.containers[0].args:
+                    if "--cluster-asn=" in arg:
+                        asn = arg[14:]
+                logger.info('Kube-Router Detected! Cluster AS=%s',asn)
+        except Exception as e:
+            pass
+        if asn == 0:
+            logger.error("Can't detect K8s Cluster AS, BGP topology will not work corectly")
+        return asn
+
+
 
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
@@ -262,7 +289,9 @@ class VkaciBuilTopology(object):
 
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
-
+        if 'mac' not in node:
+            logger.error("Could not resolved the mac address of node with ip %s", node['node_ip'] )
+            exit()
         #Find the mac to interface mapping
         logger.info("Find the mac to interface mapping for Node %s with MAC %s", node['node_ip'], node['mac'])
         path =  self.apic_methods.get_fvcep_mac(apic, node['mac'])
@@ -299,11 +328,14 @@ class VkaciBuilTopology(object):
 
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
         # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
-        # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by / and - to get ['uni', 'tn', 'common', 'ctx', 'calico']
-        #and extract the common and calico part.
-        vrf=re.split('/|-',self.aci_vrf)
-        vrf = '.*/dom-' + vrf[2] + ':' + vrf[4] + '/.*'
-        bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, vrf, node['node_ip'])
+        # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by /.
+        #Then we can trim the strings as the tn- and ctx- are fixed. DO NOT split by - as - is a valid char for an APIC object
+        tmp=re.split('/',self.aci_vrf)
+        tenant=tmp[1][3:]
+        vrf = tmp[2][4:]
+        dn_filter = '.*/dom-' + tenant + ':' + vrf + '/.*'
+        bgpPeerEntry = self.apic_methods.get_bgppeerentry(apic, dn_filter, node['node_ip'])
+        logger.debug("bgpPeerEntry %s %s %s %s", bgpPeerEntry, apic, dn_filter, node['node_ip'])
 
         for bgpPeer in bgpPeerEntry:
             if bgpPeer.operSt == "established":
@@ -382,18 +414,20 @@ class VkaciBuilTopology(object):
         start = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:            
             for k,v in self.topology.items():
+                logger.info("Updating node %s", k)
                 #find the mac for the IP of the node and add it to the topology file.
-                    for ep in eps:
-                        for ip in ep.Children:
-                            if ip.addr == v['node_ip']:
-                                v['mac'] = ep.mac
-                    future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
+                for ep in eps:
+                    for ip in ep.Children:
+                        if ip.addr == v['node_ip']:
+                            logger.debug("Node %s: Updated MAC address %s", ip.addr, ep.mac)
+                            v['mac'] = ep.mac           
+                future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         result = future.result()
         
         logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
-        logger.info("Topology:")
-        logger.info(pformat(self.topology))
+        logger.debug("Topology:")
+        logger.debug(pformat(self.topology))
         return self.topology
 
     def get(self):
@@ -422,12 +456,13 @@ class VkaciBuilTopology(object):
         al.sort()
         return al
 
-    def get_pods(self):
-        '''return all the pods'''
+    def get_pods(self, ns = None):
+        '''return all the pods in all namespaces by default or filtered by ns'''
         pod_names = []
         for node in self.topology.keys():
-            for pod in self.topology[node]["pods"].keys():
-                pod_names.append(pod)
+            for pod, v in self.topology[node]["pods"].items():
+                if ns == None or ns == v["ns"]:
+                    pod_names.append(pod)
         return pod_names
 
     def get_namespaces(self):
