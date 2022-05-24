@@ -1,0 +1,26 @@
+# Add permission to list the POD for in cluster PODs
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-list
+  labels:
+    {{- include "vkaci.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["list", "get"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pods-list
+  labels:
+    {{- include "vkaci.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "vkaci.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: pods-list
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vkaci.fullname" . }}-vkaci
+  labels:
+    {{- include "vkaci.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  #externalIPs:
+  #  - {{ .Values.service.externalIP }}
+  externalTrafficPolicy: Local
+  ports:
+    - port: {{ .Values.service.port }}
+      nodePort: {{ .Values.service.nodePort }}
+      targetPort: 8080
+      protocol: TCP
+  selector:
+    {{- include "vkaci.selectorLabels" . | nindent 4 }}
