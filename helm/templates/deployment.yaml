@@ -60,7 +60,7 @@ spec:
             - name: VRF
               value: "{{ .Values.vrfName }}"
             - name: NEO4J_URL
-              value: "{{ .Values.n4jUrl }}"
+              value: "neo4j://{{ include "vkaci.fullname" . }}-neo4j:7687"
             - name: NEO4J_BROWSER_URL
               value: "{{ .Values.n4jBrowserUrl }}"
             - name: NEO4J_USER
@@ -88,6 +88,6 @@ spec:
       volumes:
         - name: aci-user-cert-volume
           secret:
-            secretName: aci-user-cert
+            secretName: {{ include "vkaci.fullname" . }}-aci-user-cert
         - name: aci-meta
           emptyDir: {}

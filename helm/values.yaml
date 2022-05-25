@@ -5,16 +5,19 @@
 replicaCount: 1
 
 # VKACI APIC Variables
+# All of these will need to be set correctly
 apicIps: ""
 apicCertName: ""
-apicKeyFile: ""
 apicUsername: ""
 vrfTenant: ""
 vrfName: ""
+# Get the APIC key data by encoding your key file as a base64 string
+# NOTE: It would have been nice to be able to pass in a filename instead so Helm can do it for us
+# but I found no way for Helm to access user files outside of the chart.
+apicKeyData: ""
 
-# VKACI Neo4j Variables
-n4jUrl: neo4j://vkaci-chart-neo4j:7687
-n4jBrowserUrl: neo4j://vkaci-chart-neo4j:7687
+# Special VKACI Neo4j Variables
+n4jBrowserUrl: ""
 n4jUser: neo4j
 n4jPassword: me-change
 
@@ -25,8 +28,6 @@ image:
   tag: ""
 
 imagePullSecrets: []
-nameOverride: "vkaci-app"
-fullnameOverride: "vkaci-app"
 
 serviceAccount:
   # Specifies whether a service account should be created
