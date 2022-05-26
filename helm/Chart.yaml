@@ -24,8 +24,8 @@ version: 0.1.0
 appVersion: "1.0rc2"
 
 maintainers:
-- email: samitab@cisco.com
-  name: samitab
+- email: vkaci-tool@cisco.com
+  name: samitab, camrossi
 
 # The neo4j dependency is a modified version speficially for VKACI.
 # The pod is a deployment instead of a stateful set and does not require
