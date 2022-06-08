@@ -112,14 +112,22 @@ class ApicMethodsResolve(object):
         So I need to normalize this
         '''
 
-        if 'protpaths' in path:
-            # protpaths means the interface is a vPC/PC so I canjust return the path all good
-            return path
+        # Detect the link type by lagT values of fabricPathEp
+        #fc-link => Fc Port Channel
+        #link Direct Port Channel
+        #node Virtaul Port Channel
+        #not-aggregated Not an aggregated link
+        
+        fabricPathEp = apic.mit.FromDn(path).GET()[0]
 
+        if 'node' == fabricPathEp.lagT or "link" == fabricPathEp.lagT:
+            logger.info('Detected a vPC or PC Interface')
+            # if the interface is a vPC/PC I canjust return the path all good
+            return path
+        
         #Derive the physcal interface from the proto path topology/pod-1/paths-2104/pathep-[eth1/11] -->
         #  topology/pod-1/node-2103/sys/phys-[eth1/11]
-        logger.info('Detected a non vPC/PC interface')
-
+        logger.info('Detected a standalone interface')
         path_dn = path.replace('paths','node')
         path_dn = path_dn.replace('pathep','sys/phys')
         logger.info('Getting interface %s CDP and LLDP infos', path_dn)
