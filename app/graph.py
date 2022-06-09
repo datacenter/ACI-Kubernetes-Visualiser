@@ -9,6 +9,7 @@ from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
 from pprint import pformat
+from datetime import datetime
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
 #logging.getLogger('pyaci').setLevel(logging.DEBUG)
@@ -19,7 +20,7 @@ formatter = logging.Formatter(
         '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 class VkaciEnvVariables(object):
     '''Parse the environment variables'''
@@ -307,12 +308,22 @@ class VkaciBuilTopology(object):
         #Get Path, there should be only one...need to add checks
         # i.e I get topology/pod-1/protpaths-101-102/pathep-[esxi1_PolGrp] 
         if len(path.fvRsCEpToPathEp) > 1:
-            logger.error("Node %s %s is learned over multiple paths. This points to an ACI misconfiguration, i.e. port-channel/vPC operating in individual mode", node['node_ip'], node['mac'])
+            logger.warning("Node %s %s is learned over multiple paths. This points to a possilbe ACI misconfiguration or Stale fvRsCEpToPathEp in the APIC, i.e. port-channel/vPC operating in individual mode. Will pick the most recent entry", node['node_ip'], node['mac'])
+            
+        create_time = None
 
         for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
-            pathtDn = fvRsCEpToPathEp.tDn
-            logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
-
+            logger.info("Found path %s for %s %s", fvRsCEpToPathEp.tDn, node['node_ip'], node['mac'])
+            # If create_time is None is the first iteration just save it and pick the path
+            if not create_time:
+                create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
+                pathtDn = fvRsCEpToPathEp.tDn
+            # If create_time exist if the new fvRsCEpToPathEp is more recent override 
+            elif datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
+                create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
+                logger.info("Discarding path %s as %s is more recent", pathtDn, fvRsCEpToPathEp.tDn)
+                pathtDn = fvRsCEpToPathEp.tDn
+                
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
         pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
