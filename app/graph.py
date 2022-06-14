@@ -338,20 +338,6 @@ class VkaciBuilTopology(object):
                 pathtDn = fvRsCEpToPathEp.tDn
                 logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
         
-        #Not working modTs is not updated see CSCwc13370
-        #create_time = None
-        #for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
-        #    logger.info("Found path %s for %s %s", fvRsCEpToPathEp.tDn, node['node_ip'], node['mac'])
-        #    # If create_time is None is the first iteration just save it and pick the path
-        #    if not create_time:
-        #        create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
-        #        pathtDn = fvRsCEpToPathEp.tDn
-        #    # If create_time exist if the new fvRsCEpToPathEp is more recent override 
-        #    elif datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
-        #        create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
-        #        logger.info("Discarding path %s as %s is more recent", pathtDn, fvRsCEpToPathEp.tDn)
-        #        pathtDn = fvRsCEpToPathEp.tDn
-        
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
         pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
