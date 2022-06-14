@@ -102,6 +102,11 @@ class ApicMethodsResolve(object):
         for node in fabricNodes:
             nodes[node.address] = node.name
         return nodes
+    
+    def get_arp_adj_ep(self, apic: Node, mac:str):
+        '''Return an IP Address '''
+        return apic.methods.ResolveClass('arpAdjEp').GET(**options.filter(
+            filters.Eq('arpAdjEp.mac',mac)))
 
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
@@ -309,21 +314,44 @@ class VkaciBuilTopology(object):
         # i.e I get topology/pod-1/protpaths-101-102/pathep-[esxi1_PolGrp] 
         if len(path.fvRsCEpToPathEp) > 1:
             logger.warning("Node %s %s is learned over multiple paths. This points to a possilbe ACI misconfiguration or Stale fvRsCEpToPathEp in the APIC, i.e. port-channel/vPC operating in individual mode. Will pick the most recent entry", node['node_ip'], node['mac'])
-            
-        create_time = None
-
-        for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
-            logger.info("Found path %s for %s %s", fvRsCEpToPathEp.tDn, node['node_ip'], node['mac'])
-            # If create_time is None is the first iteration just save it and pick the path
-            if not create_time:
-                create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
+            # Due to CSCwc13370 I need to try to figure out what is the right path, the best way I found for now is 
+            # to look for the arpAdjEps for the mac and find the one that has a physical path but it takes a while for the adj to 
+            #be updated
+            arpAdjEps = self.apic_methods.get_arp_adj_ep(apic, node['mac'])
+            create_time = None
+            logger.warning("Checking arpAdjEp")
+            for arpAdjEp in arpAdjEps:
+                if 'tunnel' not in arpAdjEp.physIfId:
+                    if not create_time:
+                        create_time = datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z")
+                        #Extract node id from the dn
+                        arp_node_owner_id = arpAdjEp.dn.split("/")[2].split('-')[1]
+                    elif datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
+                        create_time = datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z")
+                        arp_node_owner_id = arpAdjEp.dn.split("/")[2].split('-')[1]
+            for tmp in path.fvRsCEpToPathEp:
+                if arp_node_owner_id in tmp.tDn:
+                    pathtDn = tmp.tDn
+                    logger.warning("Multiple paths: Selecting %s as path", pathtDn)
+        else:
+            for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
                 pathtDn = fvRsCEpToPathEp.tDn
-            # If create_time exist if the new fvRsCEpToPathEp is more recent override 
-            elif datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
-                create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
-                logger.info("Discarding path %s as %s is more recent", pathtDn, fvRsCEpToPathEp.tDn)
-                pathtDn = fvRsCEpToPathEp.tDn
-                
+                logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
+        
+        #Not working modTs is not updated see CSCwc13370
+        #create_time = None
+        #for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
+        #    logger.info("Found path %s for %s %s", fvRsCEpToPathEp.tDn, node['node_ip'], node['mac'])
+        #    # If create_time is None is the first iteration just save it and pick the path
+        #    if not create_time:
+        #        create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
+        #        pathtDn = fvRsCEpToPathEp.tDn
+        #    # If create_time exist if the new fvRsCEpToPathEp is more recent override 
+        #    elif datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
+        #        create_time = datetime.strptime(fvRsCEpToPathEp.modTs,"%Y-%m-%dT%H:%M:%S.%f%z")
+        #        logger.info("Discarding path %s as %s is more recent", pathtDn, fvRsCEpToPathEp.tDn)
+        #        pathtDn = fvRsCEpToPathEp.tDn
+        
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
         pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
