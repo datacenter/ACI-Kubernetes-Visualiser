@@ -19,7 +19,7 @@ formatter = logging.Formatter(
         '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 class VkaciEnvVariables(object):
     '''Parse the environment variables'''
@@ -201,17 +201,23 @@ class VkaciBuilTopology(object):
             switch = neighbour.dn.split('/')[2].replace("node", "leaf")
             if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
                 node['neighbours'][neighbour_adj.sysName][switch] = set()
+                node['neighbours'][neighbour_adj.sysName]['Description'] = ""
                 logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
             if not neighbour_adj_port:
                 # CDP Class is portId
                 neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
-
+            #LLDP Class is portId (I.E. VMNICX)
+            neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
+            if not neighbour_adj_port:
+                # CDP Class is portId
+                neighbour_description = getattr(neighbour_adj, 'platId', None)
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
                 node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
+                node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
     def get_cluster_as(self):
