@@ -509,9 +509,10 @@ class VkaciGraph(object):
     WITH $json as data
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
-    MATCH (v:VM_Host) WHERE v.name = s.vm_host
+    UNWIND s.vm_hosts as v
+    MATCH (vmh:VM_Host) WHERE vmh.name = v
     MERGE (switch:Switch {name:s.name})
-    MERGE (v)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
     """
     #FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.node}]->(switch)))
 
@@ -536,8 +537,9 @@ class VkaciGraph(object):
             for neighbour, switches in topology[node]["neighbours"].items():
                 for switchName, interfaces in switches.items():
                     if switchName not in switch_items.keys():
-                        switch_items[switchName] = {"name": switchName, "vm_host": neighbour, "interface": next(iter(interfaces or []), ""), "nodes": []}
+                        switch_items[switchName] = {"name": switchName, "vm_hosts": [], "interface": next(iter(interfaces or []), ""), "nodes": []}
                     switch_items[switchName]["nodes"].append(node)
+                    switch_items[switchName]["vm_hosts"].append(neighbour)
         switch_data = { "items": list(switch_items.values()) }
 
         for node in topology.keys():
