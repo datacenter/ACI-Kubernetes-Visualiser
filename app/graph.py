@@ -508,19 +508,28 @@ class VkaciGraph(object):
     MERGE (pod)-[:RUNNING_ON]->(node))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
-    FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch)))
+    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh))
     """
+
+    query2 = """
+    WITH $json as data
+    UNWIND data.items as s
+    WITH s, SIZE(s.nodes) as ncount
+    MATCH (v:VM_Host) WHERE v.name = s.vm_host
+    MERGE (switch:Switch {name:s.name})
+    MERGE (v)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    """
+    #FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.node}]->(switch)))
 
     def update_database(self):
         '''Update the neo4j database with the data collected from ACI and K8s'''
         graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
         topology = self.topology.update()
-        data = self.build_graph_data(topology)
+        data, switch_data = self.build_graph_data(topology)
 
         graph.run("MATCH (n) DETACH DELETE n")
         results = graph.run(self.query,json=data)
-
+        results = graph.run(self.query2,json=switch_data)
         tx = graph.begin()
         graph.commit(tx)
 
@@ -528,13 +537,19 @@ class VkaciGraph(object):
         '''generate the neo4j data to insert in the DB'''
         data = { "items": [] }
 
+        switch_items = {}
+        for node in topology.keys():
+            for neighbour, switches in topology[node]["neighbours"].items():
+                for switchName, interfaces in switches.items():
+                    if switchName not in switch_items.keys():
+                        switch_items[switchName] = {"name": switchName, "vm_host": neighbour, "interface": next(iter(interfaces or []), ""), "nodes": []}
+                    switch_items[switchName]["nodes"].append(node)
+        switch_data = { "items": list(switch_items.values()) }
+
         for node in topology.keys():
             vm_hosts = []
             for neighbour, switches in topology[node]["neighbours"].items():
-                switch_list = []
-                for switchName, interfaces in switches.items():  
-                    switch_list.append({"name": switchName, "interface": next(iter(interfaces or []), "")})     
-                vm_hosts.append({"host_name": neighbour, "switches": switch_list})
+                vm_hosts.append({"host_name": neighbour})
             
             pods = []
             for pod_name, pod in topology[node]["pods"].items():
@@ -553,7 +568,7 @@ class VkaciGraph(object):
                 "bgp_peers": bgp_peers
             })
             
-        return data
+        return data, switch_data
 
 class VkaciTable ():
     '''Handle the table view'''
