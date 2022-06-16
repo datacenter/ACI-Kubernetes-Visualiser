@@ -19,7 +19,7 @@ formatter = logging.Formatter(
         '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class VkaciEnvVariables(object):
     '''Parse the environment variables'''
@@ -194,14 +194,14 @@ class VkaciBuilTopology(object):
 
         for neighbour_adj in AdjEp:
             if neighbour_adj.sysName not in node['neighbours'].keys():
-                node['neighbours'][neighbour_adj.sysName] = {}
+                node['neighbours'][neighbour_adj.sysName] = {'switches': {}}
+                node['neighbours'][neighbour_adj.sysName]['Description'] = ""
                 logger.info("Found the following Host as Neighbour %s", neighbour_adj.sysName)
 
             # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
             switch = neighbour.dn.split('/')[2].replace("node", "leaf")
-            if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
-                node['neighbours'][neighbour_adj.sysName][switch] = set()
-                node['neighbours'][neighbour_adj.sysName]['Description'] = ""
+            if switch not in node['neighbours'][neighbour_adj.sysName]['switches'].keys() and neighbour_adj:
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
                 logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
@@ -216,7 +216,7 @@ class VkaciBuilTopology(object):
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
-                node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
@@ -459,7 +459,7 @@ class VkaciBuilTopology(object):
             for v in self.topology[node]["bgp_peers"]:
                 leafs.append(v)
             for v, n in self.topology[node]["neighbours"].items():
-                leafs.extend(n.keys())    
+                leafs.extend(n['switches'].keys())    
         al=list(set(leafs))
         al.sort()
         return al
@@ -508,7 +508,7 @@ class VkaciGraph(object):
     MERGE (pod)-[:RUNNING_ON]->(node))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh))
+    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
     """
 
     query2 = """
@@ -539,8 +539,8 @@ class VkaciGraph(object):
 
         switch_items = {}
         for node in topology.keys():
-            for neighbour, switches in topology[node]["neighbours"].items():
-                for switchName, interfaces in switches.items():
+            for neighbour, neighbour_data in topology[node]["neighbours"].items():
+                for switchName, interfaces in neighbour_data['switches'].items():
                     if switchName not in switch_items.keys():
                         switch_items[switchName] = {"name": switchName, "vm_host": neighbour, "interface": next(iter(interfaces or []), ""), "nodes": []}
                     switch_items[switchName]["nodes"].append(node)
@@ -548,8 +548,8 @@ class VkaciGraph(object):
 
         for node in topology.keys():
             vm_hosts = []
-            for neighbour, switches in topology[node]["neighbours"].items():
-                vm_hosts.append({"host_name": neighbour})
+            for neighbour, neighbour_data in topology[node]["neighbours"].items():
+                vm_hosts.append({"host_name": neighbour, "description": neighbour_data['Description']})
             
             pods = []
             for pod_name, pod in topology[node]["pods"].items():
@@ -588,12 +588,12 @@ class VkaciTable ():
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
                 
                 for neighbour_name, neighbour in node["neighbours"].items():
-                    if leaf_name in neighbour.keys():
+                    if leaf_name in neighbour['switches'].keys():
                         pods = []
                         for pod_name, pod in node["pods"].items():
                             pods.append({"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
                         if neighbour_name not in vm_hosts:
-                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour['switches'][leaf_name]), "ns": "", "image":"esxi.png","data":[]}
                         vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg", "data": pods})
             
             leaf_data = list(vm_hosts.values())
@@ -648,9 +648,9 @@ class VkaciTable ():
             vm_hosts = {}
             for node_name, node in topology.items():
                 for neighbour_name, neighbour in node["neighbours"].items():
-                    if leaf_name in neighbour.keys():
+                    if leaf_name in neighbour['switches'].keys():
                         if neighbour_name not in vm_hosts:
-                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour['switches'][leaf_name]), "ns": "", "image":"esxi.png","data":[]}
                         vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
 
             if len(vm_hosts) > 0:
@@ -672,7 +672,7 @@ class VkaciTable ():
             pods = {}
             for node_name, node in topology.items():
                  for neighbour_name, neighbour in node["neighbours"].items():
-                    if leaf_name in neighbour.keys():
+                    if leaf_name in neighbour['switches'].keys():
                         for pod_name, pod in node["pods"].items():
                             pods[pod_name] = {"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"}
             
