@@ -9,6 +9,7 @@ from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
 from pprint import pformat
+from datetime import datetime
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
 #logging.getLogger('pyaci').setLevel(logging.DEBUG)
@@ -101,6 +102,11 @@ class ApicMethodsResolve(object):
         for node in fabricNodes:
             nodes[node.address] = node.name
         return nodes
+    
+    def get_arp_adj_ep(self, apic: Node, mac:str):
+        '''Return an IP Address '''
+        return apic.methods.ResolveClass('arpAdjEp').GET(**options.filter(
+            filters.Eq('arpAdjEp.mac',mac)))
 
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
@@ -307,12 +313,31 @@ class VkaciBuilTopology(object):
         #Get Path, there should be only one...need to add checks
         # i.e I get topology/pod-1/protpaths-101-102/pathep-[esxi1_PolGrp] 
         if len(path.fvRsCEpToPathEp) > 1:
-            logger.error("Node %s %s is learned over multiple paths. This points to an ACI misconfiguration, i.e. port-channel/vPC operating in individual mode", node['node_ip'], node['mac'])
-
-        for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
-            pathtDn = fvRsCEpToPathEp.tDn
-            logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
-
+            logger.warning("Node %s %s is learned over multiple paths. This points to a possilbe ACI misconfiguration or Stale fvRsCEpToPathEp in the APIC, i.e. port-channel/vPC operating in individual mode. Will pick the most recent entry", node['node_ip'], node['mac'])
+            # Due to CSCwc13370 I need to try to figure out what is the right path, the best way I found for now is 
+            # to look for the arpAdjEps for the mac and find the one that has a physical path but it takes a while for the adj to 
+            #be updated
+            arpAdjEps = self.apic_methods.get_arp_adj_ep(apic, node['mac'])
+            create_time = None
+            logger.warning("Checking arpAdjEp")
+            for arpAdjEp in arpAdjEps:
+                if 'tunnel' not in arpAdjEp.physIfId:
+                    if not create_time:
+                        create_time = datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z")
+                        #Extract node id from the dn
+                        arp_node_owner_id = arpAdjEp.dn.split("/")[2].split('-')[1]
+                    elif datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
+                        create_time = datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z")
+                        arp_node_owner_id = arpAdjEp.dn.split("/")[2].split('-')[1]
+            for tmp in path.fvRsCEpToPathEp:
+                if arp_node_owner_id in tmp.tDn:
+                    pathtDn = tmp.tDn
+                    logger.warning("Multiple paths: Selecting %s as path", pathtDn)
+        else:
+            for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
+                pathtDn = fvRsCEpToPathEp.tDn
+                logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
+        
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
         pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
