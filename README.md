@@ -16,7 +16,7 @@ The Kubernetes API allows you to query and manipulate the state of Kubernetes AP
 - Vkaci is an essential tool as it collects raw data from the K8's API and APIC, models it and delivers it so the data is easier to understand and interpret.
 - It has multiple views allowing users to see how their K8s Leafs, nodes and Pods are linked and interact with their Fabrics.
 - Users can also see the connectivity of applications in pods so they're able to understand how changes to their infrastructure will affect their clusters.
-- Scalability is promising with significantly large clusters supported. Tested currently with up to 200 nodes.
+- Scalability is promising with significantly large clusters supported. Tested currently with up to 200 nodes and 2500 pods.
 - It's an easy tool available to let non-programmers create visualizations of network topologies.
 - Free and open source to help showcase the possibilities of ACI and K8s.
 
@@ -34,7 +34,7 @@ The Kubernetes API allows you to query and manipulate the state of Kubernetes AP
 | 2. | Leaf Graph Visualisation | As a user, I want to visualise how a specific ACI Leaf connects within my K8s cluster so I can identify the Nodes connected to an ACI Leaf. |
 | 3. | Node Graph Visualisation | Being a User, I want to visualise how a specific Node connects within the network so I can identify the network topology related to a Node. |
 | 4. | Pod Graph Visualisation | As a User, I want to visualise how a specific Pod connects within the network so I can identify the network topology related to a Pod. |
-| 5. | Table View | As a User, I want to see the details(BGP Peering, Routes ect.)of my ACI connected K8s cluster in a table so I can confirm the network configuration. |
+| 5. | Table View | As a User, I want to see the details including, BGP Peering and Routes, of my ACI connected K8s cluster in a table so I can confirm the network configuration. |
 
 ### Product Architecture
 
@@ -44,11 +44,11 @@ The visualisation of the cluster network is based on two main views. One is an i
 
 The main visualisation of Vkaci represents different views of the cluster network using an interconnecting graph diagram.
 
-A complete topology update takes roughly 1 min from refresh to display:
+A complete topology update with a 200 node cluster  takes roughly 1 min from refresh to display:
 
 - 30 secs to load the pods in memory
 - 25 secs to query ACI
-- 10 secs to load from neo4j into the browser
+- 10 secs to load from neo4j into the browser for the complete topology.
 
 | **View** | **Description** |
 | --- | --- |
@@ -229,7 +229,7 @@ Execute the `visibility_ui.py` script to run the Vkaci service in debug mode.
 
 1. Check that all the variables are correctly set for your APIC and K8s cluster.
 2. The Vkaci logging is quite comprehensive and should indicate what has occurred.
-3. The init pod crashes: Ensure the vkaci POD can talk directly with the APIC.
+3. The init pod crashes: Ensure the vkaci Pod can talk directly with the APIC.
 
 **The topology graphs are not appearing:**
 
@@ -249,7 +249,7 @@ This is most likely because your APIC is configured in a way that we have not en
 - Vkaci is an open source, proof of concept tool hence has potential for further enhancements.
 - There are some constraints to supporting all configurations at this stage.
 - The intention of making this tool open source is to gain feedbacks or suggestions from the wider community in relation to any defects and unexpected anomalies that may appear. However, we tried our best to test it and implement enough logging and error handling so problems can be clearly identified.
-- Scalability was a consideration hence Vkaci was tested and confirmed to work with a cluster consisting of 200 nodes. Although, with larger topologies there can be a few seconds wait in loading time for a stabilized graph appearance. This is because of a fixed number of physics iterations prior to showing the result.
+- Scalability was a consideration hence Vkaci was tested and confirmed to work with a cluster consisting of 200 nodes and 2500 pods. Although, with larger topologies there can be a few seconds wait in loading time for a stabilized graph appearance. This is because of a fixed number of physics iterations prior to showing the result.
 - The topology graphs use a visualisation library that uses physics simulations to attempt to positions graph objects evenly and dynamically. The topology graphs may appear differently each time. However, it is possible to reposition the graph objects manually to suit your preference.
 - Blade systems are not supported and if a user is using blade system the "hypervisor" will in reality be the Blade System switch.
 
