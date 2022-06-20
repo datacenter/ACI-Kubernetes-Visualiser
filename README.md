@@ -30,11 +30,11 @@ The Kubernetes API allows you to query and manipulate the state of Kubernetes AP
 
 | **#** | **Title** | **User Story** |
 | --- | --- | --- |
-| 1. | Cluster Graph Visualisation | As a Network Engineer, I want to visualise how my K8s cluster connects with ACI so I can confirm and view my network configuration. |
+| 1. | Cluster Graph Visualisation | Being a User, I want to visualise how my K8s cluster connects with ACI so I can confirm and view my network configuration. |
 | 2. | Leaf Graph Visualisation | As a user, I want to visualise how a specific ACI Leaf connects within my K8s cluster so I can identify the Nodes connected to an ACI Leaf. |
-| 3. | Node Graph Visualisation | As a Technical Solutions Architect, I want to visualise how a specific Node connects within the network so I can identify the network topology related to a Node. |
-| 4. | Pod Graph Visualisation | As a Technical Marketing Engineer, I want to visualise how a specific Pod connects within the network so I can identify the network topology related to a Pod. |
-| 5. | Table View | As a Network Engineer, I want to see the details of my ACI connected K8s cluster in a table so I can confirm the network configuration. |
+| 3. | Node Graph Visualisation | Being a User, I want to visualise how a specific Node connects within the network so I can identify the network topology related to a Node. |
+| 4. | Pod Graph Visualisation | As a User, I want to visualise how a specific Pod connects within the network so I can identify the network topology related to a Pod. |
+| 5. | Table View | As a User, I want to see the details(BGP Peering, Routes ect.)of my ACI connected K8s cluster in a table so I can confirm the network configuration. |
 
 ### Product Architecture
 
@@ -43,6 +43,12 @@ The visualisation of the cluster network is based on two main views. One is an i
 #### Topology View
 
 The main visualisation of Vkaci represents different views of the cluster network using an interconnecting graph diagram.
+
+A complete topology update takes roughly 1 min from refresh to display:
+
+- 30 secs to load the pods in memory
+- 25 secs to query ACI
+- 10 secs to load from neo4j into the browser
 
 | **View** | **Description** |
 | --- | --- |
@@ -119,16 +125,19 @@ VKACI is a web application using Python 3.9 and Flask as its server technology. 
 
 ## Supported Configurations
 
-### Supported APIC Configurations
+### Supported Topologies
 
-What type of APIC configurations does VKACI support?
--To be finished by Chris/Cam/Dom
+- K8s VMs running on Bare metal Hypervisors directly connected to ACI via single link, port-channel or vPC
+- K8s Bare metal nodes directly connected to ACI via single link, port-channel or vPC (testing still in progress)
 
-1. Tenants
-2. Contexts – VRF, as each context defines a separate layer 3 domain, IP addresses residing within a context can overlap with addresses in other contexts.
-3. Bridge Domains and Subnets
-4. End Point Groups (EPG&#39;s)
-5. Filters
+### Partially Supported Topologies
+
+- Hypervisors in a blade server system. The topology will detect the Blade Switch as the directly connected node to ACI. No info on the K8s nodes to Hypervisor mapping. All the K8s nodes will be reported as running on the Blade Switch
+
+### Untested Topology
+
+- K8s Bare metal nodes running on blade servers. If you test let us know!
+Note: VMM Integration is not required nor supported, physical domain for Floating SVI is used for both Bare Metal and VMs clusters
 
 ### Supported CNI Plugins
 
@@ -140,7 +149,7 @@ What type of APIC configurations does VKACI support?
 
 ### Connectivity Requirements in Cluster
 
-Vkaci needs to connect to the APIC via certificate-based authentication. It is expected that your APIC is pre-configured for certificate-based authentication.
+Vkaci needs to connect to the APIC (OOB or InBand) via certificate-based authentication. It is expected that your APIC is pre-configured for certificate-based authentication.
 
 ### Installation – Helm Chart
 
@@ -160,7 +169,7 @@ The helm chart can currently be found in the source code for VKACI and is also a
 | apicUsername | Name of the APIC certificate user. | ansible |
 | vrfTenant | Tenant where the cluster VRF is deployed. | calico |
 | vrfName | Name of the VRF used by the cluster. | vrf |
-| n4jBrowserUrl | This will need to be set to an externally accessible URL for the Vkaci browser to reach the Neo4j service. | neo4j://192.168.2.1:30100 |
+| n4jBrowserUrl | This will need to be set to an externally accessible URL. The browser needs to reach the Neo4j service directly to pull the topology data.| neo4j://192.168.2.1:30100 |
 
 **Example values.yml:**
 
@@ -220,6 +229,7 @@ Execute the `visibility_ui.py` script to run the Vkaci service in debug mode.
 
 1. Check that all the variables are correctly set for your APIC and K8s cluster.
 2. The Vkaci logging is quite comprehensive and should indicate what has occurred.
+3. The init pod crashes: Ensure the vkaci POD can talk directly with the APIC.
 
 **The topology graphs are not appearing:**
 
@@ -241,6 +251,7 @@ This is most likely because your APIC is configured in a way that we have not en
 - The intention of making this tool open source is to gain feedbacks or suggestions from the wider community in relation to any defects and unexpected anomalies that may appear. However, we tried our best to test it and implement enough logging and error handling so problems can be clearly identified.
 - Scalability was a consideration hence Vkaci was tested and confirmed to work with a cluster consisting of 200 nodes. Although, with larger topologies there can be a few seconds wait in loading time for a stabilized graph appearance. This is because of a fixed number of physics iterations prior to showing the result.
 - The topology graphs use a visualisation library that uses physics simulations to attempt to positions graph objects evenly and dynamically. The topology graphs may appear differently each time. However, it is possible to reposition the graph objects manually to suit your preference.
+- Blade systems are not supported and if a user is using blade system the "hypervisor" will in reality be the Blade System switch.
 
 ### Potential Improvements
 
