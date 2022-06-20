@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vkaci.fullname" . }}
+  labels:
+    {{- include "vkaci.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.affinity }}
+  affinity:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- with .Values.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 8 }}
+  {{- end }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "vkaci.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "vkaci.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "vkaci.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+          - containerPort: 50000
+          command: ['sh', '-c', "gunicorn -w 1 --thread 12 -k gevent -b 0.0.0.0:8080 --timeout 600 visibility_ui:app" ]
+          env:
+            - name: MODE
+              value: "CLUSTER"
+            - name: APIC_IPS
+              value: "{{ .Values.apicIps }}"
+            - name: CERT_NAME
+              value: "{{ .Values.apicCertName }}"
+            - name: CERT_USER
+              value: "{{ .Values.apicUsername }}"
+            - name: TENANT
+              value: "{{ .Values.vrfTenant }}"
+            - name: VRF
+              value: "{{ .Values.vrfName }}"
+            - name: NEO4J_URL
+              value: "neo4j://{{ include "vkaci.fullname" . }}-neo4j:7687"
+            - name: NEO4J_BROWSER_URL
+              value: "{{ .Values.n4jBrowserUrl }}"
+            - name: NEO4J_USER
+              value: "{{ .Values.n4jUser }}"
+            - name: NEO4J_PASSWORD
+              value: "{{ .Values.n4jPassword }}"
+          volumeMounts:
+            - name: aci-user-cert-volume
+              mountPath: /usr/local/etc/aci-cert/
+            - name: aci-meta
+              mountPath: "/root/.aci-meta"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      initContainers:
+       - name: init-{{ .Chart.Name }}
+         image: "{{ .Values.image.repository }}-init:{{ .Values.image.tag | default .Chart.AppVersion }}"
+         imagePullPolicy: {{ .Values.image.pullPolicy }}
+         command: ['sh', '-c', "python3 init.py"]
+         env:
+           - name: APIC_IPS
+             value: "{{ .Values.apicIps }}"
+         volumeMounts:
+           - name: aci-meta
+             mountPath: "/root/.aci-meta"
+      volumes:
+        - name: aci-user-cert-volume
+          secret:
+            secretName: {{ include "vkaci.fullname" . }}-aci-user-cert
+        - name: aci-meta
+          emptyDir: {}
