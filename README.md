@@ -48,7 +48,7 @@ A complete topology update with a 200 node cluster  takes roughly 1 min from ref
 
 - 30 secs to load the pods in memory
 - 25 secs to query ACI
-- 10 secs to load from neo4j into the browser for the complete topology.
+- 10 secs to load from neo4j into the browser.
 
 | **View** | **Description** |
 | --- | --- |
