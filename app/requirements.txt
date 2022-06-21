@@ -4,4 +4,5 @@ py2neo
 prettyprint
 gunicorn
 gevent
+natsort
 https://github.com/datacenter/pyaci/archive/master.zip
