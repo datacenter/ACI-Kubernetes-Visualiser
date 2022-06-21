@@ -485,7 +485,7 @@ class VkaciBuilTopology(object):
             for v in self.topology[node]["bgp_peers"]:
                 leafs.append(v)
             for v, n in self.topology[node]["neighbours"].items():
-                leafs.extend(n.keys())    
+                leafs.extend(n['switches'].keys())    
         return natsorted(list(set(leafs)))
 
     def get_nodes(self):
