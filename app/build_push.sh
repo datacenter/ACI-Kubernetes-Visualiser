@@ -1,5 +1,5 @@
 #!/bin/bash
-TAG="1.0rc2"
+TAG="scale_testing"
 echo -n "Build: " > version.txt
 echo -n `git describe --tags --always HEAD` >> version.txt
 echo -n " " >> version.txt
