@@ -9,6 +9,7 @@ from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
 from pprint import pformat
+from datetime import datetime
 from natsort import natsorted
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
@@ -102,6 +103,11 @@ class ApicMethodsResolve(object):
         for node in fabricNodes:
             nodes[node.address] = node.name
         return nodes
+    
+    def get_arp_adj_ep(self, apic: Node, mac:str):
+        '''Return an IP Address '''
+        return apic.methods.ResolveClass('arpAdjEp').GET(**options.filter(
+            filters.Eq('arpAdjEp.mac',mac)))
 
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
@@ -195,24 +201,30 @@ class VkaciBuilTopology(object):
 
         for neighbour_adj in AdjEp:
             if neighbour_adj.sysName not in node['neighbours'].keys():
-                node['neighbours'][neighbour_adj.sysName] = {}
+                node['neighbours'][neighbour_adj.sysName] = {'switches': {}}
+                node['neighbours'][neighbour_adj.sysName]['Description'] = ""
                 logger.info("Found the following Host as Neighbour %s", neighbour_adj.sysName)
 
             # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
             switch = neighbour.dn.split('/')[2].replace("node", "leaf")
-            if switch not in node['neighbours'][neighbour_adj.sysName].keys() and neighbour_adj:
-                node['neighbours'][neighbour_adj.sysName][switch] = set()
+            if switch not in node['neighbours'][neighbour_adj.sysName]['switches'].keys() and neighbour_adj:
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
                 logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
             if not neighbour_adj_port:
                 # CDP Class is portId
                 neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
-
+            #LLDP Class is portId (I.E. VMNICX)
+            neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
+            if not neighbour_adj_port:
+                # CDP Class is portId
+                neighbour_description = getattr(neighbour_adj, 'platId', None)
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
-                node['neighbours'][neighbour_adj.sysName][switch].add(neighbour_adj_port + '-' + neighbour.id  )
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
+                node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
     def get_cluster_as(self):
@@ -308,12 +320,31 @@ class VkaciBuilTopology(object):
         #Get Path, there should be only one...need to add checks
         # i.e I get topology/pod-1/protpaths-101-102/pathep-[esxi1_PolGrp] 
         if len(path.fvRsCEpToPathEp) > 1:
-            logger.error("Node %s %s is learned over multiple paths. This points to an ACI misconfiguration, i.e. port-channel/vPC operating in individual mode", node['node_ip'], node['mac'])
-
-        for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
-            pathtDn = fvRsCEpToPathEp.tDn
-            logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
-
+            logger.warning("Node %s %s is learned over multiple paths. This points to a possilbe ACI misconfiguration or Stale fvRsCEpToPathEp in the APIC, i.e. port-channel/vPC operating in individual mode. Will pick the most recent entry", node['node_ip'], node['mac'])
+            # Due to CSCwc13370 I need to try to figure out what is the right path, the best way I found for now is 
+            # to look for the arpAdjEps for the mac and find the one that has a physical path but it takes a while for the adj to 
+            #be updated
+            arpAdjEps = self.apic_methods.get_arp_adj_ep(apic, node['mac'])
+            create_time = None
+            logger.warning("Checking arpAdjEp")
+            for arpAdjEp in arpAdjEps:
+                if 'tunnel' not in arpAdjEp.physIfId:
+                    if not create_time:
+                        create_time = datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z")
+                        #Extract node id from the dn
+                        arp_node_owner_id = arpAdjEp.dn.split("/")[2].split('-')[1]
+                    elif datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z") > create_time:
+                        create_time = datetime.strptime(arpAdjEp.upTS,"%Y-%m-%dT%H:%M:%S.%f%z")
+                        arp_node_owner_id = arpAdjEp.dn.split("/")[2].split('-')[1]
+            for tmp in path.fvRsCEpToPathEp:
+                if arp_node_owner_id in tmp.tDn:
+                    pathtDn = tmp.tDn
+                    logger.warning("Multiple paths: Selecting %s as path", pathtDn)
+        else:
+            for fvRsCEpToPathEp in path.fvRsCEpToPathEp:
+                pathtDn = fvRsCEpToPathEp.tDn
+                logger.info("Found path %s for %s %s", pathtDn, node['node_ip'], node['mac'])
+        
         #Get all LLDP and CDP Neighbors for that interface, since I am using the path
         #This return a list of all the interfaces in that proto path 
         pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
@@ -456,8 +487,7 @@ class VkaciBuilTopology(object):
             for v, n in self.topology[node]["neighbours"].items():
                 leafs.extend(n.keys())    
         return natsorted(list(set(leafs)))
-        
-        
+
     def get_nodes(self):
         '''return all the K8s nodes'''
         return natsorted(list(self.topology.keys()))
@@ -479,8 +509,6 @@ class VkaciBuilTopology(object):
                 namespaces.append(v["ns"])
         return natsorted(list(set(namespaces)))
         
-
-
 class VkaciGraph(object):
     '''Class to build the Graph'''
     def __init__(self, env: VkaciEnvVariables, topology: VkaciBuilTopology) -> None:
@@ -501,19 +529,29 @@ class VkaciGraph(object):
     MERGE (pod)-[:RUNNING_ON]->(node))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name}) MERGE (node)-[:RUNNING_IN]->(vmh)
-    FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface}]->(switch)))
+    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
     """
+
+    query2 = """
+    WITH $json as data
+    UNWIND data.items as s
+    WITH s, SIZE(s.nodes) as ncount
+    UNWIND s.vm_hosts as v
+    MATCH (vmh:VM_Host) WHERE vmh.name = v
+    MERGE (switch:Switch {name:s.name})
+    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    """
+    #FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.node}]->(switch)))
 
     def update_database(self):
         '''Update the neo4j database with the data collected from ACI and K8s'''
         graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
         topology = self.topology.update()
-        data = self.build_graph_data(topology)
+        data, switch_data = self.build_graph_data(topology)
 
         graph.run("MATCH (n) DETACH DELETE n")
         results = graph.run(self.query,json=data)
-
+        results = graph.run(self.query2,json=switch_data)
         tx = graph.begin()
         graph.commit(tx)
 
@@ -521,13 +559,20 @@ class VkaciGraph(object):
         '''generate the neo4j data to insert in the DB'''
         data = { "items": [] }
 
+        switch_items = {}
+        for node in topology.keys():
+            for neighbour, neighbour_data in topology[node]["neighbours"].items():
+                for switchName, interfaces in neighbour_data['switches'].items():
+                    if switchName not in switch_items.keys():
+                        switch_items[switchName] = {"name": switchName, "vm_hosts": [], "interface": next(iter(interfaces or []), ""), "nodes": []}
+                    switch_items[switchName]["nodes"].append(node)
+                    switch_items[switchName]["vm_hosts"].append(neighbour)
+        switch_data = { "items": list(switch_items.values()) }
+
         for node in topology.keys():
             vm_hosts = []
-            for neighbour, switches in topology[node]["neighbours"].items():
-                switch_list = []
-                for switchName, interfaces in switches.items():  
-                    switch_list.append({"name": switchName, "interface": next(iter(interfaces or []), "")})     
-                vm_hosts.append({"host_name": neighbour, "switches": switch_list})
+            for neighbour, neighbour_data in topology[node]["neighbours"].items():
+                vm_hosts.append({"host_name": neighbour, "description": neighbour_data['Description']})
             
             pods = []
             for pod_name, pod in topology[node]["pods"].items():
@@ -546,7 +591,7 @@ class VkaciGraph(object):
                 "bgp_peers": bgp_peers
             })
             
-        return data
+        return data, switch_data
 
 class VkaciTable ():
     '''Handle the table view'''
@@ -566,12 +611,12 @@ class VkaciTable ():
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
                 
                 for neighbour_name, neighbour in node["neighbours"].items():
-                    if leaf_name in neighbour.keys():
+                    if leaf_name in neighbour['switches'].keys():
                         pods = []
                         for pod_name, pod in node["pods"].items():
                             pods.append({"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"})
                         if neighbour_name not in vm_hosts:
-                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour['switches'][leaf_name]), "ns": "", "image":"esxi.png","data":[]}
                         vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg", "data": pods})
             
             leaf_data = list(vm_hosts.values())
@@ -626,9 +671,9 @@ class VkaciTable ():
             vm_hosts = {}
             for node_name, node in topology.items():
                 for neighbour_name, neighbour in node["neighbours"].items():
-                    if leaf_name in neighbour.keys():
+                    if leaf_name in neighbour['switches'].keys():
                         if neighbour_name not in vm_hosts:
-                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour[leaf_name]), "ns": "", "image":"esxi.png","data":[]}
+                            vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour['switches'][leaf_name]), "ns": "", "image":"esxi.png","data":[]}
                         vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
 
             if len(vm_hosts) > 0:
@@ -650,7 +695,7 @@ class VkaciTable ():
             pods = {}
             for node_name, node in topology.items():
                  for neighbour_name, neighbour in node["neighbours"].items():
-                    if leaf_name in neighbour.keys():
+                    if leaf_name in neighbour['switches'].keys():
                         for pod_name, pod in node["pods"].items():
                             pods[pod_name] = {"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"}
             
