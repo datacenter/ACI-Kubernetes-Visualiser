@@ -10,6 +10,7 @@ from kubernetes import client, config
 from pyaci import Node, options, filters
 from pprint import pformat
 from datetime import datetime
+from natsort import natsorted
 #If you need to look at the API calls this is what you do
 #logging.basicConfig(level=logger.info)
 #logging.getLogger('pyaci').setLevel(logging.DEBUG)
@@ -484,17 +485,13 @@ class VkaciBuilTopology(object):
             for v in self.topology[node]["bgp_peers"]:
                 leafs.append(v)
             for v, n in self.topology[node]["neighbours"].items():
-                leafs.extend(n['switches'].keys())    
-        al=list(set(leafs))
-        al.sort()
-        return al
-        
+                leafs.extend(n.keys())    
+        return natsorted(list(set(leafs)))
+
     def get_nodes(self):
         '''return all the K8s nodes'''
-        al=list(self.topology.keys())
-        al.sort()
-        return al
-
+        return natsorted(list(self.topology.keys()))
+             
     def get_pods(self, ns = None):
         '''return all the pods in all namespaces by default or filtered by ns'''
         pod_names = []
@@ -502,7 +499,7 @@ class VkaciBuilTopology(object):
             for pod, v in self.topology[node]["pods"].items():
                 if ns == None or ns == v["ns"]:
                     pod_names.append(pod)
-        return pod_names
+        return natsorted(pod_names)
 
     def get_namespaces(self):
         '''return all the namespaces'''
@@ -510,9 +507,8 @@ class VkaciBuilTopology(object):
         for node in self.topology.keys():
             for k,v in self.topology[node]["pods"].items():
                 namespaces.append(v["ns"])
-        return list(set(namespaces))
-
-
+        return natsorted(list(set(namespaces)))
+        
 class VkaciGraph(object):
     '''Class to build the Graph'''
     def __init__(self, env: VkaciEnvVariables, topology: VkaciBuilTopology) -> None:
