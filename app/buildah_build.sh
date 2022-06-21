@@ -5,9 +5,14 @@ export MANIFEST_NAME="vkaci"
 export REGISTRY="quay.io"
 export USER="camillo"
 export IMAGE_NAME="vkaci"
-export IMAGE_TAG="multi_arch_3.10"
+export IMAGE_TAG="dev-21-jun"
 
 # Create a multi-architecture manifest
+for i in `buildah manifest inspect ${MANIFEST_NAME} | jq -r ".manifests[].digest"`
+    do
+    buildah manifest remove ${MANIFEST_NAME}  $i
+    done
+buildah manifest rm ${MANIFEST_NAME} 
 buildah manifest create ${MANIFEST_NAME}
 
 # Build your amd64 architecture container
@@ -34,6 +39,12 @@ buildah manifest push --all \
 
 export MANIFEST_NAME="vkaci-init"
 export IMAGE_NAME="vkaci-init"
+
+for i in `buildah manifest inspect ${MANIFEST_NAME} | jq -r ".manifests[].digest"`
+    do
+    buildah manifest remove ${MANIFEST_NAME}  $i
+    done
+buildah manifest rm ${MANIFEST_NAME} 
 buildah manifest create ${MANIFEST_NAME}
 
 # Build your amd64 architecture container
