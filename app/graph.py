@@ -210,16 +210,25 @@ class VkaciBuilTopology(object):
             if switch not in node['neighbours'][neighbour_adj.sysName]['switches'].keys() and neighbour_adj:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
                 logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
+            
             #LLDP Class is portId (I.E. VMNICX)
-            neighbour_adj_port = getattr(neighbour_adj, 'chassisIdV', None)
+            neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
+            
+            #Vmare esxi puts the port name vmnic in the chassisIdV while linux put the port name in the portDesc
+            lldp_port_id_class = 'portDesc'
+            if 'VMware' in neighbour_description:
+                lldp_port_id_class = 'chassisIdV'
+            
+            neighbour_adj_port = getattr(neighbour_adj,lldp_port_id_class, None)
+
+            if not neighbour_adj_port:
+                # CDP Class is platId
+                neighbour_description = getattr(neighbour_adj, 'platId', None)
+            
             if not neighbour_adj_port:
                 # CDP Class is portId
                 neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
-            #LLDP Class is portId (I.E. VMNICX)
-            neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
-            if not neighbour_adj_port:
-                # CDP Class is portId
-                neighbour_description = getattr(neighbour_adj, 'platId', None)
+
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
