@@ -213,11 +213,16 @@ class VkaciBuilTopology(object):
             
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
+            if not neighbour_description:
+                neighbour_description = getattr(neighbour_adj, 'ver', None)
             
             #Vmare esxi puts the port name vmnic in the chassisIdV while linux put the port name in the portDesc
             lldp_port_id_class = 'portDesc'
             if 'VMware' in neighbour_description:
                 lldp_port_id_class = 'chassisIdV'
+            # UCS Uses the portIdV
+            if 'Cisco' in neighbour_description:
+                lldp_port_id_class = 'portIdV'
             
             neighbour_adj_port = getattr(neighbour_adj,lldp_port_id_class, None)
 
@@ -363,17 +368,18 @@ class VkaciBuilTopology(object):
         if (len(lldp_neighbours) == 0 and len(cdp_neighbours) == 0 ):
             logger.error("No LLDP or CDP neighbour detected, the topology will be incomplete. ")
 
-        # IF LLDP is UP and CDP is DOWN
-        for lldp_neighbour in lldp_neighbours:
-            if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
-                logger.debug("LLDP ADD")
-                self.add_neighbour(node, lldp_neighbour)
+        if len(lldp_neighbours) > 0:
+            # Prefer LLDP over CDP
+            for lldp_neighbour in lldp_neighbours:
+                if lldp_neighbour.operRxSt == "up" and lldp_neighbour.operTxSt == 'up':
+                    logger.debug("LLDP ADD")
+                    self.add_neighbour(node, lldp_neighbour)
 
-        # IF CDP is UP and LLDP is DOWN
-        for cdp_neighbour in cdp_neighbours:
-            if cdp_neighbour.operSt == "up":
-                logger.debug("CDP ADD")
-                self.add_neighbour(node, cdp_neighbour)
+        elif len(cdp_neighbours) > 0:
+            for cdp_neighbour in cdp_neighbours:
+                if cdp_neighbour.operSt == "up":
+                    logger.debug("CDP ADD")
+                    self.add_neighbour(node, cdp_neighbour)
 
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
         # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
@@ -475,8 +481,8 @@ class VkaciBuilTopology(object):
         result = future.result()
         
         logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
-        logger.debug("Topology:")
-        logger.debug(pformat(self.topology))
+        logger.info("Topology:")
+        logger.info(pformat(self.topology))
         return self.topology
 
     def get(self):
