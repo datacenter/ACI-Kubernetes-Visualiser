@@ -163,7 +163,7 @@
                      <div class="col-md-3">
                         <div class="form-group input--icon base-margin-bottom">
                            <div class="form-group__text">
-                              <input id="leafname" type="search" list="LeafList">
+                              <input id="leafname" type="search" list="LeafList" autocomplete="off">
                               <button type="button" id="leafBttn" onclick="draw_leaf()" class="link">
                                  <span class="icon-search"></span>
                               </button>
@@ -189,7 +189,7 @@
                      <div class="col-md-3">
                         <div class="form-group input--icon base-margin-bottom">
                            <div class="form-group__text">
-                              <input id="nodename" type="search" list="NodeList">
+                              <input id="nodename" type="search" list="NodeList" autocomplete="off">
                               <button type="button" id="nodeBttn" onclick="draw_node()" class="link">
                                  <span class="icon-search"></span>
                               </button>
@@ -211,17 +211,17 @@
 
                <!-- Pod Topology tab -->
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
-                  <div>
+                  <div class="row">
                      <div class="col-md-3">
                         <div class="form-group input--icon base-margin-bottom">
                            <div class="form-group__text">
-                              <input id="podname" type="search" list="PodList">
+                              <input id="podname" type="search" list="PodList" autocomplete="off">
                               <button type="button" id="podBttn" onclick="draw_pod()" class="link">
                                  <span class="icon-search"></span>
                               </button>
                            </div>
                            <div class="form-group__help">
-                              <span>Type the node name and click the search icon to update the graph</span>
+                              <span>Type the pod name and click the search icon to update the graph</span>
                            </div>
                         </div>
                      </div>
@@ -231,6 +231,24 @@
                         <option>{{pod}}</option>
                         {%endfor%}
                      </datalist>
+                     <div class="col-md-2">
+                        <div class="form-group dropdown">
+                           <div class="form-group__text select">
+                              <input id="select-type-styled" value="All">
+                           </div>
+                           <div class="form-group__help">
+                              <span>Selected Namespace</span>
+                           </div>
+                           <div id="selected_pod_namespace" class="dropdown__menu">
+                              <!-- For loop logic of jinja template -->
+                              {%for namespace in namespaces %}
+                              <a id="{{namespace}}" onclick="pod_namespace('{{namespace}}')">{{namespace}}</a>
+                              {%endfor%}
+                              <div class="dropdown__divider"></div>
+                              <a id="!" onclick="pod_namespace('!')">All</a>
+                           </div>
+                        </div>
+                     </div>
                   </div>
                   <div id="viz_pod" class="viz"></div>
                </div>
@@ -338,7 +356,7 @@
                               <div class="Legend-item">
                                  <td><img src="./assets/cui-2.0.0/img/esxi.png" width="25" height="25"></td>
                                  <td><span class="Legend-label dbl-margin-right">
-                                       Hypervisor
+                                       Leaf Neighbour
                                     </span></td>
                               </div>
                            </tr>
@@ -378,7 +396,7 @@
                            <div class="Legend-item">
                               <td><img src="./assets/cui-2.0.0/img/connected_to.svg" width="128" height="30"></td>
                               <td><span class="Legend-label">
-                                    Hypervisor connected to leaf
+                                    Leaf Neighbour connected to leaf's
                                  </span>
                               </td>
                            </div>
@@ -405,7 +423,7 @@
                            <div class="Legend-item">
                               <td><img src="./assets/cui-2.0.0/img/running_on.svg" width="128" height="30"></td>
                               <td><span class="Legend-label">
-                                    K8s Node running on Hypervisor
+                                    K8s Node running on Leaf Neighbour
                                  </span>
                               </td>
                            </div>
