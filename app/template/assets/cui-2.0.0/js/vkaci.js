@@ -133,6 +133,7 @@ class View {
 
 selectedView = View.WithoutPods
 selectedNamespace = ".*"
+selectedPodNamespace = "!"
 
 function draw_all() {
     selectedView = View.All
@@ -187,9 +188,20 @@ function selectView() {
         }
         else {
             a.removeClass("selected")
+        } 
+    })
+
+    $("#selected_pod_namespace").find("a").each(function () {
+        var a = $(this)
+        if (a.attr("id") == selectedPodNamespace) {
+            a.addClass("selected")
+        }
+        else {
+            a.removeClass("selected")
         }
     })
 }
+
 // draw cluster topology with different views
 function draw(query, pods = false) {
     selectView()
@@ -231,7 +243,7 @@ function draw_node() {
     //})
 }
 
-
+var viz_pod = null
 function draw_pod() {
     var str = $("#podname").val();
     if (!str.trim()) return;
@@ -245,7 +257,7 @@ function draw_pod() {
         WHERE p.${t} = "${str}" AND n.name IN r2.nodes RETURN *
     `;
     var config_pod = neo_viz_config(true, "viz_pod", p , seed)
-    var viz_pod = new NeoVis.default(config_pod);
+    viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529
     //viz_pod.registerOnEvent("completed", function (){
@@ -253,6 +265,30 @@ function draw_pod() {
     //})
 }
 
+function pod_namespace(namespace) {
+    selectedPodNamespace = namespace
+    selectView()
+    
+    // Clear search bar
+    $("#podname").val("");
+    
+    // Clear graph 
+    if (viz_pod !== null){
+        viz_pod.clearNetwork()
+    }
+    
+    // Update data list
+    $.ajax({url: "/pod_names?ns="+namespace, success: function(result){
+        // $("#datalist").html(result);
+        console.log(result)
+        // clearing the Pod Names
+        $("#PodList").empty();
+        // adding the list of Pod Names
+        result.pods.forEach(pod => {
+            $('#PodList').append(`<option>${pod}</option>`);
+        })
+      }});
+}
 
 /* Check if string is IP */
 function checkIfValidIP(str) {

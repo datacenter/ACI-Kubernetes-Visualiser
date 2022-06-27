@@ -114,7 +114,7 @@ class ApicMethodsResolve(object):
         mac pinning and vPC we end up with LACP running in individual mode and the
         the LLDP/CDP path to be the one of the vPC interface, but the endpoint is learned on
         the physical interface for example:
-        The end point is learned over          topology/pod-1/paths-2104/pathep-[eth1/11]
+        The end point is learned over topology/pod-1/paths-2104/pathep-[eth1/11]
         The LLDP/CDP Adjagency is learned over topology/pod-1/protpaths-2103-2104/pathep-[vpc_ucs-c1-1]
         So I need to normalize this
         '''
@@ -276,8 +276,6 @@ class VkaciBuilTopology(object):
         if asn == 0:
             logger.error("Can't detect K8s Cluster AS, BGP topology will not work corectly")
         return asn
-
-
 
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''

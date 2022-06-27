@@ -18,6 +18,12 @@ graph.update_database()
 def index():
     return render_template('index.html', version=__build__, env=env, pod_names = topology.get_pods(), node_names = topology.get_nodes(), namespaces = topology.get_namespaces(), leaf_names = topology.get_leafs())
 
+@app.route('/pod_names')
+def pod_names():
+    ns = request.args.get("ns")
+    if ns == "!":
+        ns = None
+    return {"pods":topology.get_pods(ns=ns)}
 
 @app.route('/table_data')
 def table_data():
