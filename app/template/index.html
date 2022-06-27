@@ -212,19 +212,6 @@
                <!-- Pod Topology tab -->
                <div notcomponent="" data-cubextabs="panel" class="tab-pane">
                   <div class="row">
-                     <div class="col-md-3">
-                        <div class="form-group input--icon base-margin-bottom">
-                           <div class="form-group__text">
-                              <input id="podname" type="search" list="PodList" autocomplete="off">
-                              <button type="button" id="podBttn" onclick="draw_pod()" class="link">
-                                 <span class="icon-search"></span>
-                              </button>
-                           </div>
-                           <div class="form-group__help">
-                              <span>Type the pod name and click the search icon to update the graph</span>
-                           </div>
-                        </div>
-                     </div>
                      <datalist id="PodList">
                         <!-- For loop logic of jinja template -->
                         {%for pod in pod_names %}
@@ -246,6 +233,19 @@
                               {%endfor%}
                               <div class="dropdown__divider"></div>
                               <a id="!" onclick="pod_namespace('!')">All</a>
+                           </div>
+                        </div>
+                     </div>
+                     <div class="col-md-3">
+                        <div class="form-group input--icon base-margin-bottom">
+                           <div class="form-group__text">
+                              <input id="podname" type="search" list="PodList" autocomplete="off">
+                              <button type="button" id="podBttn" onclick="draw_pod()" class="link">
+                                 <span class="icon-search"></span>
+                              </button>
+                           </div>
+                           <div class="form-group__help">
+                              <span>Type the pod name and click the search icon to update the graph</span>
                            </div>
                         </div>
                      </div>
