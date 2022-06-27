@@ -87,9 +87,10 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 "color": "#7A8A24",
                 "caption": "interface",
                 "font": {
-                    "size": 18,
-                    "color": "#000099", 
-                    strokeWidth: 5
+                    "size": 16,
+                    "color": "#000099",
+                    strokeWidth: 5,
+                    multi: true
                 },
             },
 

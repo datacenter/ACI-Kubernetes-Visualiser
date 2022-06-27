@@ -579,7 +579,7 @@ class VkaciGraph(object):
             for neighbour, neighbour_data in topology[node]["neighbours"].items():
                 for switchName, interfaces in neighbour_data['switches'].items():
                     if switchName not in switch_items.keys():
-                        switch_items[switchName] = {"name": switchName, "vm_hosts": [], "interface": next(iter(interfaces or []), ""), "nodes": []}
+                        switch_items[switchName] = {"name": switchName, "vm_hosts": [], "interface": "<i>"+" | ".join(list(interfaces))+"</i>", "nodes": []}
                     switch_items[switchName]["nodes"].append(node)
                     switch_items[switchName]["vm_hosts"].append(neighbour)
         switch_data = { "items": list(switch_items.values()) }
