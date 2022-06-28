@@ -459,7 +459,8 @@ class VkaciBuilTopology(object):
             }
             self.topology['services'][i.metadata.namespace].append(svc_info)
         
-        logger.info("Pods, Nodes and Services Loaded, Current Topology %s", pformat(self.topology))
+        logger.info("Pods, Nodes and Services Loaded")
+        logger.debug("Current Topology %s", pformat(self.topology))
         self.update_bgp_info(self.apics[0])
 
         start = time.time()
@@ -670,7 +671,6 @@ class VkaciTable ():
                         return ns + '|' + svc['name']
                     elif svc['external_i_ps']:
                         for ext_svc_ip in svc['external_i_ps']:
-                            logger.debug('Is %s equal to %s', svc_ip, ext_svc_ip)
                             if svc_ip == ext_svc_ip:
                                 return ns + '|' + svc['name']
         return None
