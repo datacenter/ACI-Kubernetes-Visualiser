@@ -124,8 +124,10 @@ function renderBgpPeerTable() {
         id: "value", header: ["Name / Route", { content: "textFilter" }], width: 300,
         template: "{common.icon()} <img src=./assets/cui-2.0.0/img/#image# width=16 height=16 style='margin:3px 4px 0px 1px;'><span>#value#</span>",
       },
-      { id: "ip", header: ["IP / NextHop", { content: "textFilter" }], width: 300 },
+      { id: "ip", header: ["IP / NextHop", { content: "textFilter" }], width: 200 },
       { id: "k8s_route", header: ["K8s Route", { content: "selectFilter" }], width: 100 },
+      { id: "ns", header: ["Namespace", { content: "selectFilter" }], width: 200 },
+      { id: "svc", header: ["Service", { content: "selectFilter" }], width: 200 }
     ],
 
     autoheight: true,

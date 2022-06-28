@@ -668,12 +668,12 @@ class VkaciTable ():
             for ns, svcs in topology['services'].items():
                 for svc in svcs:
                     if svc_ip == svc['cluster_ip']:
-                        return ns + '|' + svc['name']
+                        return ns, svc['name']
                     elif svc['external_i_ps']:
                         for ext_svc_ip in svc['external_i_ps']:
                             if svc_ip == ext_svc_ip:
-                                return ns + '|' + svc['name']
-        return None
+                                return ns, svc['name']
+        return "", ""
 
     def get_bgp_table(self):
         start = time.time()
@@ -690,14 +690,13 @@ class VkaciTable ():
             if leaf_name in bgp_info.keys():
                 sorted_items = sorted(bgp_info[leaf_name].items())
                 for prefix, route in sorted_items:
-                    svc_name = self.get_svc_name(prefix)
+                    ns, svc_name = self.get_svc_name(prefix)
                     if prefix != "prefix_count":
                         hosts = []
                         for host in route["hosts"]:
                             hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
-                        if svc_name:
-                            prefix = prefix + ' ' + svc_name
-                        bgp_prefixes.append({"value": prefix, "image": "route.png", "k8s_route":str(route["k8s_route"]), "data": hosts})
+                        bgp_prefixes.append({"value": prefix, "image": "route.png", "k8s_route": str(
+                            route["k8s_route"]), "ns": ns, "svc": svc_name, "data": hosts})
             data["data"].append({
                     "value": leaf_name,
                     "ip"   : "",
