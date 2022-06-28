@@ -161,7 +161,7 @@ class VkaciBuilTopology(object):
     def __init__(self, env:VkaciEnvVariables, apic_methods:ApicMethodsResolve) -> None:
         super().__init__()
         self.pod = {}
-        self.topology = {}
+        self.topology = { 'nodes': {}, 'services': {}}
         self.bgp_info = {}
         self.env = env
         self.apic_methods = apic_methods
@@ -244,8 +244,10 @@ class VkaciBuilTopology(object):
     def get_cluster_as(self):
         ''' Get the AS from K8s Configuration this assumes Calico is used'''
         asn = 0
+        logger.debug("Detect Cluster AS")
         # Try to get Cluster AS from Calico Config
         try: 
+            logger.debug("Try to detect Calico")
             res =  self.custom_obj.get_cluster_custom_object(
                 group="crd.projectcalico.org",
                 version="v1",
@@ -259,6 +261,7 @@ class VkaciBuilTopology(object):
             pass
          # Try to get Cluster AS from kube-rotuer Config
         try: 
+            logger.debug("Try to detect Kube-Router")
             pods = self.get_pods(ns='kube-system')
             kr_pod = False
             for pod in pods:
@@ -307,7 +310,7 @@ class VkaciBuilTopology(object):
                     if next_hop in overlay_ip_to_switch.keys():
                         host_name = overlay_ip_to_switch[next_hop]
                         image = "switch.png"
-                    for k, v in self.topology.items():
+                    for k, v in self.topology['nodes'].items():
                         if next_hop == v['node_ip']:
                             host_name = k
                     self.bgp_info[leaf][route]["hosts"].append({"ip": next_hop, "hostname": host_name, "image": image})
@@ -402,7 +405,7 @@ class VkaciBuilTopology(object):
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
         logger.info("Start Topology Generation")
-        self.topology = { }
+        #self.topology = { }
         self.apics = []
 
         # Check APIC Ips
@@ -425,27 +428,38 @@ class VkaciBuilTopology(object):
                 logger.error("MODE can only be LOCAL or CLUSTER but %s was given", self.env.mode)
                 return
         
-        ##Load all the POD and Nodes in Memory. 
+        #Load all the POD, Services and Nodes in Memory. 
         logger.info("Loading K8s Pods in Memory")
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
             # Ensure the node has a name, if a POD is Pening there will be no node name.
             if i.spec.node_name:
-                if i.spec.node_name not in self.topology.keys():
-                    self.topology[i.spec.node_name] = {
+                if i.spec.node_name not in self.topology['nodes'].keys():
+                    self.topology['nodes'][i.spec.node_name] = {
                     "node_ip": i.status.host_ip,
                     "pods" : {},
                     'bgp_peers': {},
                     'neighbours': {}
                     }
 
-                self.topology[i.spec.node_name]['pods'][i.metadata.name] = {
+                self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name] = {
                     "ip": i.status.pod_ip,
                     "ns": i.metadata.namespace
                     }
 
-        logger.info("Pods Loaded, Current Topology %s", pformat(self.topology))
-
+        logger.info("Loading K8s Services in Memory")
+        ret = self.v1.list_service_for_all_namespaces(watch=False)
+        for i in ret.items:
+            if i.metadata.namespace not in self.topology['services']:
+                self.topology['services'][i.metadata.namespace] = []
+            svc_info = {
+                'name': i.metadata.name,
+                'cluster_ip':i.spec.cluster_ip,
+                'external_i_ps': i.spec.external_i_ps
+            }
+            self.topology['services'][i.metadata.namespace].append(svc_info)
+        
+        logger.info("Pods, Nodes and Services Loaded, Current Topology %s", pformat(self.topology))
         self.update_bgp_info(self.apics[0])
 
         start = time.time()
@@ -458,7 +472,7 @@ class VkaciBuilTopology(object):
         logger.info("ACI EP completed after: %s seconds", (time.time() - start))
         #Find the K8s Node IP/Mac
         # No Thread 50 nodes takes ~ 41 seconds
-        #for k,v in self.topology.items():
+        #for k,v in self.topology['nodes'].items():
         #    self.update_node(node=v)
 
         #Threaded to single APIC 50 nodes takes ~ 11 seconds
@@ -466,7 +480,7 @@ class VkaciBuilTopology(object):
         logger.info("Start querying ACI")
         start = time.time()
         with concurrent.futures.ThreadPoolExecutor() as executor:            
-            for k,v in self.topology.items():
+            for k,v in self.topology['nodes'].items():
                 logger.info("Updating node %s", k)
                 #find the mac for the IP of the node and add it to the topology file.
                 for ep in eps:
@@ -494,22 +508,22 @@ class VkaciBuilTopology(object):
     def get_leafs(self):
         '''return all the ACI leaves'''
         leafs = []
-        for node in self.topology.keys():
-            for v in self.topology[node]["bgp_peers"]:
+        for node in self.topology['nodes'].keys():
+            for v in self.topology['nodes'][node]["bgp_peers"]:
                 leafs.append(v)
-            for v, n in self.topology[node]["neighbours"].items():
+            for v, n in self.topology['nodes'][node]["neighbours"].items():
                 leafs.extend(n['switches'].keys())    
         return natsorted(list(set(leafs)))
 
     def get_nodes(self):
         '''return all the K8s nodes'''
-        return natsorted(list(self.topology.keys()))
+        return natsorted(list(self.topology['nodes'].keys()))
              
     def get_pods(self, ns = None):
         '''return all the pods in all namespaces by default or filtered by ns'''
         pod_names = []
-        for node in self.topology.keys():
-            for pod, v in self.topology[node]["pods"].items():
+        for node in self.topology['nodes'].keys():
+            for pod, v in self.topology['nodes'][node]["pods"].items():
                 if ns == None or ns == v["ns"]:
                     pod_names.append(pod)
         return natsorted(pod_names)
@@ -517,8 +531,8 @@ class VkaciBuilTopology(object):
     def get_namespaces(self):
         '''return all the namespaces'''
         namespaces = []
-        for node in self.topology.keys():
-            for k,v in self.topology[node]["pods"].items():
+        for node in self.topology['nodes'].keys():
+            for k,v in self.topology['nodes'][node]["pods"].items():
                 namespaces.append(v["ns"])
         return natsorted(list(set(namespaces)))
         
@@ -573,8 +587,8 @@ class VkaciGraph(object):
         data = { "items": [] }
 
         switch_items = {}
-        for node in topology.keys():
-            for neighbour, neighbour_data in topology[node]["neighbours"].items():
+        for node in topology['nodes'].keys():
+            for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
                 for switchName, interfaces in neighbour_data['switches'].items():
                     if switchName not in switch_items.keys():
                         switch_items[switchName] = {"name": switchName, "vm_hosts": [], "interface": "<i>"+" | ".join(list(interfaces))+"</i>", "nodes": []}
@@ -582,23 +596,23 @@ class VkaciGraph(object):
                     switch_items[switchName]["vm_hosts"].append(neighbour)
         switch_data = { "items": list(switch_items.values()) }
 
-        for node in topology.keys():
+        for node in topology['nodes'].keys():
             vm_hosts = []
-            for neighbour, neighbour_data in topology[node]["neighbours"].items():
+            for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
                 vm_hosts.append({"host_name": neighbour, "description": neighbour_data['Description']})
             
             pods = []
-            for pod_name, pod in topology[node]["pods"].items():
+            for pod_name, pod in topology['nodes'][node]["pods"].items():
                 pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"]})
             
             bgp_peers = []
-            for peer_name, peer in topology[node]["bgp_peers"].items():
+            for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
                 bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})
 
             data["items"].append({
                 "node_name": node,
-                "node_ip": topology[node]["node_ip"],
-                "node_mac": topology[node]["mac"],
+                "node_ip": topology['nodes'][node]["node_ip"],
+                "node_mac": topology['nodes'][node]["mac"],
                 "pods": pods,
                 "vm_hosts": vm_hosts,
                 "bgp_peers": bgp_peers
@@ -619,7 +633,7 @@ class VkaciTable ():
         for leaf_name in leafs: 
             bgp_peers = []
             vm_hosts = {}
-            for node_name, node in topology.items():
+            for node_name, node in topology['nodes'].items():
                 if leaf_name in node["bgp_peers"]:
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
                 
@@ -645,24 +659,44 @@ class VkaciTable ():
         logger.debug(pformat(data))
         return data 
 
+    def get_svc_name(self, prefix):
+        topology=self.topology.get()
+        logger.debug('Finding Prexif Name for %s', prefix)
+        if "/32" in prefix:
+            svc_ip = prefix.split('/')[0]
+            for ns, svcs in topology['services'].items():
+                for svc in svcs:
+                    if svc_ip == svc['cluster_ip']:
+                        return ns + '|' + svc['name']
+                    elif svc['external_i_ps']:
+                        for ext_svc_ip in svc['external_i_ps']:
+                            logger.debug('Is %s equal to %s', svc_ip, ext_svc_ip)
+                            if svc_ip == ext_svc_ip:
+                                return ns + '|' + svc['name']
+        return None
+
     def get_bgp_table(self):
+        start = time.time()
         topology=self.topology.get()
         bgp_info=self.topology.get_bgp_info()
         leafs=self.topology.get_leafs()
         data = { "parent":0, "data": [] }
         for leaf_name in leafs: 
             bgp_peers = []
-            for node_name, node in topology.items():
+            for node_name, node in topology['nodes'].items():
                 if leaf_name in node["bgp_peers"]:
                     bgp_peers.append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
             bgp_prefixes = []
             if leaf_name in bgp_info.keys():
                 sorted_items = sorted(bgp_info[leaf_name].items())
                 for prefix, route in sorted_items:
+                    svc_name = self.get_svc_name(prefix)
                     if prefix != "prefix_count":
                         hosts = []
                         for host in route["hosts"]:
                             hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
+                        if svc_name:
+                            prefix = prefix + ' ' + svc_name
                         bgp_prefixes.append({"value": prefix, "image": "route.png", "k8s_route":str(route["k8s_route"]), "data": hosts})
             data["data"].append({
                     "value": leaf_name,
@@ -674,6 +708,7 @@ class VkaciTable ():
                 })
         logger.debug("BGP Table View:")
         logger.debug(pformat(data))
+        logger.info("time %s", time.time() - start)
         return data
 
     def get_node_table(self):
@@ -682,7 +717,7 @@ class VkaciTable ():
         data = { "parent":0, "data": [] }
         for leaf_name in leafs: 
             vm_hosts = {}
-            for node_name, node in topology.items():
+            for node_name, node in topology['nodes'].items():
                 for neighbour_name, neighbour in node["neighbours"].items():
                     if leaf_name in neighbour['switches'].keys():
                         if neighbour_name not in vm_hosts:
@@ -706,7 +741,7 @@ class VkaciTable ():
         data = { "parent":0, "data": [] }
         for leaf_name in leafs: 
             pods = {}
-            for node_name, node in topology.items():
+            for node_name, node in topology['nodes'].items():
                  for neighbour_name, neighbour in node["neighbours"].items():
                     if leaf_name in neighbour['switches'].keys():
                         for pod_name, pod in node["pods"].items():
