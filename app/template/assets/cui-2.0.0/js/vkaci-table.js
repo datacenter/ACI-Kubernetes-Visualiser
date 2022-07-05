@@ -124,10 +124,26 @@ function renderBgpPeerTable() {
         id: "value", header: ["Name / Route", { content: "textFilter" }], width: 300,
         template: "{common.icon()} <img src=./assets/cui-2.0.0/img/#image# width=16 height=16 style='margin:3px 4px 0px 1px;'><span>#value#</span>",
       },
-      { id: "ip", header: ["IP / NextHop", { content: "textFilter" }], width: 300 },
+      { id: "ip", header: ["IP / NextHop", { content: "textFilter" }], width: 200 },
       { id: "k8s_route", header: ["K8s Route", { content: "selectFilter" }], width: 100 },
+      { id: "ns", header: ["Namespace", { content: "selectFilter" }], width: 200 },
+      { id: "svc", header: ["Service", { content: "selectFilter" }], width: 200 }
     ],
-
+    on:{
+      "onAfterFilter": function () {
+        var grid = $$("gridd")
+        var ns = grid.getFilter("ns").value
+        var columns = grid.config.columns;
+        // Update data list
+        $.ajax({
+          url: "/service_names?ns=" + ns, success: function (result) {
+            // adding the list of Service Names
+            columns[4].options = result.svc
+            grid.refreshColumns(columns);
+          }
+        });
+      }
+    },
     autoheight: true,
     scroll: false,
     url: "/table_data_bgp", datatype: "json"
