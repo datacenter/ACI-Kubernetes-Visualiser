@@ -33,6 +33,14 @@ def table_data():
 def table_data_bgp():
     return table.get_bgp_table()
 
+#Corresponding service names with namespaces 
+@app.route('/service_names')
+def service_names():
+    ns = request.args.get("ns")
+    if ns == "":
+        ns = None
+    return {"svc":topology.get_svc(ns=ns)}
+
 @app.route('/table_data_node')
 def table_data_node():
     return table.get_node_table()

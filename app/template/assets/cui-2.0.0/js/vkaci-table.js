@@ -129,7 +129,21 @@ function renderBgpPeerTable() {
       { id: "ns", header: ["Namespace", { content: "selectFilter" }], width: 200 },
       { id: "svc", header: ["Service", { content: "selectFilter" }], width: 200 }
     ],
-
+    on:{
+      "onAfterFilter": function () {
+        var grid = $$("gridd")
+        var ns = grid.getFilter("ns").value
+        var columns = grid.config.columns;
+        // Update data list
+        $.ajax({
+          url: "/service_names?ns=" + ns, success: function (result) {
+            // adding the list of Service Names
+            columns[4].options = result.svc
+            grid.refreshColumns(columns);
+          }
+        });
+      }
+    },
     autoheight: true,
     scroll: false,
     url: "/table_data_bgp", datatype: "json"
