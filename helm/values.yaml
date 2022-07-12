@@ -19,7 +19,7 @@ apicKeyData: ""
 # Special VKACI Neo4j Variables
 n4jBrowserUrl: ""
 n4jUser: neo4j
-n4jPassword: me-change
+n4jPassword: ""
 
 image:
   repository: quay.io/camillo/vkaci

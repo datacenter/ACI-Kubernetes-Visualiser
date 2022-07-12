@@ -170,6 +170,7 @@ The helm chart can currently be found in the source code for VKACI and is also a
 | vrfTenant | Tenant where the cluster VRF is deployed. | calico |
 | vrfName | Name of the VRF used by the cluster. | vrf |
 | n4jBrowserUrl | This will need to be set to an externally accessible URL. The browser needs to reach the Neo4j service directly to pull the topology data.| neo4j://192.168.2.1:30100 |
+| n4jPassword | Neo4j user password. | password |
 
 **Example values.yml:**
 
@@ -183,6 +184,7 @@ vrfTenant: "calico"
 vrfName: "vrf"
 # Neo4j Variables
 n4jBrowserUrl: neo4j://192.168.2.1:30100
+n4jPassword: "password"
 ```
 
 To generate the base64 data for apicKeyData from the apic key file use the base64 command. Eg.
@@ -211,12 +213,12 @@ The following variables are required to be defined:
 | **NEO4J_URL** | The URL for the Vkaci server to access the Neo4j database. | neo4j://my-neo4j-release-neo4j:7687 |
 | **NEO4J_BROWSER_URL** | This will need to be set to an externally accessible URL for the Vkaci browser to reach the Neo4j service. | neo4j://10.5.10.160:7687 |
 | **NEO4J_USER** | The Neo4j user. | neo4j |
-| **NEO4J_PASSWORD** | The password of the Neo4j user. | me-change |
+| **NEO4J_PASSWORD** | The password of the Neo4j user. | password |
 
 For example, to run Vkaci outside of a K8s cluster do the following:
 
 ```bash
-export MODE=LOCAL APIC_IPS="10.67.185.102,10.67.185.42,10.67.185.41" CERT_NAME=ansible.crt CERT_USER=ansible TENANT=calico2 VRF=vrf KEY_PATH=/home/cisco/Coding/ansible.key KUBE_CONFIG=/home/cisco/Coding/vkaci/calico-2.config NEO4J_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_BROWSER_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=me-change
+export MODE=LOCAL APIC_IPS="10.67.185.102,10.67.185.42,10.67.185.41" CERT_NAME=ansible.crt CERT_USER=ansible TENANT=calico2 VRF=vrf KEY_PATH=/home/cisco/Coding/ansible.key KUBE_CONFIG=/home/cisco/Coding/vkaci/calico-2.config NEO4J_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_BROWSER_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=password
 ```
 
 Execute the `init.py` script to locally load the ACI metadata used by pyaci. This is only required once.
