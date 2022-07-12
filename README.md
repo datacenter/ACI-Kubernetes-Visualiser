@@ -95,9 +95,11 @@ The below flowcharts are created to visualise the overall sequence and the logic
 <br>
 
 Vkaci Connectivity Overview
+
 ![Vkaci Connectivity Overview](readme-img/fig6.png)
 
 Vkaci topology update process
+
 ![Vkaci topology update process](readme-img/fig7.png)
 
 #### Libraries Used
