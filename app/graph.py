@@ -453,14 +453,22 @@ class VkaciBuilTopology(object):
                     "node_ip": i.status.host_ip,
                     "pods" : {},
                     'bgp_peers': {},
-                    'neighbours': {}
+                    'neighbours': {},
+                    'labels': {}
                     }
 
                 self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name] = {
                     "ip": i.status.pod_ip,
-                    "ns": i.metadata.namespace
+                    "ns": i.metadata.namespace,
+                    "labels": i.metadata.labels if i.metadata.labels is not None else {}
                     }
                     
+        pro = self.v1.list_node(watch=False)
+        for i in pro.items:
+            n = i.metadata.name
+            if n in self.topology['nodes'].keys():
+                self.topology['nodes'][n]['labels'] = i.metadata.labels if i.metadata.labels is not None else {}
+                
         self.update_bgp_info(self.apics[0])
 
         logger.info("Loading K8s Services in Memory")
@@ -578,10 +586,10 @@ class VkaciGraph(object):
     UNWIND data.items as n
 
     MERGE (node:Node {name:n.node_name}) ON CREATE
-    SET node.ip = n.node_ip, node.mac = n.node_mac
+    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
-    SET pod.ip = p.ip, pod.ns = p.ns 
+    SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels
     MERGE (pod)-[:RUNNING_ON]->(node))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
@@ -632,16 +640,18 @@ class VkaciGraph(object):
             
             pods = []
             for pod_name, pod in topology['nodes'][node]["pods"].items():
-                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"]})
+                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()]})
             
             bgp_peers = []
             for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
                 bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})
 
+            #nodes
             data["items"].append({
                 "node_name": node,
                 "node_ip": topology['nodes'][node]["node_ip"],
                 "node_mac": topology['nodes'][node]["mac"],
+                "labels": [k+":"+v for k, v in topology['nodes'][node]["labels"].items()],
                 "pods": pods,
                 "vm_hosts": vm_hosts,
                 "bgp_peers": bgp_peers
