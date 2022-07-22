@@ -480,6 +480,7 @@ class VkaciBuilTopology(object):
                 'name': i.metadata.name,
                 'cluster_ip':i.spec.cluster_ip,
                 'external_i_ps': i.spec.external_i_ps, 
+                'labels': i.metadata.labels if i.metadata.labels is not None else {},
                 'prefix': None
             }
             svc_info = self.add_prefix(svc_info)
@@ -753,7 +754,8 @@ class VkaciTable ():
                     if leaf_name in neighbour['switches'].keys():
                         if neighbour_name not in vm_hosts:
                             vm_hosts[neighbour_name] = {"value": neighbour_name, "interface": list(neighbour['switches'][leaf_name]), "ns": "", "image":"esxi.png","data":[]}
-                        vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg"})
+                        labels = [{'value':k, 'label_value':v, 'image':'label.svg'} for k, v in node["labels"].items()]
+                        vm_hosts[neighbour_name]["data"].append({"value": node_name, "ip": node["node_ip"], "ns": "", "image":"node.svg", "data": labels})
 
             if len(vm_hosts) > 0:
                 data["data"].append({
@@ -776,7 +778,8 @@ class VkaciTable ():
                  for neighbour_name, neighbour in node["neighbours"].items():
                     if leaf_name in neighbour['switches'].keys():
                         for pod_name, pod in node["pods"].items():
-                            pods[pod_name] = {"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg"}
+                            labels = [{'value':k, 'label_value':v, 'image':'label.svg'} for k, v in pod["labels"].items()]
+                            pods[pod_name] = {"value": pod_name, "ip": pod["ip"], "ns": pod["ns"], "image":"pod.svg", "data": labels}
             
             if len(pods) > 0:
                 data["data"].append({
