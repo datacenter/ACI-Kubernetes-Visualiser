@@ -30,7 +30,7 @@ The Kubernetes API allows you to query and manipulate the state of Kubernetes AP
 
 | **#** | **Title** | **User Story** |
 | --- | --- | --- |
-| 1. | Cluster Graph Visualisation | Being a User, I want to visualise how my K8s cluster connects with ACI so I can confirm and view my network configuration. |
+| 1. | Cluster Graph Visualisation | As a network engineer, I want to visualise how my K8s cluster connects with ACI so I can confirm and view my network configuration. |
 | 2. | Leaf Graph Visualisation | As a user, I want to visualise how a specific ACI Leaf connects within my K8s cluster so I can identify the Nodes connected to an ACI Leaf. |
 | 3. | Node Graph Visualisation | Being a User, I want to visualise how a specific Node connects within the network so I can identify the network topology related to a Node. |
 | 4. | Pod Graph Visualisation | As a User, I want to visualise how a specific Pod connects within the network so I can identify the network topology related to a Pod. |
@@ -172,7 +172,7 @@ The helm chart can currently be found in the source code for VKACI and is also a
 | vrfTenant | Tenant where the cluster VRF is deployed. | calico |
 | vrfName | Name of the VRF used by the cluster. | vrf |
 | n4jBrowserUrl | This will need to be set to an externally accessible URL. The browser needs to reach the Neo4j service directly to pull the topology data.| neo4j://192.168.2.1:30100 |
-| n4jPassword | Neo4j user password. | password |
+| n4jPassword | Neo4j user password. | use a strong password |
 
 **Example values.yml:**
 
@@ -186,7 +186,7 @@ vrfTenant: "calico"
 vrfName: "vrf"
 # Neo4j Variables
 n4jBrowserUrl: neo4j://192.168.2.1:30100
-n4jPassword: "password"
+n4jPassword: "use a better password"
 ```
 
 To generate the base64 data for apicKeyData from the apic key file use the base64 command. Eg.
@@ -215,12 +215,12 @@ The following variables are required to be defined:
 | **NEO4J_URL** | The URL for the Vkaci server to access the Neo4j database. | neo4j://my-neo4j-release-neo4j:7687 |
 | **NEO4J_BROWSER_URL** | This will need to be set to an externally accessible URL for the Vkaci browser to reach the Neo4j service. | neo4j://10.5.10.160:7687 |
 | **NEO4J_USER** | The Neo4j user. | neo4j |
-| **NEO4J_PASSWORD** | The password of the Neo4j user. | password |
+| **NEO4J_PASSWORD** | The password of the Neo4j user. | use a better password |
 
 For example, to run Vkaci outside of a K8s cluster do the following:
 
 ```bash
-export MODE=LOCAL APIC_IPS="10.67.185.102,10.67.185.42,10.67.185.41" CERT_NAME=ansible.crt CERT_USER=ansible TENANT=calico2 VRF=vrf KEY_PATH=/home/cisco/Coding/ansible.key KUBE_CONFIG=/home/cisco/Coding/vkaci/calico-2.config NEO4J_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_BROWSER_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_USER=neo4j NEO4J_PASSWORD=password
+export MODE=LOCAL APIC_IPS="10.67.185.102,10.67.185.42,10.67.185.41" CERT_NAME=ansible.crt CERT_USER=ansible TENANT=calico2 VRF=vrf KEY_PATH=/home/cisco/Coding/ansible.key KUBE_CONFIG=/home/cisco/Coding/vkaci/calico-2.config NEO4J_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_BROWSER_URL=neo4j://my-neo4j-release-neo4j:7687 NEO4J_USER=neo4j NEO4J_PASSWORD="use a better password"
 ```
 
 Execute the `init.py` script to locally load the ACI metadata used by pyaci. This is only required once.

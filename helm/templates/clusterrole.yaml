@@ -7,7 +7,7 @@ metadata:
     {{- include "vkaci.labels" . | nindent 4 }}
 rules:
 - apiGroups: [""]
-  resources: ["pods"]
+  resources: ["services", "nodes", "pods"]
   verbs: ["list", "get"]
 - apiGroups: ["crd.projectcalico.org"]
   resources: ["bgpconfigurations"]
