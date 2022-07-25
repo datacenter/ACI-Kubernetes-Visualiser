@@ -791,3 +791,17 @@ class VkaciTable ():
         logger.debug("Pod Table View:")
         logger.debug(pformat(data))
         return data
+
+    def get_services_table(self):
+        topology=self.topology.get()
+        data = { "parent":0, "data": [] } 
+        for namespace, s in topology["services"].items():
+            for info in s:
+                info["value"] = info["name"]
+                info["ns"] = namespace
+                info["image"] = "svc.svg"
+                info["data"] = [{'value':k, 'label_value':v, 'image':'label.svg'} for k, v in info["labels"].items()]
+                data["data"].append(info)
+        logger.debug("Services Table View:")
+        logger.debug(pformat(data))
+        return data

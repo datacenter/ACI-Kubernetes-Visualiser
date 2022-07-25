@@ -5,6 +5,8 @@ class Table {
   static LeafsAndPods = new Table("LeafsAndPods", "Leafs & Pods")
   static LeafsAndNodes = new Table("LeafsAndNodes", "Leafs & Nodes")
   static BgpPeers = new Table("BgpPeers", "BGP Peering")
+  static Services = new Table("Services", "Services")
+
 
   constructor(name, displayName) {
     this.name = name
@@ -37,6 +39,12 @@ function table_bgp_peers() {
   selectedTable = Table.BgpPeers
   selectTable()
   renderBgpPeerTable()
+}
+
+function table_services() {
+  selectedTable = Table.Services
+  selectTable()
+  renderServicesTable()
 }
 
 function renderAllTable() {
@@ -149,6 +157,33 @@ function renderBgpPeerTable() {
     autoheight: true,
     scroll: false,
     url: "/table_data_bgp", datatype: "json"
+  };
+  $("#table").empty()
+  webix.ui(gridd);
+}
+
+function renderServicesTable() {
+  gridd = {
+    view: "treetable",
+    css: "webix_dark",
+    container: "table",
+    id: "gridd",
+    resizeColumn: true, resizeRow: true,
+    columns: [
+      {
+        id: "value", header: ["Name", { content: "textFilter" }], width: 300,
+        template: "{common.icon()} <img src=./assets/cui-2.0.0/img/#image# width=16 height=16 style='margin:3px 4px 0px 1px;'><span>#value#</span>",
+      },
+      { id: "label_value", header: ["Label Value", { content: "textFilter" }], width: 200 },
+      { id: "ns", header: ["Namespace", { content: "selectFilter" }], width: 200 },
+      { id: "cluster_ip", header: ["Cluster IP", { content: "textFilter" }], width: 200 },
+      { id: "external_i_ps", header: ["External IP", { content: "textFilter" }], width: 200 },
+      { id: "prefix", header: ["Prefix", { content: "textFilter" }], width: 200 },
+    ],
+
+    autoheight: true,
+    scroll: false,
+    url: "/table_data_services", datatype: "json"
   };
   $("#table").empty()
   webix.ui(gridd);

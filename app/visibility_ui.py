@@ -49,6 +49,10 @@ def table_data_node():
 def table_data_pod():
     return table.get_pod_table()
 
+@app.route('/table_data_services')
+def table_data_services():
+    return table.get_services_table()
+
 @app.route('/re-generate',methods=['GET', 'POST'])
 def regenerate():
     if request.method == 'POST':
