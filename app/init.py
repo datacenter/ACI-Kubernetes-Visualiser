@@ -21,11 +21,8 @@ try:
     r = requests.get(url, verify=False, allow_redirects=True)
 except Exception as e:
     logger.error("Unable to Connect to APIC %s", str(e))
-    exit()
+    exit(1)
 
-if "Cisco APIC" != r.headers['Server']:
-    logger.error("You are not connecting to an APIC!")
-    exit() 
 url = "https://" + os.environ.get("APIC_IPS").split(',')[0] + '/acimeta/aci-meta.json'
 r = requests.get(url, verify=False, allow_redirects=True)
 open(os.path.expanduser("~") + '/.aci-meta/aci-meta.json','wb').write(r.content)
