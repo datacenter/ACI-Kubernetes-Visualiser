@@ -16,7 +16,9 @@ graph.update_database()
 
 @app.route('/')
 def index():
-    return render_template('index.html', version=__build__, env=env, pod_names = topology.get_pods(), node_names = topology.get_nodes(), namespaces = topology.get_namespaces(), leaf_names = topology.get_leafs())
+    return render_template('index.html', version=__build__, env=env, pod_names=topology.get_pods(), 
+    node_names=topology.get_nodes(), namespaces=topology.get_namespaces(), 
+    leaf_names=topology.get_leafs(), label_names=topology.get_labels())
 
 @app.route('/pod_names')
 def pod_names():
@@ -24,6 +26,11 @@ def pod_names():
     if ns == "!":
         ns = None
     return {"pods":topology.get_pods(ns=ns)}
+
+@app.route('/label_values')
+def label_values():
+    label = request.args.get("label")
+    return {"values":topology.get_label_values(label)}
 
 @app.route('/table_data')
 def table_data():

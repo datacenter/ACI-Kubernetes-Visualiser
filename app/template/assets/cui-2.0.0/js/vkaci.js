@@ -76,6 +76,16 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                     strokeWidth: 5
                 },
             },
+            "Label": {
+                caption: "name",
+                size: 2,
+                image: './assets/cui-2.0.0/img/label.svg',
+                "font": {
+                    "size": 20,
+                    "color": "#000000",
+                    strokeWidth: 5
+                },
+            },
         },
         relationships: {
             "PEERED_INTO": {
@@ -100,6 +110,10 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
 
             "RUNNING_ON": {
                 "color": "#DAA520"
+            },
+
+            "ATTACHED_TO": {
+                "color": "#ff5050"
             },
 
             [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
@@ -133,36 +147,70 @@ class View {
 
 selectedView = View.WithoutPods
 selectedNamespace = ".*"
+const selectedLabelFilters = new Map()
 selectedPodNamespace = "!"
+
+function getLabelFilterString() {
+    const lbls = [];
+    selectedLabelFilters.forEach((value) => lbls.push(`'${value}'`));
+    let lblStr = lbls.join(",")
+    console.log(lblStr)
+    return lblStr
+}
+
+function addLabelQuery() {
+    if (selectedLabelFilters.size > 0) {
+        lblStr = getLabelFilterString();
+        return `AND l.name IN [${lblStr}] `;
+        // q += `AND l2.name IN [${lblStr}]) `
+    }
+    return "";
+}
 
 function draw_all() {
     selectedView = View.All
-    // draw("MATCH (n)-[r]-(m) RETURN n,r,m")
-    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
+    let q = `MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN p, m, r, r2, a`
+    draw(q)
+    //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
-    // draw("MATCH (n:Node)-[r*1..2]->(m) Return n,m,r")
-    draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return m,r2,a")
+    let q = `MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN m, r2, a`
+    draw(q)
+    //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return m,r2,a")
 }
 
 function draw_without_bgp_peers() {
     selectedView = View.WithoutBgpPeers
-    // draw("MATCH (n1)-[r1:RUNNING_IN]-(n2)-[r2:CONNECTED_TO]-(n3) RETURN r1, r2, n1, n2, n3")
-    draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, r1, n, v, l")
+    let q = ` MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN u, r1, m, v,s`
+    draw(q)
+    // draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, r1, n, v, l")
 }
 
 function draw_pods_and_nodes() {
     selectedView = View.PodsAndNodes
-    // draw("MATCH (n1:Pod)-[r]->(n2) RETURN r, n1, n2", true)
-    draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
+    let q = ` MATCH (l:Label)-->(p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN p,r1,n`
+    draw(q, true)
+    //draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
 function draw_only_bgp_peers() {
     selectedView = View.OnlyBgpPeers
-    // draw("MATCH (n1)-[r:PEERED_INTO]->(n2) RETURN r, n1, n2")
-    draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, n,s")
+    let q = ` MATCH (l:Label)-->(p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN r, n,s`
+    draw(q)
+    
+    //draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, n,s")
 }
 
 function draw_namespace(namespace) {
@@ -296,4 +344,48 @@ function checkIfValidIP(str) {
     const regexExp = /^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$/gi;
 
     return regexExp.test(str);
+}
+
+function removeLabelFilter(id){
+    $("#"+$.escapeSelector(id)).remove();
+    selectedLabelFilters.delete(id)
+    selectedView.drawFunc()
+}
+
+function addLabelFilter(){
+    let label = $("#input-label-filter").val().trim();
+    let labelValue = $("#input-label-value-filter").val().trim();
+    let filter = `${label}:${labelValue}`
+    let id = filter.replace(':','-').replace('/','_').replace('.','_')
+    if (id !== '-' && !selectedLabelFilters.has(id)){
+        let html = 
+            `<span id="${id}" class="label label--dark label--round half-margin-left qtr-margin-top">
+                <span>${filter}</span>
+                <span class="icon-close" onclick="removeLabelFilter('${id}')"></span>
+            </span>`
+        $('#filtered-container').append(html);
+        selectedLabelFilters.set(id, filter)
+    }
+    closeModal('modal-small-label')
+    selectedView.drawFunc()
+}
+
+function label_values() {
+    
+    // Clear value filter
+    $("#input-label-value-filter").val("");
+    
+    // getting the label
+    label = $("#input-label-filter").val();
+
+    // Update data list
+    $.ajax({url: "/label_values?label="+label, success: function(result){
+        console.log(result)
+        // clearing the label values
+        $("#LabelValueList").empty();
+        // adding the list of label Values
+        result.values.forEach(value => {
+            $('#LabelValueList').append(`<option>${value}</option>`);
+        })
+      }});
 }
