@@ -7272,6 +7272,8 @@ body.cui .label {
     color: var(--cui-font-color); }
   body.cui .label.label--raised {
     box-shadow: var(--cui-shadow-outset); }
+  body.cui .label.label--round {
+    border-radius: 0.5em; }
 
 body.cui a:not(.btn), body.cui .link {
   -moz-appearance: none;

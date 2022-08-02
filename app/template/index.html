@@ -53,13 +53,13 @@
 
                      <a data-hreftarget="_self" target="_self"
                         data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
-                        href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Source Code"
+                        href="https://github.com/datacenter/ACI-Kubernetes-Visualiser" data-hreftitle="Source Code"
                         title="Source Code" class="header-item" id="_uidb14b144f"><i
                            class="fa-brands fa-github fa-2x"></i></a>
 
                      <a data-hreftarget="_self" target="_self"
                         data-hreflink="https://aci-github.cisco.com/camrossi/vkaci"
-                        href="https://aci-github.cisco.com/camrossi/vkaci" data-hreftitle="Open An Issue"
+                        href="https://github.com/datacenter/ACI-Kubernetes-Visualiser/issues" data-hreftitle="Open An Issue"
                         title="Open An Issue" class="header-item" id="_uid2e094e7e">Open An Issue</a>
                   </div>
                </div>
@@ -126,32 +126,40 @@
             <div class="tab-content">
                <!-- Cluster Topology tab -->
                <div notcomponent="" data-cubextabs="panel" class="tab-pane active">
-                  <div class="btn-group btn-group--large btn-group--square">
-                     <div class="dropdown">
-                        <button class="btn btn--white btn--dropdown selected view">Different Views</button>
-                        <div id="selected_views" class="dropdown__menu dropdown__menu--openleft">
-                           <a id="PodsAndNodes" onclick="draw_pods_and_nodes()">Pods & Nodes</a>
-                           <a id="WithoutBgpPeers" onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
-                           <a id="WithoutPods" onclick="draw_without_pods()">Without Pods</a>
-                           <a id="OnlyBgpPeers" onclick="draw_only_bgp_peers()">BGP Peers</a>
-                           <div class="dropdown__divider"></div>
-                           <a id="All" onclick="draw_all()">View All</a>
+                  <div class="row">
+                     <div class="btn-group btn-group--large btn-group--square">
+                        <div class="dropdown">
+                           <button class="btn btn--white btn--dropdown selected view">Different Views</button>
+                           <div id="selected_views" class="dropdown__menu dropdown__menu--openleft">
+                              <a id="PodsAndNodes" onclick="draw_pods_and_nodes()">Pods & Nodes</a>
+                              <a id="WithoutBgpPeers" onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
+                              <a id="WithoutPods" onclick="draw_without_pods()">Without Pods</a>
+                              <a id="OnlyBgpPeers" onclick="draw_only_bgp_peers()">BGP Peers</a>
+                              <div class="dropdown__divider"></div>
+                              <a id="All" onclick="draw_all()">View All</a>
+                           </div>
                         </div>
                      </div>
-                  </div>
-
-                  <div class="btn-group btn-group--large btn-group--square">
-                     <div class="dropdown">
-                        <button class="btn btn--white btn--dropdown selected view">Namespaces</button>
-                        <div id="selected_namespace" class="dropdown__menu dropdown__menu--openleft">
-                           <!-- For loop logic of jinja template -->
-                           {%for namespace in namespaces %}
-                           <a id="{{namespace}}" onclick="draw_namespace('{{namespace}}')">{{namespace}}</a>
-                           {%endfor%}
-                           <div class="dropdown__divider"></div>
-                           <a id=".*" onclick="draw_namespace('.*')">All</a>
+               
+                     <div class="btn-group btn-group--large btn-group--square">
+                        <div class="dropdown">
+                           <button class="btn btn--white btn--dropdown selected view">Namespaces</button>
+                           <div id="selected_namespace" class="dropdown__menu dropdown__menu--openleft">
+                              <!-- For loop logic of jinja template -->
+                              {%for namespace in namespaces %}
+                              <a id="{{namespace}}" onclick="draw_namespace('{{namespace}}')">{{namespace}}</a>
+                              {%endfor%}
+                              <div class="dropdown__divider"></div>
+                              <a id=".*" onclick="draw_namespace('.*')">All</a>
+                           </div>
                         </div>
                      </div>
+                     <div>
+                        <button class="btn btn--ghost half-margin-left btn--large" onclick="openModal('modal-small-label')"
+                           data-balloon="Filter by Label" data-balloon-pos="down">
+                           <i class="fa-solid fa-filter"></i></button>
+                     </div>
+                     <div id="filtered-container"></div>
                   </div>
                   <div id="viz" class="viz"></div>
                </div>
@@ -415,7 +423,7 @@
                            <div class="Legend-item">
                               <td><img src="./assets/cui-2.0.0/img/running_in.svg" width="128" height="30"></td>
                               <td><span class="Legend-label">
-                                    K8s Pod running in Node
+                                    K8s Node running on Leaf Neighbour
                                  </span>
                               </td>
                            </div>
@@ -424,7 +432,7 @@
                            <div class="Legend-item">
                               <td><img src="./assets/cui-2.0.0/img/running_on.svg" width="128" height="30"></td>
                               <td><span class="Legend-label">
-                                    K8s Node running on Leaf Neighbour
+                                    K8s Pod running in Node
                                  </span>
                               </td>
                            </div>
@@ -435,6 +443,63 @@
                   </div>
                   <div class="modal__footer">
                      <button class="btn" onclick="closeModal('modal-legend')">Ok</button>
+                  </div>
+               </div>
+            </div>
+         </div>
+         
+         <!-- Label filtering -->
+         <datalist id="LabelList">
+            <!-- For loop logic of jinja template -->
+            {%for label in label_names %}
+            <option>{{label}}</option>
+            {%endfor%}
+         </datalist>
+         <datalist id="LabelValueList">
+         </datalist>
+         <div class="modal modal--small hide" id="modal-small-label">
+            <div class="modal__dialog">
+               <div class="modal__content">
+                  <a class="modal__close" onclick="closeModal('modal-small-label')"><span class="icon-close"></span></a>
+                  <div class="modal__header">
+                     <div class="modal__title">Add Label Filter</div>
+                  </div>
+                  <div class="modal__body">
+                     <div class="row">
+                        <div class="col-10">
+                           <div class="form-group form-group--inline">
+                              <div class="col-md-7">
+                                 <div class="form-group input--icon base-margin-bottom">
+                                    <div class="form-group__text">
+                                       <input id="input-label-filter" type="search" list="LabelList" autocomplete="off">
+                                       <button type="button" id='labelBtn' class="link">
+                                          <span class="icon-tags"></span>
+                                       </button>
+                                    </div>
+                                    <div class="form-group__help">
+                                       <span>Label</span>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="col-md-7">
+                                 <div class="form-group input--icon base-margin-bottom">
+                                    <div class="form-group__text">
+                                       <input id="input-label-value-filter" type="search" list="LabelValueList" autocomplete="off">
+                                       <button type="button" class="link">
+                                          <span class="icon-view-stacked"></span>
+                                       </button>
+                                    </div>
+                                    <div class="form-group__help">
+                                       <span>Label Value</span>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="modal__footer">
+                     <button class="btn" onclick="addLabelFilter()">Add</button>
                   </div>
                </div>
             </div>
@@ -479,6 +544,10 @@
       });
       document.getElementById('podname').addEventListener('input', function (event) {
          if(!event.inputType) $("#podBttn").click();
+      });
+
+      document.getElementById('input-label-filter').addEventListener('input', function (event) {
+         if(!event.inputType) label_values();
       });
 
    </script>

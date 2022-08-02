@@ -573,6 +573,26 @@ class VkaciBuilTopology(object):
             for k,v in self.topology['nodes'][node]["pods"].items():
                 namespaces.append(v["ns"])
         return natsorted(list(set(namespaces)))
+
+    def get_labels(self):
+        '''return all the label names'''
+        label_names = []
+        for node in self.topology['nodes'].keys():
+            for pod, info in self.topology['nodes'][node]["pods"].items():
+              for k, v in info["labels"].items():
+                label_names.append(k)
+        return natsorted(list(set(label_names)))
+
+    def get_label_values(self, label):
+        '''return all the label values by labels'''
+        label_values = []
+        for node in self.topology['nodes'].keys():
+            for pod, info in self.topology['nodes'][node]["pods"].items():
+              for k, v in info["labels"].items():
+                if label == k:
+                    label_values.append(v)
+        return natsorted(list(set(label_values)))
+           
         
 class VkaciGraph(object):
     '''Class to build the Graph'''
@@ -591,10 +611,12 @@ class VkaciGraph(object):
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels
-    MERGE (pod)-[:RUNNING_ON]->(node))
+    MERGE (pod)-[:RUNNING_ON]->(node)
+    FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
     FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
+    FOREACH (l IN n.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(node))
     """
 
     query2 = """
@@ -606,8 +628,7 @@ class VkaciGraph(object):
     MERGE (switch:Switch {name:s.name})
     MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
     """
-    #FOREACH (s IN v.switches | MERGE (switch:Switch {name:s.name}) MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.node}]->(switch)))
-
+    
     def update_database(self):
         '''Update the neo4j database with the data collected from ACI and K8s'''
         graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
