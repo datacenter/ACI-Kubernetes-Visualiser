@@ -367,7 +367,7 @@ class VkaciBuilTopology(object):
         cdp_neighbours = self.apic_methods.get_cdpif(apic, pathtDn)
 
         if (len(lldp_neighbours) == 0 and len(cdp_neighbours) == 0 ):
-            logger.error("No LLDP or CDP neighbour detected, the topology will be incomplete. ")
+            logger.error("No LLDP or CDP neighbour detected, the topology will be incomplete.")
 
         if len(lldp_neighbours) > 0:
             # Prefer LLDP over CDP
@@ -376,7 +376,7 @@ class VkaciBuilTopology(object):
                     logger.debug("LLDP ADD")
                     self.add_neighbour(node, lldp_neighbour)
 
-        elif len(cdp_neighbours) > 0:
+        if len(cdp_neighbours) > 0 and len(node["neighbours"]) == 0:
             for cdp_neighbour in cdp_neighbours:
                 if cdp_neighbour.operSt == "up":
                     logger.debug("CDP ADD")

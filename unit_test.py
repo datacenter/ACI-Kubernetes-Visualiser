@@ -14,11 +14,32 @@ pods = [
             host_ip="192.168.1.2", pod_ip="192.158.1.3"
         ),
         metadata=client.V1ObjectMeta(
-            name="dateformat", namespace="dockerimage"
+            name="dateformat", namespace="dockerimage", labels={"guest":"frontend"}
         ),
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[]
         )
+    )
+]
+
+# Fake k8s cluster data for nodes
+nodes = [
+    client.V1Node(
+        metadata=client.V1ObjectMeta(
+            name="1234abc", labels = {"app":"redis"}
+        )    
+    )
+]
+
+# Fake k8s cluster data for services
+services = [
+    client.V1Service(
+        metadata=client.V1ObjectMeta(
+            name="example service", namespace="appx", labels = {"app":"guestbook"}
+        ),
+        spec=client.V1ServiceSpec(
+            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"]
+        )  
     )
 ]
 
@@ -45,6 +66,7 @@ def create_lldp_neighbour(on: bool = True):
         n.lldpAdjEp = [Expando()]
         n.lldpAdjEp[0].sysName = "esxi4.cam.ciscolabs.com"
         n.lldpAdjEp[0].chassisIdV = "vmxnic1"
+        n.lldpAdjEp[0].sysDesc = "VMware version 123"
         n.sysDesc = n.dn = "topology/pod-1/node-204"
         n.id = "eth1/1"
     return n
@@ -56,8 +78,9 @@ def create_cdp_neighbour(on: bool = False):
     if (on):
         n.operSt = "up"
         n.cdpAdjEp = [Expando()]
-        n.cdpAdjEp[0].sysName = "esxi5"
-        n.cdpAdjEp[0].chassisIdV = "vmxnic2"
+        n.cdpAdjEp[0].sysName = "CiscoLabs5"
+        n.cdpAdjEp[0].chassisIdV = n.cdpAdjEp[0].portIdV = "vmxnic2"
+        n.cdpAdjEp[0].ver = "Cisco version 123"
         n.sysDesc = n.dn = "topology/pod-1/node-203"
         n.id = "eth1/1"
     return n
@@ -131,6 +154,8 @@ class ApicMethodsMock(ApicMethodsResolve):
 @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
 @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
 @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+@patch('kubernetes.client.CoreV1Api.list_service_for_all_namespaces', MagicMock(return_value=client.V1ServiceList(api_version="1", items=services)))
+@patch('kubernetes.client.CoreV1Api.list_node', MagicMock(return_value=client.V1NodeList(api_version="1", items=nodes)))
 @patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
 class TestVkaciGraph(unittest.TestCase):
 
@@ -161,13 +186,19 @@ class TestVkaciGraph(unittest.TestCase):
     def test_valid_topology(self):
         """Test that a valid topology is created"""
         # Arrange
-        expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com': {'leaf-204': {'vmxnic1-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
+        expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
+                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}}},
+                                          'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
+                                                                                                         {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                          'labels': {'app': 'redis'}, 'mac': 'MOCKMO1C'}},
+                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],
+                                           'labels': {'app': 'guestbook'}, 'prefix': '192.168.5.1/32'}]}}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
         # Act
         result = build.update()
+    
         # Assert
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
@@ -176,8 +207,22 @@ class TestVkaciGraph(unittest.TestCase):
     def test_valid_topology_cdpn(self):
         """Test that a valid topology is created with cdp neighbours"""
         # Arrange
-        expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {'esxi5': {'leaf-203': {'vmxnic2-eth1/1'}}}, 'mac': 'MOCKMO1C'}}
+        expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
+                                          'labels': {'app': 'redis'},
+                                          'mac': 'MOCKMO1C',
+                                          'neighbours': {'CiscoLabs5': {'Description': 'Cisco '
+                                                                        'version '
+                                                                        '123',
+                                                                        'switches': {'leaf-203': {'vmxnic2-eth1/1'}}}},
+                                          'node_ip': '192.168.1.2',
+                                          'pods': {'dateformat': {'ip': '192.158.1.3',
+                                                                  'labels': {'guest': 'frontend'},
+                                                                  'ns': 'dockerimage'}}}},
+                    'services': {'appx': [{'cluster_ip': '192.168.25.5',
+                                           'external_i_ps': ['192.168.5.1'],
+                                           'labels': {'app': 'guestbook'},
+                                           'name': 'example service',
+                                           'prefix': '192.168.5.1/32'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(False)]
@@ -194,8 +239,19 @@ class TestVkaciGraph(unittest.TestCase):
     def test_valid_topology_no_neighbours(self):
         """Test that a valid topology is created with no neighbours"""
         # Arrange
-        expected = {'1234abc': {'node_ip': '192.168.1.2', 'pods': {'dateformat': {
-            'ip': '192.158.1.3', 'ns': 'dockerimage'}}, 'bgp_peers': {'leaf-204':{'prefix_count': 2}}, 'neighbours': {}, 'mac': 'MOCKMO1C'}}
+        expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
+                                          'labels': {'app': 'redis'},
+                                          'mac': 'MOCKMO1C',
+                                          'neighbours': {},
+                                          'node_ip': '192.168.1.2',
+                                          'pods': {'dateformat': {'ip': '192.158.1.3',
+                                                                  'labels': {'guest': 'frontend'},
+                                                                  'ns': 'dockerimage'}}}},
+                    'services': {'appx': [{'cluster_ip': '192.168.25.5',
+                                           'external_i_ps': ['192.168.5.1'],
+                                           'labels': {'app': 'guestbook'},
+                                           'name': 'example service',
+                                           'prefix': '192.168.5.1/32'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = []
@@ -250,12 +306,12 @@ class TestVkaciGraph(unittest.TestCase):
     def test_bgp_table(self):
         """Test that a bgp table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
-        [{'value': 'BGP Peering', 'image': 'bgp.png', 'data':
-        [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, {'value': 'Prefixes', 'image': 'ip.png', 'data': 
-        [{'value': '0.0.0.0/0', 'image': 'route.png', 'k8s_route': 'False', 'data': 
-        [{'value': '&lt;No Hostname&gt;', 'ip': '10.4.68.5', 'image': 'Nok8slogo.png'}]}, {'value': '192.168.5.1/32', 'image': 'route.png', 'k8s_route': 'True', 'data': 
-        [{'value': 'leaf 203', 'ip': '192.168.2.5', 'image': 'switch.png'}, {'value': '1234abc', 'ip': '192.168.1.2', 'image': 'node.svg'}]}]}]}]}
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
+        'data': [{'value': 'BGP Peering', 'image': 'bgp.png', 
+        'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, {'value': 'Prefixes', 'image': 'ip.png', 
+        'data': [{'value': '0.0.0.0/0', 'image': 'route.png', 'k8s_route': 'False', 'ns': '', 'svc': '', 
+        'data': [{'value': '&lt;No Hostname&gt;', 'ip': '10.4.68.5', 'image': 'Nok8slogo.png'}]}, {'value': '192.168.5.1/32', 'image': 'route.png', 'k8s_route': 'True', 'ns': 'appx', 'svc': 'example service', 
+        'data': [{'value': 'leaf 203', 'ip': '192.168.2.5', 'image': 'switch.png'}, {'value': '1234abc', 'ip': '192.168.1.2', 'image': 'node.svg'}]}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -263,6 +319,7 @@ class TestVkaciGraph(unittest.TestCase):
         # Act
         build.update()
         result = table.get_bgp_table()
+
         # Assert
         self.assertDictEqual(result, expected)
 
@@ -270,9 +327,10 @@ class TestVkaciGraph(unittest.TestCase):
     def test_node_table(self):
         """Test that a node table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
-        [{'value': 'esxi4.cam.ciscolabs.com', 'interface': ['vmxnic1-eth1/1'], 'ns': '', 'image': 'esxi.png', 'data': 
-        [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}]}]}
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
+        'data': [{'value': 'esxi4.cam.ciscolabs.com', 'interface': ['vmxnic1-eth1/1'], 'ns': '', 'image': 'esxi.png', 
+        'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg', 
+        'data': [{'value': 'app', 'label_value': 'redis', 'image': 'label.svg'}]}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -288,8 +346,9 @@ class TestVkaciGraph(unittest.TestCase):
     def test_pod_table(self):
         """Test that a pod table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 'data': 
-        [{'value': 'dateformat', 'ip': '192.158.1.3', 'ns': 'dockerimage', 'image': 'pod.svg'}]}]}
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
+        'data': [{'value': 'dateformat', 'ip': '192.158.1.3','ns': 'dockerimage', 'image': 'pod.svg', 
+        'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -297,9 +356,28 @@ class TestVkaciGraph(unittest.TestCase):
         # Act
         build.update()
         result = table.get_pod_table()
+       
+        # Assert
+        self.assertDictEqual(result, expected)
+
+
+    def test_services_table(self):
+        """Test that a services table is correctly created"""
+        # Arrange
+        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 
+        'labels': {'app': 'guestbook'}, 'prefix': '192.168.5.1/32', 'value': 'example service', 'ns': 'appx', 
+        'image': 'svc.svg', 'data': [{'value': 'app', 'label_value': 'guestbook', 'image': 'label.svg'}]}]}
+
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        table = VkaciTable(build)
+        # Act
+        build.update()
+        result = table.get_services_table()
         
         # Assert
         self.assertDictEqual(result, expected)
+
         
 
 if __name__ == '__main__':
