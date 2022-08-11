@@ -1,5 +1,5 @@
 function setTheme(mode) {
-    button = $("#colour-mode-button")
+    var button = $("#colour-mode-button")
     if (mode === "dark") {
       $("body").attr("data-theme", "dark")
       button.removeClass("fa-dragon")
@@ -17,7 +17,7 @@ function setTheme(mode) {
   }
   
 function toggleColourMode() {
-    mode = $("body").attr("data-theme")
+    var mode = $("body").attr("data-theme")
     if (mode === "dark") {
       setTheme("light")
     }

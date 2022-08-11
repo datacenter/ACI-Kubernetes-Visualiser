@@ -160,7 +160,7 @@ function getLabelFilterString() {
 
 function addLabelQuery() {
     if (selectedLabelFilters.size > 0) {
-        lblStr = getLabelFilterString();
+        var lblStr = getLabelFilterString();
         return `AND l.name IN [${lblStr}] `;
         // q += `AND l2.name IN [${lblStr}]) `
     }
@@ -254,10 +254,8 @@ function selectView() {
 function draw(query, pods = false) {
     selectView()
     var config = neo_viz_config(pods, "viz", query)
-    console.log(config)
     var viz = new NeoVis.default(config);
     viz.render();
-    console.log(viz);
 }
 
 function draw_leaf() {
@@ -278,7 +276,7 @@ function draw_node() {
     if (!str.trim()) return;
     var seed = "0.7578607868826415:1645663636870"
     // var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
-    q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+    let q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
          MATCH (n)-[r3:PEERED_INTO]->(s1)
          WHERE n.name = "${str}" AND n.name IN r2.nodes RETURN *
     `;
@@ -296,11 +294,11 @@ function draw_pod() {
     var str = $("#podname").val();
     if (!str.trim()) return;
     var seed = "0.8660747593468698:1645662423690"
-    t = "name"
+    var t = "name"
     if (checkIfValidIP(str)) {
         t = "ip"
     }
-    p = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+    var p = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
         MATCH (n)-[r3:PEERED_INTO]->(s1)
         WHERE p.${t} = "${str}" AND n.name IN r2.nodes RETURN *
     `;
@@ -355,7 +353,7 @@ function removeLabelFilter(id){
 function addLabelFilter(){
     let label = $("#input-label-filter").val().trim();
     let labelValue = $("#input-label-value-filter").val().trim();
-    let filter = `${label}:${labelValue}`
+    let filter = DOMPurify.sanitize(`${label}:${labelValue}`)
     let id = filter.replace(':','-').replace('/','_').replace('.','_')
     if (id !== '-' && !selectedLabelFilters.has(id)){
         let html = 
@@ -376,7 +374,7 @@ function label_values() {
     $("#input-label-value-filter").val("");
     
     // getting the label
-    label = $("#input-label-filter").val();
+    let label = $("#input-label-filter").val();
 
     // Update data list
     $.ajax({url: "/label_values?label="+label, success: function(result){
