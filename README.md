@@ -1,5 +1,7 @@
 # Visualising Kubernetes ACI
 
+[![VKACI Automated Tests](https://github.com/datacenter/ACI-Kubernetes-Visualiser/actions/workflows/vkaci-test.yml/badge.svg)](https://github.com/datacenter/ACI-Kubernetes-Visualiser/actions/workflows/vkaci-test.yml)
+
 ## CISCO VKACI
 
 ## Introduction
