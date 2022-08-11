@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 logger.info("Loading ACI Metadata")
 try:
     url = "https://" + os.environ.get("APIC_IPS").split(',')[0]
-    r = requests.get(url, verify=False, allow_redirects=True)
+    requests.get(url, verify=False, allow_redirects=True)
 except Exception as e:
     logger.error("Unable to Connect to APIC %s", str(e))
     exit(1)

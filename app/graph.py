@@ -56,7 +56,7 @@ class VkaciEnvVariables(object):
 
     def enviro(self):
         '''Return the Dictionary with all the Environment Variables'''
-        if self.dict_env == None:
+        if self.dict_env is None:
             return os.environ
         else:
             return self.dict_env
@@ -432,10 +432,12 @@ class VkaciBuilTopology(object):
         logger.info("APICs To Probe %s", self.env.apic_ip)
         for apic in self.apics:
             if self.is_local_mode():
-                logger.info("Running in Local Mode, using %s as user name, %s as certificate name and %s as key path", self.env.cert_user, self.env.cert_name, self.env.key_path)
+                logger.info("Running in Local Mode")
+                #logger.debug("using %s as user name, %s as certificate name and %s as key path", self.env.cert_user, self.env.cert_name, self.env.key_path)
                 apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, self.env.key_path)
             elif self.is_cluster_mode():
-                logger.info("Running in Cluster Mode, using %s as user name, %s as certificate name and key is loaded as a K8s Secret ", self.env.cert_user, self.env.cert_name)
+                logger.info("Running in Cluster Mode") 
+                #logger.debug("using %s as user name, %s as certificate name and key is loaded as a K8s Secret ", self.env.cert_user, self.env.cert_name)
                 apic.useX509CertAuth(self.env.cert_user, self.env.cert_name, '/usr/local/etc/aci-cert/user.key')
             else:
                 logger.error("MODE can only be LOCAL or CLUSTER but %s was given", self.env.mode)
@@ -518,7 +520,7 @@ class VkaciBuilTopology(object):
                             v['mac'] = ep.mac           
                 future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
-        result = future.result()
+        future.result()
         
         logger.info("ACI queries completed after: {} seconds".format(time.time() - start))
         logger.info("Topology:")
@@ -552,7 +554,7 @@ class VkaciBuilTopology(object):
         pod_names = []
         for node in self.topology['nodes'].keys():
             for pod, v in self.topology['nodes'][node]["pods"].items():
-                if ns == None or ns == v["ns"]:
+                if ns is None or ns == v["ns"]:
                     pod_names.append(pod)
         return natsorted(pod_names)
 
@@ -560,7 +562,7 @@ class VkaciBuilTopology(object):
         '''return all the service names in all namespaces by default or filtered by ns'''
         service_names = []
         for namespace in self.topology['services'].keys():
-            if ns == None or ns == namespace:
+            if ns is None or ns == namespace:      
                 for s in self.topology["services"][namespace]:
                     if s['prefix']:
                         service_names.append(s["name"])
@@ -636,8 +638,8 @@ class VkaciGraph(object):
         data, switch_data = self.build_graph_data(topology)
 
         graph.run("MATCH (n) DETACH DELETE n")
-        results = graph.run(self.query,json=data)
-        results = graph.run(self.query2,json=switch_data)
+        graph.run(self.query,json=data)
+        graph.run(self.query2,json=switch_data)
         tx = graph.begin()
         graph.commit(tx)
 
