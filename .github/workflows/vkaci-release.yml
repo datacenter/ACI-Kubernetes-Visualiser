@@ -1,0 +1,22 @@
+# This is a basic workflow to help you get started with the GitHub Auto-Release on Commit Action.
+
+name: AutoRelease
+
+on:
+  push:
+    branches: [ main ]
+
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: CupOfTea696/gh-action-auto-release@v1.0.0
+        with:
+          title: "Release: $version"
+          tag: "v$semver"
+          draft: true
+          regex: "/^Release: #{semver}$/i"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
