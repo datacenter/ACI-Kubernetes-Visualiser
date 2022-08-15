@@ -1,0 +1,19 @@
+# This is a basic workflow to help you get started with the GitHub Auto-Release on Commit Action.
+
+name: VKACI Container Build
+
+on:
+  release:
+    types: [published]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: build container with tag ${{ github.ref_name }}
+        run:  bash app/buildah_build.sh ${{ github.ref_name }}
