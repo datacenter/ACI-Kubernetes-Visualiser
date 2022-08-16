@@ -16,4 +16,4 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: build container with tag ${{ github.ref_name }}
-        run:  cd app && sudo bash buildah_build.sh ${{ github.ref_name }}
+        run:  cd app && echo ${{ secrets.USER_PASS }} | sudo -S bash buildah_build.sh ${{ github.ref_name }}
