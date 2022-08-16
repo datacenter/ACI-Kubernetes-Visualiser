@@ -3,9 +3,14 @@ export MANIFEST_NAME="vkaci"
 
 # Set the required variables
 export REGISTRY="quay.io"
-export USER="camillo"
+export USER="datacenter"
 export IMAGE_NAME="vkaci"
-export IMAGE_TAG="dev-27-jun"
+if [ -z "$1" ]
+    then
+        export IMAGE_TAG="test-15-AUG"
+    else
+        export IMAGE_TAG="$1"
+fi
 
 # Create a multi-architecture manifest
 for i in `buildah manifest inspect ${MANIFEST_NAME} | jq -r ".manifests[].digest"`
