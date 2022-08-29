@@ -254,7 +254,7 @@ This is most likely because your APIC is configured in a way that we have not en
 
 - Vkaci is an open source, proof of concept tool hence has potential for further enhancements.
 - There are some constraints to supporting all configurations at this stage.
-- The intention of making this tool open source is to gain feedbacks or suggestions from the wider community in relation to any defects and unexpected anomalies that may appear. However, we tried our best to test it and implement enough logging and error handling so problems can be clearly identified.
+- The intention of making this tool open source is to gain feedback or suggestions from the wider community in relation to any defects and unexpected anomalies that may appear. However, we tried our best to test it and implement enough logging and error handling so problems can be clearly identified.
 - Scalability was a consideration hence Vkaci was tested and confirmed to work with a cluster consisting of 200 nodes and 2500 pods. Although, with larger topologies there can be a few seconds wait in loading time for a stabilized graph appearance. This is because of a fixed number of physics iterations prior to showing the result.
 - The topology graphs use a visualisation library that uses physics simulations to attempt to positions graph objects evenly and dynamically. The topology graphs may appear differently each time. However, it is possible to reposition the graph objects manually to suit your preference.
 - Blade systems are not supported and if a user is using blade system the "hypervisor" will in reality be the Blade System switch.
