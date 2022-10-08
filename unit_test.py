@@ -58,7 +58,7 @@ class MockMo(object):
         self.fvRsCEpToPathEp[0].tDn = pathtDn
 
 
-def create_lldp_neighbour(on: bool = True):
+def create_lldp_neighbour(on: bool = True, desc: bool = True):
     n = Expando()
     n.operTxSt = n.operRxSt = "down"
     if (on):
@@ -66,7 +66,8 @@ def create_lldp_neighbour(on: bool = True):
         n.lldpAdjEp = [Expando()]
         n.lldpAdjEp[0].sysName = "esxi4.cam.ciscolabs.com"
         n.lldpAdjEp[0].chassisIdV = "vmxnic1"
-        n.lldpAdjEp[0].sysDesc = "VMware version 123"
+        if desc:
+            n.lldpAdjEp[0].sysDesc = "VMware version 123"
         n.sysDesc = n.dn = "topology/pod-1/node-204"
         n.id = "eth1/1"
     return n
@@ -260,6 +261,37 @@ class TestVkaciGraph(unittest.TestCase):
             VkaciEnvVariables(self.vars), mock)
         # Act
         result = build.update()
+        # Assert
+        self.assertDictEqual(result, expected)
+        self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
+
+
+    def test_valid_topology_no_desc_neighbour(self):
+        """Test that a neighbour with no description will not crash"""
+        # Arrange
+        expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
+                                          'labels': {'app': 'redis'},
+                                          'mac': 'MOCKMO1C',
+                                          'neighbours': {'esxi4.cam.ciscolabs.com': {'Description': '',
+                                                                        'switches': {'leaf-204': set()}}},
+                                          'node_ip': '192.168.1.2',
+                                          'pods': {'dateformat': {'ip': '192.158.1.3',
+                                                                  'labels': {'guest': 'frontend'},
+                                                                  'ns': 'dockerimage'}}}},
+                    'services': {'appx': [{'cluster_ip': '192.168.25.5',
+                                           'external_i_ps': ['192.168.5.1'],
+                                           'labels': {'app': 'guestbook'},
+                                           'name': 'example service',
+                                           'prefix': '192.168.5.1/32'}]}}
+
+        mock = ApicMethodsMock()
+        mock.lldps = [create_lldp_neighbour(desc=False)]
+        mock.cdpns = []
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), mock)
+        # Act
+        result = build.update()
+        print(result)
         # Assert
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
