@@ -218,10 +218,10 @@ class VkaciBuilTopology(object):
             
             #Vmare esxi puts the port name vmnic in the chassisIdV while linux put the port name in the portDesc
             lldp_port_id_class = 'portDesc'
-            if 'VMware' in neighbour_description:
+            if neighbour_description and 'VMware' in neighbour_description:
                 lldp_port_id_class = 'chassisIdV'
             # UCS Uses the portIdV
-            if 'Cisco' in neighbour_description:
+            if neighbour_description and 'Cisco' in neighbour_description:
                 lldp_port_id_class = 'portIdV'
             
             neighbour_adj_port = getattr(neighbour_adj,lldp_port_id_class, None)
