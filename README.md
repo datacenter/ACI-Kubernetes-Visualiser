@@ -22,10 +22,6 @@ The Kubernetes API allows you to query and manipulate the state of Kubernetes AP
 - It's an easy tool available to let non-programmers create visualizations of network topologies.
 - Free and open source to help showcase the possibilities of ACI and K8s.
 
-## Dev Team
-
-![Dev Team](readme-img/fig1.png)
-
 ## Systems Design
 
 ### User Stories
