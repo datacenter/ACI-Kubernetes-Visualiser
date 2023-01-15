@@ -1,6 +1,6 @@
 # Visualising Kubernetes ACI
 
-[![VKACI Automated Tests](https://github.com/datacenter/ACI-Kubernetes-Visualiser/actions/workflows/vkaci-test.yml/badge.svg)](https://github.com/datacenter/ACI-Kubernetes-Visualiser/actions/workflows/vkaci-test.yml) [![Language grade: JavaScript](https://img.shields.io/lgtm/grade/javascript/g/datacenter/ACI-Kubernetes-Visualiser.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/datacenter/ACI-Kubernetes-Visualiser/context:javascript) [![Language grade: Python](https://img.shields.io/lgtm/grade/python/g/datacenter/ACI-Kubernetes-Visualiser.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/datacenter/ACI-Kubernetes-Visualiser/context:python)
+[![VKACI Automated Tests](https://github.com/datacenter/ACI-Kubernetes-Visualiser/actions/workflows/vkaci-test.yml/badge.svg)](https://github.com/datacenter/ACI-Kubernetes-Visualiser/actions/workflows/vkaci-test.yml)
 
 ## CISCO VKACI
 
