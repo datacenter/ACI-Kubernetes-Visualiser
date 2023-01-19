@@ -64,9 +64,9 @@ spec:
             - name: NEO4J_BROWSER_URL
               value: "{{ .Values.n4jBrowserUrl }}"
             - name: NEO4J_USER
-              value: "{{ .Values.neo4j-standalone.neo4j.name }}"
+              value: "{{ .Values.neo4j\-standalone.neo4j.name }}"
             - name: NEO4J_PASSWORD
-              value: "{{ .Values.neo4j-standalone.neo4j.password }}"
+              value: "{{ .Values.neo4j\-standalone.neo4j.password }}"
           volumeMounts:
             - name: aci-user-cert-volume
               mountPath: /usr/local/etc/aci-cert/
