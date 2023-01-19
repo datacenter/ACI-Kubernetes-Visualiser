@@ -84,8 +84,6 @@ affinity: {}
 
 # Neo4j Chart Settings
 neo4j-standalone:
-  nameOverride: "vkaci-neo4j"
-  fullnameOverride: "vkaci-neo4j"
   services:
     neo4j:
       # Disables the LoadBalancer service
