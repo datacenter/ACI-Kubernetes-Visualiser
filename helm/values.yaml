@@ -18,8 +18,6 @@ apicKeyData: ""
 
 # Special VKACI Neo4j Variables
 n4jBrowserUrl: ""
-n4jUser: neo4j
-n4jPassword: ""
 
 image:
   repository: quay.io/datacenter/vkaci
@@ -95,6 +93,7 @@ neo4j-standalone:
     resources:
       cpu: "1"
       memory: "2Gi"
+    name: neo_user
     password: me-change
   volumes:
     data:
