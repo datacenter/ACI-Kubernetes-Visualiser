@@ -93,7 +93,6 @@ neo4j-standalone:
     resources:
       cpu: "1"
       memory: "2Gi"
-    name: neo_user
     password: me-change
   volumes:
     data:

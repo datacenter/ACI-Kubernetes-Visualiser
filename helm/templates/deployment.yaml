@@ -64,7 +64,7 @@ spec:
             - name: NEO4J_BROWSER_URL
               value: "{{ .Values.n4jBrowserUrl }}"
             - name: NEO4J_USER
-              value: "{{ index .Values "neo4j-standalone" "neo4j" "name" }}"
+              value: "neo4j"
             - name: NEO4J_PASSWORD
               value: "{{ index .Values "neo4j-standalone" "neo4j" "password" }}"
           volumeMounts:
