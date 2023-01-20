@@ -22,7 +22,7 @@ n4jUser: neo4j
 n4jPassword: ""
 
 image:
-  repository: quay.io/camillo/vkaci
+  repository: quay.io/datacenter/vkaci
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
