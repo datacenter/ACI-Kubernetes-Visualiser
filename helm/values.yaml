@@ -16,9 +16,6 @@ vrfName: ""
 # but I found no way for Helm to access user files outside of the chart.
 apicKeyData: ""
 
-# Special VKACI Neo4j Variables
-n4jBrowserUrl: ""
-
 image:
   repository: quay.io/datacenter/vkaci
   pullPolicy: Always
@@ -83,12 +80,13 @@ affinity: {}
 # Neo4j Chart Settings
 neo4j-standalone:
   services:
-    neo4j:
-      # Disables the LoadBalancer service
-      enabled: false
-    admin:
-      # Disables the extra admin service
-      enabled: false
+    default:
+      #type: NodePort
+      #externalIPs:
+      #  - 192.168.14.0
+      type: LoadBalancer
+      loadBalancerIP: 192.168.14.0
+
   neo4j:
     resources:
       cpu: "1"

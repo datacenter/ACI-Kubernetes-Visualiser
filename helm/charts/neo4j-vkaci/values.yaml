@@ -144,7 +144,7 @@ services:
 
   # A LoadBalancer Service for external Neo4j driver applications and Neo4j Browser
   neo4j:
-    enabled: true
+    enabled: false
 
     # Annotations for the K8s Service object
     annotations: { }
@@ -178,7 +178,7 @@ services:
   # A service for admin/ops tasks including taking backups
   # This service is available even if the deployment is not "ready"
   admin:
-    enabled: true
+    enabled: false
     # Annotations for the admin service
     annotations: { }
     spec:
