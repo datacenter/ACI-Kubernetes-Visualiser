@@ -11,6 +11,7 @@ apicCertName: "nkt_user_Xvpp3k"
 apicUsername: "nkt_user_Xvpp3k"
 vrfTenant: "Cilium"
 vrfName: "Cilium"
+
 # Get the APIC key data by encoding your key file as a base64 string
 # NOTE: It would have been nice to be able to pass in a filename instead so Helm can do it for us
 # but I found no way for Helm to access user files outside of the chart.
@@ -46,7 +47,7 @@ neo4j-standalone:
     resources:
       cpu: "1"
       memory: "2Gi"
-    password: me-change
+    password: "" # Set a very good password
   volumes:
     data:
       mode: defaultStorageClass

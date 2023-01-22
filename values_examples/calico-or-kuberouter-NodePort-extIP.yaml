@@ -51,7 +51,7 @@ neo4j-standalone:
     resources:
       cpu: "1"
       memory: "2Gi"
-    password: me-change
+    password: "" # Set a very good password
   volumes:
     data:
       mode: defaultStorageClass

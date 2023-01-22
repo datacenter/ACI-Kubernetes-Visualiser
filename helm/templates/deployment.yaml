@@ -72,7 +72,7 @@ spec:
               value: "neo4j://{{ index .Values "neo4j-standalone" "services" "default" "loadBalancerIP" }}:7687"
               {{- end }}
             - name: NEO4J_USER
-              value: "neo4j"
+              value: "{{ .Values.n4jUser }}"
             - name: NEO4J_PASSWORD
               value: "{{ index .Values "neo4j-standalone" "neo4j" "password" }}"
           volumeMounts:
