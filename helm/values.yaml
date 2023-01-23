@@ -18,8 +18,6 @@ apicKeyData: ""
 
 # Special VKACI Neo4j Variables
 n4jBrowserUrl: ""
-n4jUser: neo4j
-n4jPassword: ""
 
 image:
   repository: quay.io/datacenter/vkaci
@@ -84,8 +82,6 @@ affinity: {}
 
 # Neo4j Chart Settings
 neo4j-standalone:
-  nameOverride: "vkaci-neo4j"
-  fullnameOverride: "vkaci-neo4j"
   services:
     neo4j:
       # Disables the LoadBalancer service
