@@ -28,7 +28,16 @@ metadata:
   {{- end }}
 spec:
   publishNotReadyAddresses: false
-  type: ClusterIP
+  type: {{ .Values.services.default.type }}
+  externalTrafficPolicy: {{ .Values.services.default.externalTrafficPolicy | default "Cluster" }}
+  {{- if eq .Values.services.default.type "NodePort" }}
+  externalIPs: {{ .Values.services.default.externalIPs }}
+  {{- else if eq .Values.services.default.type "LoadBalancer" }}
+  loadBalancerIP: {{ .Values.services.default.loadBalancerIP }}
+  {{ if ((.Values.foo).bar) }}
+  {{ .Values.foo.bar }}
+  {{ end }}
+  {{- end }}
   {{- with .spec }}{{- include "neo4j.services.extraSpec" . | nindent 2 }}{{- end }}
   selector:
     app: "{{ template "neo4j.appName" $ }}"
@@ -37,6 +46,9 @@ spec:
     - protocol: TCP
       port: 7687
       targetPort: 7687
+      {{- if.Values.services.default.port }}
+      nodePort: {{ .Values.services.default.port }}
+      {{- end }}
       name: tcp-bolt
     - protocol: TCP
       port: 7474

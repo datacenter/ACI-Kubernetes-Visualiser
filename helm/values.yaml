@@ -11,13 +11,14 @@ apicCertName: ""
 apicUsername: ""
 vrfTenant: ""
 vrfName: ""
+
+# The username of the neo4j database. Currently it seems is not supporting changing the default neo4j username so there should be no need to change this value
+n4jUser: neo4j 
+
 # Get the APIC key data by encoding your key file as a base64 string
 # NOTE: It would have been nice to be able to pass in a filename instead so Helm can do it for us
 # but I found no way for Helm to access user files outside of the chart.
-apicKeyData: ""
-
-# Special VKACI Neo4j Variables
-n4jBrowserUrl: ""
+apicKeyData: "<base64 certificate data>"
 
 image:
   repository: quay.io/datacenter/vkaci
@@ -83,17 +84,18 @@ affinity: {}
 # Neo4j Chart Settings
 neo4j-standalone:
   services:
-    neo4j:
-      # Disables the LoadBalancer service
-      enabled: false
-    admin:
-      # Disables the extra admin service
-      enabled: false
+    default:
+      type: NodePort
+      #externalIPs:
+      #  - 192.168.14.0
+      #type: LoadBalancer
+      #loadBalancerIP: 192.168.14.0
+
   neo4j:
     resources:
       cpu: "1"
       memory: "2Gi"
-    password: me-change
+    password: "" # Set a very good password
   volumes:
     data:
       mode: defaultStorageClass

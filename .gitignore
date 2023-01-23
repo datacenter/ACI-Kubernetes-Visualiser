@@ -1,3 +1,5 @@
 app/__pycache__/*
 __pycache__/*
-.vscode/*
+.vscode/*\
+my_values.yaml
+values_examples_local

@@ -8,10 +8,15 @@ spec:
   type: {{ .Values.service.type }}
   #externalIPs:
   #  - {{ .Values.service.externalIP }}
-  externalTrafficPolicy: Local
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy | default "Cluster" }}
+  {{- if .Values.service.externalIPs }}
+  externalIPs: {{ .Values.service.externalIPs }}
+  {{- end }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: 80
+      {{- if .Values.service.nodePort }}
       nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
       targetPort: 8080
       protocol: TCP
   selector:

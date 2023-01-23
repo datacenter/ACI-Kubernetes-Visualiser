@@ -1,0 +1,57 @@
+# Default values for vkaci.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+# VKACI APIC Variables
+# All of these will need to be set correctly
+apicIps: "10.67.185.102,10.67.185.41,10.67.185.42"
+apicCertName: "nkt_user_Xvpp3k"
+apicUsername: "nkt_user_Xvpp3k"
+vrfTenant: "Cilium"
+vrfName: "Cilium"
+
+# Get the APIC key data by encoding your key file as a base64 string
+# NOTE: It would have been nice to be able to pass in a filename instead so Helm can do it for us
+# but I found no way for Helm to access user files outside of the chart.
+apicKeyData: <base64 certificate data>
+
+image:
+  repository: quay.io/datacenter/vkaci
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "vkaci"
+
+service:
+  type: LoadBalancer
+
+
+# Neo4j Chart Settings
+neo4j-standalone:
+  services:
+    # This setting configure the default neo4j service to 
+    default:
+      type: LoadBalancer
+      loadBalancerIP: 192.168.14.3 #Pick the second free IP, the first one will be allocated to vkaci
+  neo4j:
+    resources:
+      cpu: "1"
+      memory: "2Gi"
+    password: "" # Set a very good password
+  volumes:
+    data:
+      mode: defaultStorageClass
+  config:
+    dbms.default_database: neo4j
+    dbms.config.strict_validation: 'true'
+

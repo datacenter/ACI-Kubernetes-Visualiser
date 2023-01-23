@@ -62,9 +62,17 @@ spec:
             - name: NEO4J_URL
               value: "neo4j://{{ $.Release.Name }}-neo4j:7687"
             - name: NEO4J_BROWSER_URL
-              value: "{{ .Values.n4jBrowserUrl }}"
+              {{- if eq (index .Values "neo4j-standalone" "services" "default" "type") "NodePort" }}
+              {{- if (index .Values "neo4j-standalone" "services" "default" "externalIPs") }}
+              value: "neo4j://{{ index .Values "neo4j-standalone" "services" "default" "externalIPs" 0}}:7687" #Gets the 1st external IP
+              {{- else if (index .Values "neo4j-standalone" "services" "default" "nodeExternalIP") }}
+              value: "neo4j://{{ index .Values "neo4j-standalone" "services" "default" "nodeExternalIP"}}:{{ index .Values "neo4j-standalone" "services" "default" "port"}}"
+              {{- end }}
+              {{- else if eq (index .Values "neo4j-standalone" "services" "default" "type") "LoadBalancer" }}
+              value: "neo4j://{{ index .Values "neo4j-standalone" "services" "default" "loadBalancerIP" }}:7687"
+              {{- end }}
             - name: NEO4J_USER
-              value: "neo4j"
+              value: "{{ .Values.n4jUser }}"
             - name: NEO4J_PASSWORD
               value: "{{ index .Values "neo4j-standalone" "neo4j" "password" }}"
           volumeMounts:
