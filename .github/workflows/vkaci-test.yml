@@ -35,7 +35,7 @@ jobs:
     - name: Create aci-meta.json
       run: |
         mkdir /app/aci-meta
-        touch aci-meta.json
+        touch /app/aci-meta/aci-meta.json
     - name: Test with unittest
       run: |
         python unit_test.py
