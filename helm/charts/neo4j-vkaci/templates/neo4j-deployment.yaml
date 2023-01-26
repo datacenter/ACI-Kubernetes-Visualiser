@@ -128,7 +128,11 @@ spec:
             limits: {{ . | toYaml | nindent 14 }}
             {{- end }}
           {{- end }}
-          securityContext: {{ omit .Values.securityContext "fsGroupChangePolicy" "fsGroup" | toYaml  | nindent 14 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - mountPath: "/config/neo4j.conf"
               name: neo4j-conf

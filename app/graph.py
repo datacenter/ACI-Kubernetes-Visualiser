@@ -428,7 +428,7 @@ class VkaciBuilTopology(object):
 
         #Create list of APICs and set the useX509CertAuth parameters
         for i in self.env.apic_ip:
-            self.apics.append(Node('https://' + i))
+            self.apics.append(Node('https://' + i, aciMetaFilePath="/app/aci-meta/aci-meta.json"))
         logger.info("APICs To Probe %s", self.env.apic_ip)
         for apic in self.apics:
             if self.is_local_mode():
