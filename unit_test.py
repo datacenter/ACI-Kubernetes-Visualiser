@@ -167,7 +167,8 @@ class TestVkaciGraph(unittest.TestCase):
             "KUBE_CONFIG": "$HOME/.kube/config",
             "CERT_USER": "useX509",
             "CERT_NAME": "test",
-            "KEY_PATH": " 101/1/1-2"
+            "KEY_PATH": " 101/1/1-2",
+            "ACI_META_FILE": None
             }
 
     def test_no_env_variables(self):
