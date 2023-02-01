@@ -12,6 +12,17 @@ Cisco Application Centric Infrastructure (Cisco ACI) is a component of Cisco's p
 
 The Kubernetes API allows you to query and manipulate the state of Kubernetes API objects (For example: Pods, Namespaces, ConfigMaps, and Events).
 
+## Licensing Requirements
+### Please note
+
+***Fundamental Requirement***
+
+GPL 3 is a strong copyleft license, meaning that any copy or modification of the original code must also be released under the GPL v3. In other words, you can take the GPL 3’d code, add to it or make major changes, then distribute your version. However, your version is subject to the same license requirements, meaning that it must be under GPL v3 as well — anyone can see your modified code and install it for their own purposes.
+
+***Developers Requirement***
+
+Research indicates that open source software contributors are motivated more by a desire to learn and be part of the OSS community than by financial rewards. Hence consider distribution of this code ethically and not for any external companies production or commercial environment. 
+
 ## Product Value
 
 - Graph visualisation helps in delivering data in the most efficient way possible.
