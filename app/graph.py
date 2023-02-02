@@ -346,7 +346,7 @@ class VkaciBuilTopology(object):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
         if 'mac' not in node:
             logger.error("Could not resolved the mac address of node with ip %s", node['node_ip'] )
-            logger.error("This usually happnes if the Tenant/VRF config is wrong, I am configured to use '%s', is it coorect?", self.aci_vrf)
+            logger.error("This usually happnes if the Tenant/VRF config is wrong, I am configured to use '%s', is it correct?", self.aci_vrf)
             exit()
         #Find the mac to interface mapping
         logger.info("Find the mac to interface mapping for Node %s with MAC %s", node['node_ip'], node['mac'])
