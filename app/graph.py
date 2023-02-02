@@ -277,6 +277,24 @@ class VkaciBuilTopology(object):
                 logger.info('Kube-Router Detected! Cluster AS=%s',asn)
         except Exception as e:
             pass
+
+         # Try to get Cluster AS from Cilium Config
+        try: 
+            #We support only a singe AS per Cluster I use a set to ensure that
+            asn_set = set()
+            logger.debug("Try to detect Cilium")
+            #Get all the CiliumBGPPeeringPolicies traverse them and the virtualRouters and add all the found ASN in the set
+            CiliumBGPPeeringPolicies = self.custom_obj.list_cluster_custom_object(group="cilium.io",version="v2alpha1",plural="ciliumbgppeeringpolicies")
+            for policy in CiliumBGPPeeringPolicies['items']:
+                for virtualrotuer in policy['spec']['virtualRouters']:
+                    asn_set.add(str(virtualrotuer['localASN']))
+            if len(asn_set) == 1:
+                asn = asn_set.pop()
+                logger.info('Cilium Detected! Cluster AS=%s',asn)
+            elif len(asn_set) > 1:
+                logger.info('Cilium Detected! More than one AS is used, this is an unsupported configuration!')
+        except Exception as e:
+            pass
         if asn == 0:
             logger.error("Can't detect K8s Cluster AS, BGP topology will not work corectly")
         return asn
