@@ -168,7 +168,7 @@ A Helm chart for Vkaci has been created to enable simple deployment of the Vkaci
 
 The helm chart can currently be found in the source code for VKACI and is also available in the following repo:
 
-<https://samiib.github.io/vkaci-chart>
+<https://datacenter.github.io/ACI-Kubernetes-Visualiser>
 
 #### Required Variables:**
 
@@ -289,6 +289,52 @@ To generate the base64 data for apicKeyData from the apic key file use the base6
 ```bash
 base64 certificate.key
 ```
+
+## Installation - In Cluster  
+Pre Requisites: A working K8s or OpenShift cluster and the ability to expose (to the client web browser) the neo4j database directly
+- Add the vkaci chart:
+
+```
+helm repo add vkaci https://datacenter.github.io/ACI-Kubernetes-Visualiser
+```
+
+- Create a value file for your cluster, for example if you have a cluster running Calico and you have defined an External Subnet (advertised via BGP) of 192.168.22.x
+
+```yaml
+# VKACI APIC Variables
+# All of these will need to be set correctly
+apicIps: "<comma separated list of your APIC IP>" # The POD IP needs to have connectivity to ACI
+apicUsername: "<User Name>"
+apicCertName: "<The name of the certificate for the user>"
+vrfTenant: "<Name of the Tenant Where the cluster VRF is located>"
+vrfName: "<Name of the Cluster VRF>"
+apicKeyData: <base64 certificate data>
+
+service:
+  externalTrafficPolicy: Local
+  type: NodePort
+  externalIPs:
+  - 192.168.22.1
+
+# Neo4j Chart Settings
+neo4j-standalone:
+  services:
+    # This setting configure the default neo4j service to
+    default:
+      externalTrafficPolicy: Local  # Ensure the Service IP is advertised as a /32 where supported (Calico or Kube-Router)
+      type: NodePort
+      externalIPs:
+        - 192.168.22.2
+  neo4j:
+    password: "" # Set a very good password
+```
+
+- Install the helm chart:
+
+```
+helm install -n vkaci vkaci vkaci/vkaci -f values.yaml
+```
+- In a few seconds the application should be rechable on the `externalIPs` you have specified
 
 ## Installation - Off Cluster/for development
 
