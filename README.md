@@ -168,7 +168,7 @@ A Helm chart for Vkaci has been created to enable simple deployment of the Vkaci
 
 The helm chart can currently be found in the source code for VKACI and is also available in the following repo:
 
-<https://vkaci.s3.eu-west-3.amazonaws.com>
+<https://datacenter.github.io/ACI-Kubernetes-Visualiser>
 
 #### Required Variables:**
 
@@ -295,7 +295,7 @@ Pre Requisites: A working K8s or OpenShift cluster and the ability to expose (to
 - Add the vkaci chart:
 
 ```
-helm repo add vkaci https://vkaci.s3.eu-west-3.amazonaws.com
+helm repo add vkaci https://datacenter.github.io/ACI-Kubernetes-Visualiser
 ```
 
 - Create a value file for your cluster, for example if you have a cluster running Calico and you have defined an External Subnet (advertised via BGP) of 192.168.22.x
