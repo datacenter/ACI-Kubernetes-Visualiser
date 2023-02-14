@@ -36,6 +36,8 @@ class VkaciEnvVariables(object):
         else:
             self.apic_ip = []
 
+        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/app/aci-meta/aci-meta.json")
+
         self.tenant = self.enviro().get("TENANT")
         self.vrf = self.enviro().get("VRF")
 
@@ -158,14 +160,13 @@ class ApicMethodsResolve(object):
 
 class VkaciBuilTopology(object):
     ''' Class to build the topology'''
-    def __init__(self, env:VkaciEnvVariables, apic_methods:ApicMethodsResolve, aciMetaFilePath = None) -> None:
+    def __init__(self, env:VkaciEnvVariables, apic_methods:ApicMethodsResolve) -> None:
         super().__init__()
         self.pod = {}
         self.topology = { 'nodes': {}, 'services': {}}
         self.bgp_info = {}
         self.env = env
         self.apic_methods = apic_methods
-        self.aciMetaFilePath = aciMetaFilePath
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -448,7 +449,7 @@ class VkaciBuilTopology(object):
 
         #Create list of APICs and set the useX509CertAuth parameters
         for i in self.env.apic_ip:
-            self.apics.append(Node('https://' + i, aciMetaFilePath=self.aciMetaFilePath))
+            self.apics.append(Node('https://' + i, aciMetaFilePath=self.env.aciMetaFilePath))
         logger.info("APICs To Probe %s", self.env.apic_ip)
         for apic in self.apics:
             if self.is_local_mode():

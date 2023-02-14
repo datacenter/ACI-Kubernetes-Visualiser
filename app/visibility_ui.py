@@ -5,7 +5,7 @@ from  graph import VkaciTable, VkaciGraph, VkaciBuilTopology, VkaciEnvVariables,
 
 app = Flask(__name__, template_folder='template',static_folder='template/assets')
 env = VkaciEnvVariables()
-topology = VkaciBuilTopology(env, ApicMethodsResolve(), aciMetaFilePath="/app/aci-meta/aci-meta.json")
+topology = VkaciBuilTopology(env, ApicMethodsResolve())
 graph = VkaciGraph(env,topology)
 table = VkaciTable(topology)
 
