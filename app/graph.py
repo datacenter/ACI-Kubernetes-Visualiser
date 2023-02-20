@@ -249,7 +249,7 @@ class VkaciBuilTopology(object):
         logger.debug("Detect Cluster AS")
         # Try to get Cluster AS from Calico Config
         try: 
-            logger.debug("Try to detect Calico")
+            logger.info("Try to detect Calico")
             res =  self.custom_obj.get_cluster_custom_object(
                 group="crd.projectcalico.org",
                 version="v1",
@@ -263,7 +263,7 @@ class VkaciBuilTopology(object):
             pass
          # Try to get Cluster AS from kube-rotuer Config
         try: 
-            logger.debug("Try to detect Kube-Router")
+            logger.info("Try to detect Kube-Router")
             pods = self.get_pods(ns='kube-system')
             kr_pod = False
             for pod in pods:
@@ -283,7 +283,7 @@ class VkaciBuilTopology(object):
         try: 
             #We support only a singe AS per Cluster I use a set to ensure that
             asn_set = set()
-            logger.debug("Try to detect Cilium")
+            logger.info("Try to detect Cilium")
             #Get all the CiliumBGPPeeringPolicies traverse them and the virtualRouters and add all the found ASN in the set
             CiliumBGPPeeringPolicies = self.custom_obj.list_cluster_custom_object(group="cilium.io",version="v2alpha1",plural="ciliumbgppeeringpolicies")
             for policy in CiliumBGPPeeringPolicies['items']:

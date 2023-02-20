@@ -3,7 +3,7 @@ from pyaci import Node, core
 from unittest.mock import patch, MagicMock
 from kubernetes import client
 from app.graph import ApicMethodsResolve, VkaciBuilTopology, VkaciEnvVariables, VkaciTable
-
+import json
 core.aciClassMetas = {"topRoot": {
     "properties": {}, "rnFormat": "something"}}
 
@@ -19,8 +19,35 @@ pods = [
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[]
         )
+    ),
+    client.V1Pod(
+        status=client.V1PodStatus(
+            host_ip="192.168.1.2", pod_ip="192.168.1.2"
+        ),
+        metadata=client.V1ObjectMeta(
+            name="kube-router-xfgr", namespace="kube-system"
+        ),
+        spec=client.V1PodSpec(
+            node_name="1234abc", containers=[client.V1Container(name="kube-router",
+                args=[
+                    "--run-router=true",
+                    "--run-firewall=true",
+                    "--run-service-proxy=true",
+                    "--bgp-graceful-restart=true",
+                    "--bgp-holdtime=3s",
+                    "--kubeconfig=/var/lib/kube-router/kubeconfig",
+                    "--cluster-asn=56001",
+                    "--advertise-external-ip",
+                    "--advertise-loadbalancer-ip",
+                    "--advertise-pod-cidr=true",
+                    "--enable-ibgp=false",
+                    "--enable-overlay=false",
+                    "--enable-pod-egress=false",
+                    "--override-nexthop=true"
+                ])]
+            )
     )
-]
+    ]
 
 # Fake k8s cluster data for nodes
 nodes = [
@@ -155,6 +182,7 @@ class ApicMethodsMock(ApicMethodsResolve):
 @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
 @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
 @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+@patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=pods[1]))
 @patch('kubernetes.client.CoreV1Api.list_service_for_all_namespaces', MagicMock(return_value=client.V1ServiceList(api_version="1", items=services)))
 @patch('kubernetes.client.CoreV1Api.list_node', MagicMock(return_value=client.V1NodeList(api_version="1", items=nodes)))
 @patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
@@ -189,7 +217,8 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a valid topology is created"""
         # Arrange
         expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}}},
+                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2', 'ns': 'kube-system', 'labels': {}}},
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                           'labels': {'app': 'redis'}, 'mac': 'MOCKMO1C'}},
@@ -219,7 +248,11 @@ class TestVkaciGraph(unittest.TestCase):
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'labels': {'guest': 'frontend'},
-                                                                  'ns': 'dockerimage'}}}},
+                                                                  'ns': 'dockerimage'},
+                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'labels': {},
+                                                                  'ns': 'kube-system'}
+                                                                  }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'labels': {'app': 'guestbook'},
@@ -248,7 +281,11 @@ class TestVkaciGraph(unittest.TestCase):
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'labels': {'guest': 'frontend'},
-                                                                  'ns': 'dockerimage'}}}},
+                                                                  'ns': 'dockerimage'},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'labels': {},
+                                                                  'ns': 'kube-system'}
+                                                                  }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'labels': {'app': 'guestbook'},
@@ -278,7 +315,11 @@ class TestVkaciGraph(unittest.TestCase):
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'labels': {'guest': 'frontend'},
-                                                                  'ns': 'dockerimage'}}}},
+                                                                  'ns': 'dockerimage'},
+                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'labels': {},
+                                                                  'ns': 'kube-system'},
+                                                                  }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'labels': {'app': 'guestbook'},
@@ -305,7 +346,11 @@ class TestVkaciGraph(unittest.TestCase):
             'data': [{'data': [{'data': [{'data': [{'image': 'pod.svg',
                                          'ip': '192.158.1.3',
                                                     'ns': 'dockerimage',
-                                                    'value': 'dateformat'}],
+                                                    'value': 'dateformat'},
+                                                    {'image': 'pod.svg',
+                                         'ip': '192.168.1.2',
+                                                    'ns': 'kube-system',
+                                                    'value': 'kube-router-xfgr'}],
                                'image': 'node.svg',
                                           'ip': '192.168.1.2',
                                           'ns': '',
@@ -381,7 +426,10 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
         'data': [{'value': 'dateformat', 'ip': '192.158.1.3','ns': 'dockerimage', 'image': 'pod.svg', 
-        'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]}]}]}
+        'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]},
+                {'value': 'kube-router-xfgr', 'ip': '192.168.1.2','ns': 'kube-system', 'image': 'pod.svg', 
+        'data': []}
+        ]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -411,7 +459,121 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-        
-
+    def test_bgp_as_detection(self):
+        """Test that the correct bgp as is detected"""
+        """Calico is tested by default in all thre previous tests"""
+        """Raise a Calico Exception, that triggers testing for Kube-Router"""
+        with patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(side_effect=Exception("Test"))):
+            build = VkaciBuilTopology(
+                VkaciEnvVariables(self.vars), ApicMethodsMock())
+            build.update()
+            asn = build.get_cluster_as()
+            self.assertEqual(asn, '56001')
+        CiliumBGPPeeringPolicies = json.loads("""
+        {
+        "apiVersion": "v1",
+        "items": [
+            {
+            "apiVersion": "cilium.io/v2alpha1",
+            "kind": "CiliumBGPPeeringPolicy",
+            "metadata": {
+                "creationTimestamp": "2023-01-20T04:49:55Z",
+                "generation": 1,
+                "name": "rack-1",
+                "resourceVersion": "976",
+                "uid": "6f05b9f0-0dbd-4846-a4c9-abb7c4ac559b"
+            },
+            "spec": {
+                "nodeSelector": {
+                "matchLabels": {
+                    "rack_id": "1"
+                }
+                },
+                "virtualRouters": [
+                {
+                    "exportPodCIDR": true,
+                    "localASN": 56001,
+                    "neighbors": [
+                    {
+                        "peerASN": 65002,
+                        "peerAddress": "192.168.11.101/32"
+                    },
+                    {
+                        "peerASN": 65002,
+                        "peerAddress": "192.168.11.102/32"
+                    }
+                    ],
+                    "serviceSelector": {
+                    "matchExpressions": [
+                        {
+                        "key": "CiliumAdvertiseAllServices",
+                        "operator": "DoesNotExist"
+                        }
+                    ]
+                    }
+                }
+                ]
+            }
+            },
+            {
+            "apiVersion": "cilium.io/v2alpha1",
+            "kind": "CiliumBGPPeeringPolicy",
+            "metadata": {
+                "creationTimestamp": "2023-01-20T04:49:55Z",
+                "generation": 1,
+                "name": "rack-2",
+                "resourceVersion": "977",
+                "uid": "f264c06b-4e65-44d1-9050-e87c3e52a39f"
+            },
+            "spec": {
+                "nodeSelector": {
+                "matchLabels": {
+                    "rack_id": "2"
+                }
+                },
+                "virtualRouters": [
+                {
+                    "exportPodCIDR": true,
+                    "localASN": 56001,
+                    "neighbors": [
+                    {
+                        "peerASN": 65002,
+                        "peerAddress": "192.168.11.103/32"
+                    },
+                    {
+                        "peerASN": 65002,
+                        "peerAddress": "192.168.11.104/32"
+                    }
+                    ],
+                    "serviceSelector": {
+                    "matchExpressions": [
+                        {
+                        "key": "CiliumAdvertiseAllServices",
+                        "operator": "DoesNotExist"
+                        }
+                    ]
+                    }
+                }
+                ]
+            }
+            }
+        ],
+        "kind": "List",
+        "metadata": {
+            "resourceVersion": ""
+        }
+        }
+        """)
+        """Raise a Calico Exception and hide the Kube-Router POD , that triggers testing for Cilium"""
+        with (
+            patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(side_effect=Exception("Test"))),
+            patch('kubernetes.client.CustomObjectsApi.list_cluster_custom_object', MagicMock(return_value=CiliumBGPPeeringPolicies)),
+            patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods[0:1]))),
+        ):
+            build = VkaciBuilTopology(
+                VkaciEnvVariables(self.vars), ApicMethodsMock())
+            build.update()
+            asn = build.get_cluster_as()
+            self.assertEqual(asn, '56001')
 if __name__ == '__main__':
     unittest.main()
