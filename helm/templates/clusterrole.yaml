@@ -12,6 +12,9 @@ rules:
 - apiGroups: ["crd.projectcalico.org"]
   resources: ["bgpconfigurations"]
   verbs: ["list","get"]
+- apiGroups: ["cilium.io"]
+  resources: ["ciliumbgppeeringpolicies"]
+  verbs: ["list","get"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

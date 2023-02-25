@@ -9,7 +9,7 @@ export IMAGE_NAME="vkaci"
 export IMAGE_NAME_INIT="vkaci-init"
 if [ -z "$1" ]
     then
-        export IMAGE_TAG="v1.0.2"
+        export IMAGE_TAG="v1.1.0"
     else
         export IMAGE_TAG="$1"
 fi

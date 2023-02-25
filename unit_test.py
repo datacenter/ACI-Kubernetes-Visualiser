@@ -19,6 +19,33 @@ pods = [
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[]
         )
+    ),
+    client.V1Pod(
+        status=client.V1PodStatus(
+            host_ip="192.168.1.2", pod_ip="192.168.1.2"
+        ),
+        metadata=client.V1ObjectMeta(
+            name="kube-router-xfgr", namespace="kube-system"
+        ),
+        spec=client.V1PodSpec(
+            node_name="1234abc", containers=[client.V1Container(name="kube-router",
+                args=[
+                    "--run-router=true",
+                    "--run-firewall=true",
+                    "--run-service-proxy=true",
+                    "--bgp-graceful-restart=true",
+                    "--bgp-holdtime=3s",
+                    "--kubeconfig=/var/lib/kube-router/kubeconfig",
+                    "--cluster-asn=56002",
+                    "--advertise-external-ip",
+                    "--advertise-loadbalancer-ip",
+                    "--advertise-pod-cidr=true",
+                    "--enable-ibgp=false",
+                    "--enable-overlay=false",
+                    "--enable-pod-egress=false",
+                    "--override-nexthop=true"
+                ])]
+            )
     )
 ]
 
@@ -157,7 +184,7 @@ class ApicMethodsMock(ApicMethodsResolve):
 @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
 @patch('kubernetes.client.CoreV1Api.list_service_for_all_namespaces', MagicMock(return_value=client.V1ServiceList(api_version="1", items=services)))
 @patch('kubernetes.client.CoreV1Api.list_node', MagicMock(return_value=client.V1NodeList(api_version="1", items=nodes)))
-@patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
+@patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
 class TestVkaciGraph(unittest.TestCase):
 
     vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
@@ -189,7 +216,8 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a valid topology is created"""
         # Arrange
         expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}}},
+                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2', 'ns': 'kube-system', 'labels': {}}},
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                           'labels': {'app': 'redis'}, 'mac': 'MOCKMO1C'}},
@@ -219,7 +247,11 @@ class TestVkaciGraph(unittest.TestCase):
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'labels': {'guest': 'frontend'},
-                                                                  'ns': 'dockerimage'}}}},
+                                                                  'ns': 'dockerimage'},
+                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'labels': {},
+                                                                  'ns': 'kube-system'}
+                                                                  }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'labels': {'app': 'guestbook'},
@@ -248,7 +280,11 @@ class TestVkaciGraph(unittest.TestCase):
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'labels': {'guest': 'frontend'},
-                                                                  'ns': 'dockerimage'}}}},
+                                                                  'ns': 'dockerimage'},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'labels': {},
+                                                                  'ns': 'kube-system'}
+                                                                  }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'labels': {'app': 'guestbook'},
@@ -278,7 +314,11 @@ class TestVkaciGraph(unittest.TestCase):
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'labels': {'guest': 'frontend'},
-                                                                  'ns': 'dockerimage'}}}},
+                                                                  'ns': 'dockerimage'},
+                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'labels': {},
+                                                                  'ns': 'kube-system'},
+                                                                  }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'labels': {'app': 'guestbook'},
@@ -305,7 +345,11 @@ class TestVkaciGraph(unittest.TestCase):
             'data': [{'data': [{'data': [{'data': [{'image': 'pod.svg',
                                          'ip': '192.158.1.3',
                                                     'ns': 'dockerimage',
-                                                    'value': 'dateformat'}],
+                                                    'value': 'dateformat'},
+                                                    {'image': 'pod.svg',
+                                         'ip': '192.168.1.2',
+                                                    'ns': 'kube-system',
+                                                    'value': 'kube-router-xfgr'}],
                                'image': 'node.svg',
                                           'ip': '192.168.1.2',
                                           'ns': '',
@@ -381,7 +425,10 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
         'data': [{'value': 'dateformat', 'ip': '192.158.1.3','ns': 'dockerimage', 'image': 'pod.svg', 
-        'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]}]}]}
+        'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]},
+                {'value': 'kube-router-xfgr', 'ip': '192.168.1.2','ns': 'kube-system', 'image': 'pod.svg', 
+        'data': []}
+        ]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -411,7 +458,67 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-        
+
+    def assert_cluster_as(self, expected):
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        build.update()
+        asn = build.get_cluster_as()
+        self.assertEqual(asn, expected)
+
+
+    def test_calico_bgp_as_detection(self):
+        """Test that the bgp AS is detected with calico"""
+        """This is the default used on other tests but better be explicit so no one thinks it hasn't been tested"""
+        self.assert_cluster_as('56001')
+
+
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=pods[1]))
+    def test_kube_router_bgp_as_detection(self):
+        """Test that the bgp AS is detected with kube-router"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as('56002')
+
+
+    # AS numbers are intentionally repeated for testing.
+    cilium_policies = {
+        "items": [
+            {"spec": {"virtualRouters": [
+                {'localASN': 56003}, {'localASN': 56003}]}},
+            {"spec": {"virtualRouters": [{'localASN': 56003}]}}
+        ]
+    }
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
+    @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=cilium_policies))
+    def test_cilium_bgp_as_detection(self):
+        """Test that the bgp AS is detected with cilium"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as('56003')
+
+
+    # Different AS numbers in Cilium is not supported.
+    invalid_cilium_policies = {
+        "items": [
+            {"spec": {"virtualRouters": [
+                {'localASN': 56003}, {'localASN': 56004}]}},
+            {"spec": {"virtualRouters": [{'localASN': 56005}]}}
+        ]
+    }
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
+    @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=invalid_cilium_policies))
+    def test_invalid_cilium_bgp_as_detection(self):
+        """Test that the bgp AS is not detected with invalid cilium config"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as(None)
+
+
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
+    @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=[]))
+    def test_invalid_as_detection(self):
+        """Test that the bgp AS is not detected with no valid config"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as(None)
+
 
 if __name__ == '__main__':
     unittest.main()
