@@ -167,6 +167,7 @@ class VkaciBuilTopology(object):
         self.bgp_info = {}
         self.env = env
         self.apic_methods = apic_methods
+        self.k8s_as = None
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -244,22 +245,22 @@ class VkaciBuilTopology(object):
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
     def get_cluster_as(self):
-        ''' Get the AS from K8s Configuration this assumes Calico is used'''
-        asn = 0
+        '''Returns the previously detected AS number'''
+        return self.k8s_as
+    
+    def detect_cluster_as(self):
+        ''' Detect the AS from K8s Configuration'''
+        asn = None
         logger.debug("Detect Cluster AS")
         # Try to get Cluster AS from Calico Config
         try: 
             logger.info("Try to detect Calico")
-            res =  self.custom_obj.get_cluster_custom_object(
-                group="crd.projectcalico.org",
-                version="v1",
-                name="default",
-                plural="bgpconfigurations"
-            )
-            logger.info('Calico BGP Config Detected!')
+            res = self.get_calico_custom_object()
             asn = str(res['spec']['asNumber'])
+            logger.info('Calico BGP Config Detected!')
+            return asn
         except Exception as e:
-            # The the CRD does not exists I get an 404 not found exeption
+            # If the CRD does not exists it returns a 404 not found exeption
             pass
          # Try to get Cluster AS from kube-rotuer Config
         try: 
@@ -268,43 +269,55 @@ class VkaciBuilTopology(object):
             kr_pod = False
             for pod in pods:
                 if "kube-router" in pod:
-                    #I just need one so I break immediately
+                    # Only check the asn on the first kube-router pod found
                     kr_pod = self.v1.read_namespaced_pod(pod,'kube-system')
                     break
             if kr_pod:
                 for arg in kr_pod.spec.containers[0].args:
                     if "--cluster-asn=" in arg:
                         asn = arg[14:]
-                logger.info('Kube-Router Detected! Cluster AS=%s',asn)
+                        logger.info('Kube-Router Detected! Cluster AS=%s',asn)
+                        return asn
         except Exception as e:
             pass
-
          # Try to get Cluster AS from Cilium Config
         try: 
-            #We support only a singe AS per Cluster I use a set to ensure that
+            # VKACI only supports a single AS per Cluster. A set is used to ensure that
             asn_set = set()
             logger.info("Try to detect Cilium")
-            #Get all the CiliumBGPPeeringPolicies traverse them and the virtualRouters and add all the found ASN in the set
-            CiliumBGPPeeringPolicies = self.custom_obj.list_cluster_custom_object(group="cilium.io",version="v2alpha1",plural="ciliumbgppeeringpolicies")
+            # Get all the CiliumBGPPeeringPolicies traverse them and the virtualRouters and add all the found ASN in the set
+            CiliumBGPPeeringPolicies = self.list_cilium_custom_objects()
             for policy in CiliumBGPPeeringPolicies['items']:
                 for virtualrotuer in policy['spec']['virtualRouters']:
                     asn_set.add(str(virtualrotuer['localASN']))
             if len(asn_set) == 1:
                 asn = asn_set.pop()
                 logger.info('Cilium Detected! Cluster AS=%s',asn)
+                return asn
             elif len(asn_set) > 1:
                 logger.info('Cilium Detected! More than one AS is used, this is an unsupported configuration!')
         except Exception as e:
             pass
-        if asn == 0:
+        if asn is None:
             logger.error("Can't detect K8s Cluster AS, BGP topology will not work corectly")
         return asn
+
+    def get_calico_custom_object(self):
+        return self.custom_obj.get_cluster_custom_object(
+                group="crd.projectcalico.org",
+                version="v1",
+                name="default",
+                plural="bgpconfigurations"
+            )
+
+    def list_cilium_custom_objects(self):
+        return self.custom_obj.list_cluster_custom_object(group="cilium.io", version="v2alpha1", plural="ciliumbgppeeringpolicies")
 
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
         
         # Get the K8s Cluster AS
-        k8s_as = self.get_cluster_as()
+        self.k8s_as = self.detect_cluster_as()
         overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
         self.bgp_info = {}
         vrf = self.env.tenant + ":" + self.env.vrf
@@ -323,7 +336,7 @@ class VkaciBuilTopology(object):
                     self.bgp_info[leaf][route] = {}
                     self.bgp_info[leaf][route]['hosts'] = []
                     self.bgp_info[leaf][route]['k8s_route'] = True
-                if hop.tag == k8s_as:
+                if hop.tag == self.k8s_as:
                     #self.bgp_info[leaf][route]['ip'].add(next_hop)
                     host_name = ""
                     image = "node.svg"

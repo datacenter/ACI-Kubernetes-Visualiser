@@ -3,7 +3,7 @@ from pyaci import Node, core
 from unittest.mock import patch, MagicMock
 from kubernetes import client
 from app.graph import ApicMethodsResolve, VkaciBuilTopology, VkaciEnvVariables, VkaciTable
-import json
+
 core.aciClassMetas = {"topRoot": {
     "properties": {}, "rnFormat": "something"}}
 
@@ -36,7 +36,7 @@ pods = [
                     "--bgp-graceful-restart=true",
                     "--bgp-holdtime=3s",
                     "--kubeconfig=/var/lib/kube-router/kubeconfig",
-                    "--cluster-asn=56001",
+                    "--cluster-asn=56002",
                     "--advertise-external-ip",
                     "--advertise-loadbalancer-ip",
                     "--advertise-pod-cidr=true",
@@ -47,7 +47,7 @@ pods = [
                 ])]
             )
     )
-    ]
+]
 
 # Fake k8s cluster data for nodes
 nodes = [
@@ -182,10 +182,9 @@ class ApicMethodsMock(ApicMethodsResolve):
 @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
 @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
 @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
-@patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=pods[1]))
 @patch('kubernetes.client.CoreV1Api.list_service_for_all_namespaces', MagicMock(return_value=client.V1ServiceList(api_version="1", items=services)))
 @patch('kubernetes.client.CoreV1Api.list_node', MagicMock(return_value=client.V1NodeList(api_version="1", items=nodes)))
-@patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
+@patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
 class TestVkaciGraph(unittest.TestCase):
 
     vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
@@ -459,121 +458,67 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-    def test_bgp_as_detection(self):
-        """Test that the correct bgp as is detected"""
-        """Calico is tested by default in all thre previous tests"""
-        """Raise a Calico Exception, that triggers testing for Kube-Router"""
-        with patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(side_effect=Exception("Test"))):
-            build = VkaciBuilTopology(
-                VkaciEnvVariables(self.vars), ApicMethodsMock())
-            build.update()
-            asn = build.get_cluster_as()
-            self.assertEqual(asn, '56001')
-        CiliumBGPPeeringPolicies = json.loads("""
-        {
-        "apiVersion": "v1",
+
+    def assert_cluster_as(self, expected):
+        build = VkaciBuilTopology(
+            VkaciEnvVariables(self.vars), ApicMethodsMock())
+        build.update()
+        asn = build.get_cluster_as()
+        self.assertEqual(asn, expected)
+
+
+    def test_calico_bgp_as_detection(self):
+        """Test that the bgp AS is detected with calico"""
+        """This is the default used on other tests but better be explicit so no one thinks it hasn't been tested"""
+        self.assert_cluster_as('56001')
+
+
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=pods[1]))
+    def test_kube_router_bgp_as_detection(self):
+        """Test that the bgp AS is detected with kube-router"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as('56002')
+
+
+    # AS numbers are intentionally repeated for testing.
+    cilium_policies = {
         "items": [
-            {
-            "apiVersion": "cilium.io/v2alpha1",
-            "kind": "CiliumBGPPeeringPolicy",
-            "metadata": {
-                "creationTimestamp": "2023-01-20T04:49:55Z",
-                "generation": 1,
-                "name": "rack-1",
-                "resourceVersion": "976",
-                "uid": "6f05b9f0-0dbd-4846-a4c9-abb7c4ac559b"
-            },
-            "spec": {
-                "nodeSelector": {
-                "matchLabels": {
-                    "rack_id": "1"
-                }
-                },
-                "virtualRouters": [
-                {
-                    "exportPodCIDR": true,
-                    "localASN": 56001,
-                    "neighbors": [
-                    {
-                        "peerASN": 65002,
-                        "peerAddress": "192.168.11.101/32"
-                    },
-                    {
-                        "peerASN": 65002,
-                        "peerAddress": "192.168.11.102/32"
-                    }
-                    ],
-                    "serviceSelector": {
-                    "matchExpressions": [
-                        {
-                        "key": "CiliumAdvertiseAllServices",
-                        "operator": "DoesNotExist"
-                        }
-                    ]
-                    }
-                }
-                ]
-            }
-            },
-            {
-            "apiVersion": "cilium.io/v2alpha1",
-            "kind": "CiliumBGPPeeringPolicy",
-            "metadata": {
-                "creationTimestamp": "2023-01-20T04:49:55Z",
-                "generation": 1,
-                "name": "rack-2",
-                "resourceVersion": "977",
-                "uid": "f264c06b-4e65-44d1-9050-e87c3e52a39f"
-            },
-            "spec": {
-                "nodeSelector": {
-                "matchLabels": {
-                    "rack_id": "2"
-                }
-                },
-                "virtualRouters": [
-                {
-                    "exportPodCIDR": true,
-                    "localASN": 56001,
-                    "neighbors": [
-                    {
-                        "peerASN": 65002,
-                        "peerAddress": "192.168.11.103/32"
-                    },
-                    {
-                        "peerASN": 65002,
-                        "peerAddress": "192.168.11.104/32"
-                    }
-                    ],
-                    "serviceSelector": {
-                    "matchExpressions": [
-                        {
-                        "key": "CiliumAdvertiseAllServices",
-                        "operator": "DoesNotExist"
-                        }
-                    ]
-                    }
-                }
-                ]
-            }
-            }
-        ],
-        "kind": "List",
-        "metadata": {
-            "resourceVersion": ""
-        }
-        }
-        """)
-        """Raise a Calico Exception and hide the Kube-Router POD , that triggers testing for Cilium"""
-        with (
-            patch('kubernetes.client.CustomObjectsApi.get_cluster_custom_object', MagicMock(side_effect=Exception("Test"))),
-            patch('kubernetes.client.CustomObjectsApi.list_cluster_custom_object', MagicMock(return_value=CiliumBGPPeeringPolicies)),
-            patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods[0:1]))),
-        ):
-            build = VkaciBuilTopology(
-                VkaciEnvVariables(self.vars), ApicMethodsMock())
-            build.update()
-            asn = build.get_cluster_as()
-            self.assertEqual(asn, '56001')
+            {"spec": {"virtualRouters": [
+                {'localASN': 56003}, {'localASN': 56003}]}},
+            {"spec": {"virtualRouters": [{'localASN': 56003}]}}
+        ]
+    }
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
+    @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=cilium_policies))
+    def test_cilium_bgp_as_detection(self):
+        """Test that the bgp AS is detected with cilium"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as('56003')
+
+
+    # Different AS numbers in Cilium is not supported.
+    invalid_cilium_policies = {
+        "items": [
+            {"spec": {"virtualRouters": [
+                {'localASN': 56003}, {'localASN': 56004}]}},
+            {"spec": {"virtualRouters": [{'localASN': 56005}]}}
+        ]
+    }
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
+    @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=invalid_cilium_policies))
+    def test_invalid_cilium_bgp_as_detection(self):
+        """Test that the bgp AS is not detected with invalid cilium config"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as(None)
+
+
+    @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
+    @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=[]))
+    def test_invalid_as_detection(self):
+        """Test that the bgp AS is not detected with no valid config"""
+        with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
+            self.assert_cluster_as(None)
+
+
 if __name__ == '__main__':
     unittest.main()
