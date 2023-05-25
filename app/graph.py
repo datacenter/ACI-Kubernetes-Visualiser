@@ -1,4 +1,5 @@
 #!/usr/local/bin/python3
+import json
 import os
 import re
 import random
@@ -36,7 +37,7 @@ class VkaciEnvVariables(object):
         else:
             self.apic_ip = []
 
-        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/app/aci-meta/aci-meta.json")
+        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/root/.aci-meta/aci-meta.json")
 
         self.tenant = self.enviro().get("TENANT")
         self.vrf = self.enviro().get("VRF")
@@ -110,7 +111,6 @@ class ApicMethodsResolve(object):
         '''Return an IP Address '''
         return apic.methods.ResolveClass('arpAdjEp').GET(**options.filter(
             filters.Eq('arpAdjEp.mac',mac)))
-
     def path_fixup(self,apic:Node, path):
         '''In general the LLDP/CDP Path and the Endpoint paths are the same however in case we run
         mac pinning and vPC we end up with LACP running in individual mode and the
@@ -198,9 +198,14 @@ class VkaciBuilTopology(object):
         ''' Get the Host that should be either the same as the K8s node or a Hypervisor host name.
             I try to get the LLDP adj, if fails I get the CDP one.
             I do expect to have at least one of the 2 '''
+
         AdjEp = getattr(neighbour, 'lldpAdjEp', None)
+
         if not AdjEp:
             AdjEp = getattr(neighbour, 'cdpAdjEp', None)
+
+        if AdjEp is None:
+            return
 
         for neighbour_adj in AdjEp:
             if neighbour_adj.sysName not in node['neighbours'].keys():
@@ -496,8 +501,17 @@ class VkaciBuilTopology(object):
                 self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name] = {
                     "ip": i.status.pod_ip,
                     "ns": i.metadata.namespace,
-                    "labels": i.metadata.labels if i.metadata.labels is not None else {}
-                    }
+                    "labels": i.metadata.labels if i.metadata.labels is not None else {},
+                    "secondary_ips": {},
+                    "annotations": i.metadata.annotations if i.metadata.annotations is not None else {},
+                }
+
+                if i.metadata.annotations is not None:
+                    for key, annotation in i.metadata.annotations.items():
+                        if key == "k8s.v1.cni.cncf.io/network-status":
+                            items_list = json.loads(annotation)
+                            for val in items_list:
+                                self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]['secondary_ips'][str(val["interface"])] = str(val["ips"][0])
                     
         pro = self.v1.list_node(watch=False)
         for i in pro.items:
@@ -505,7 +519,7 @@ class VkaciBuilTopology(object):
             if n in self.topology['nodes'].keys():
                 self.topology['nodes'][n]['labels'] = i.metadata.labels if i.metadata.labels is not None else {}
                 
-        self.update_bgp_info(self.apics[0])
+        # self.update_bgp_info(self.apics[0])
 
         logger.info("Loading K8s Services in Memory")
         ret = self.v1.list_service_for_all_namespaces(watch=False)
@@ -551,7 +565,7 @@ class VkaciBuilTopology(object):
                     for ip in ep.Children:
                         if ip.addr == v['node_ip']:
                             logger.debug("Node %s: Updated MAC address %s", ip.addr, ep.mac)
-                            v['mac'] = ep.mac           
+                            v['mac'] = ep.mac
                 future = executor.submit(self.update_node, apic = random.choice(self.apics), node=v)
         executor.shutdown(wait=True)
         future.result()
@@ -646,7 +660,7 @@ class VkaciGraph(object):
     SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
-    SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels
+    SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels, pod.secondary_ips = p.secondary_ips, pod.annotations = p.annotations
     MERGE (pod)-[:RUNNING_ON]->(node)
     FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
 
@@ -698,7 +712,8 @@ class VkaciGraph(object):
             
             pods = []
             for pod_name, pod in topology['nodes'][node]["pods"].items():
-                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()]})
+                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()], "secondary_ips": [k+":"+v for k, v in pod["secondary_ips"].items()],
+                            "annotations": [k+":"+v for k, v in pod["annotations"].items()]})
             
             bgp_peers = []
             for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
