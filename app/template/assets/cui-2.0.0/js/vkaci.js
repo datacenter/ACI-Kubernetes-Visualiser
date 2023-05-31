@@ -109,7 +109,13 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
             },
 
             "RUNNING_ON": {
-                "color": "#DAA520"
+                "caption": "interface",
+                "color": "#000066"
+            },
+
+            "RUNNING_ON_SEC": {
+                "caption": "interface",
+                "color": "#FF3300"
             },
 
             "ATTACHED_TO": {

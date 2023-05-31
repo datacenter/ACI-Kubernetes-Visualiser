@@ -208,16 +208,17 @@ class VkaciBuilTopology(object):
             return
 
         for neighbour_adj in AdjEp:
-            if neighbour_adj.sysName not in node['neighbours'].keys():
-                node['neighbours'][neighbour_adj.sysName] = {'switches': {}}
-                node['neighbours'][neighbour_adj.sysName]['Description'] = ""
-                logger.info("Found the following Host as Neighbour %s", neighbour_adj.sysName)
+            if neighbour_adj.chassisIdV not in node['neighbours'].keys():
+                node['neighbours'][neighbour_adj.chassisIdV] = {'switches': {}}
+                node['neighbours'][neighbour_adj.chassisIdV]['Description'] = ""
+                logger.info("Found the following Host as Neighbour %s", neighbour_adj.chassisIdV)
 
             # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
             switch = neighbour.dn.split('/')[2].replace("node", "leaf")
-            if switch not in node['neighbours'][neighbour_adj.sysName]['switches'].keys() and neighbour_adj:
-                node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
-                logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
+            if switch not in node['neighbours'][neighbour_adj.chassisIdV]['switches'].keys() and neighbour_adj:
+                node['neighbours'][neighbour_adj.chassisIdV]['switches'][switch] = set()
+                logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.chassisIdV)
+            node['neighbours'][neighbour_adj.chassisIdV]['switches'][switch].add(neighbour.id)
             
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
@@ -242,12 +243,14 @@ class VkaciBuilTopology(object):
                 # CDP Class is portId
                 neighbour_adj_port = getattr(neighbour_adj, 'portId', None)
 
+
+
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
-                node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
-                node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
-                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
+                node['neighbours'][neighbour_adj.chassisIdV]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
+                node['neighbours'][neighbour_adj.chassisIdV]['Description'] = neighbour_description
+                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.chassisIdV, switch)
 
     def get_cluster_as(self):
         '''Returns the previously detected AS number'''
@@ -500,6 +503,7 @@ class VkaciBuilTopology(object):
 
                 self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name] = {
                     "ip": i.status.pod_ip,
+                    "primary_iface": "",
                     "ns": i.metadata.namespace,
                     "labels": i.metadata.labels if i.metadata.labels is not None else {},
                     "secondary_ips": {},
@@ -511,7 +515,10 @@ class VkaciBuilTopology(object):
                         if key == "k8s.v1.cni.cncf.io/network-status":
                             items_list = json.loads(annotation)
                             for val in items_list:
-                                self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]['secondary_ips'][str(val["interface"])] = str(val["ips"][0])
+                                if val["ips"][0] != self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]["ip"]:
+                                    self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]['secondary_ips'][str(val["interface"])] = str(val["ips"][0])
+                                else:
+                                    self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]['primary_iface'] = str(val["interface"])
                     
         pro = self.v1.list_node(watch=False)
         for i in pro.items:
@@ -653,30 +660,42 @@ class VkaciGraph(object):
 
     # Build query.
     query = """
-    WITH $json as data
-    UNWIND data.items as n
+    WITH $json AS data
+    UNWIND data.items AS n
 
-    MERGE (node:Node {name:n.node_name}) ON CREATE
-    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
+    MERGE (node:Node {name: n.node_name, connected_to_switch_iface: n.switch_iface})
+    ON CREATE SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
 
-    FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
-    SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels, pod.secondary_ips = p.secondary_ips, pod.annotations = p.annotations
-    MERGE (pod)-[:RUNNING_ON]->(node)
-    FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
+    FOREACH (p IN n.pods | 
+        MERGE (pod:Pod {name: p.name})
+        ON CREATE SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels, pod.secondary_ips = p.secondary_ips, pod.annotations = p.annotations
+        CREATE (pod)-[:RUNNING_ON {interface: p.primary_iface}]->(node)
+        FOREACH (i IN RANGE(0, size(p.secondary_ips) - 1) | 
+            CREATE (pod)-[:RUNNING_ON_SEC {interface: split(toString(p.secondary_ips[i]), ':')[0]}]->(node))
+        FOREACH (l IN p.labels | 
+            MERGE (lab:Label {name: l}) 
+            MERGE (lab)-[:ATTACHED_TO]->(pod))
+    )
 
-    FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
-    FOREACH (l IN n.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(node))
+    FOREACH (b IN n.bgp_peers | 
+        MERGE (switch: Switch {name: b.name, prefix_count: b.prefix_count}) 
+        MERGE (node)-[:PEERED_INTO]->(switch)
+    )
+
+    FOREACH (l IN n.labels | 
+        MERGE (lab:Label {name: l}) 
+        MERGE (lab)-[:ATTACHED_TO]->(node))
+
     """
 
     query2 = """
     WITH $json as data
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
-    UNWIND s.vm_hosts as v
-    MATCH (vmh:VM_Host) WHERE vmh.name = v
+    UNWIND s.nodes as v
+    MATCH (node:Node) WHERE node.name = v
     MERGE (switch:Switch {name:s.name})
-    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    MERGE (node)-[:CONNECTED_TO {interface:node.connected_to_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
     """
     
     def update_database(self):
@@ -713,11 +732,16 @@ class VkaciGraph(object):
             pods = []
             for pod_name, pod in topology['nodes'][node]["pods"].items():
                 pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()], "secondary_ips": [k+":"+v for k, v in pod["secondary_ips"].items()],
-                            "annotations": [k+":"+v for k, v in pod["annotations"].items()]})
+                            "annotations": [k+":"+v for k, v in pod["annotations"].items()], "primary_iface": pod["primary_iface"]})
             
             bgp_peers = []
             for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
                 bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})
+
+            switch_ifaces = set()
+            for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
+                for switchName, interfaces in neighbour_data['switches'].items():
+                    switch_ifaces.update(set(interfaces))
 
             #nodes
             data["items"].append({
@@ -727,7 +751,8 @@ class VkaciGraph(object):
                 "labels": [k+":"+v for k, v in topology['nodes'][node]["labels"].items()],
                 "pods": pods,
                 "vm_hosts": vm_hosts,
-                "bgp_peers": bgp_peers
+                "bgp_peers": bgp_peers,
+                "switch_iface": "<i>"+" | ".join(list(switch_ifaces))+"</i>"
             })
             
         return data, switch_data
