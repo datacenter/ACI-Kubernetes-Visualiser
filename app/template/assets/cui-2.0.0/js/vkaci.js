@@ -104,6 +104,17 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 },
             },
 
+            "CONNECTED_TO_SEC": {
+                "color": "#E6E600",
+                "caption": "interface",
+                "font": {
+                    "size": 16,
+                    "color": "#800000",
+                    strokeWidth: 5,
+                    multi: true
+                },
+            },
+
             "RUNNING_IN": {
                 "color": "#0047AB"
             },
@@ -205,7 +216,7 @@ function draw_pods_and_nodes() {
     let q = ` MATCH (l:Label)-->(p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN p,r1,n`
-    draw(q, true)
+    draw(q)
     //draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
