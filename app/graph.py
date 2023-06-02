@@ -6,7 +6,6 @@ import random
 import logging
 import concurrent.futures
 import time
-import json
 from py2neo import Graph
 from kubernetes import client, config
 from pyaci import Node, options, filters
@@ -209,17 +208,20 @@ class VkaciBuilTopology(object):
             return
 
         for neighbour_adj in AdjEp:
-            if neighbour_adj.chassisIdV not in node['neighbours'].keys():
-                node['neighbours'][neighbour_adj.chassisIdV] = {'switches': {}}
-                node['neighbours'][neighbour_adj.chassisIdV]['Description'] = ""
-                logger.info("Found the following Host as Neighbour %s", neighbour_adj.chassisIdV)
+            if neighbour_adj.sysName not in node['neighbours'].keys():
+                node['neighbours'][neighbour_adj.sysName] = {'switches': {}}
+                node['neighbours'][neighbour_adj.sysName]['Description'] = ""
+                logger.info("Found the following Host as Neighbour %s", neighbour_adj.sysName)
 
             # Get the switch name and remove the topology and POD-1 topology/pod-1/node-204
             switch = neighbour.dn.split('/')[2].replace("node", "leaf")
-            if switch not in node['neighbours'][neighbour_adj.chassisIdV]['switches'].keys() and neighbour_adj:
-                node['neighbours'][neighbour_adj.chassisIdV]['switches'][switch] = set()
-                logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.chassisIdV)
-            node['neighbours'][neighbour_adj.chassisIdV]['switches'][switch].add(neighbour.id)
+            if switch not in node['neighbours'][neighbour_adj.sysName]['switches'].keys() and neighbour_adj:
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
+                logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
+            node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
+
+            # TODO: Get all the connected ifaces apart from primary and 
+            # add in secondary_ifaces of the switch
             
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
@@ -249,9 +251,9 @@ class VkaciBuilTopology(object):
             # If CDP and LLDP are on at the same time only LLDP will be enabled on the DVS so I check that I actually
             # Have a neighbour_adj_port and not None.
             if neighbour_adj_port:
-                node['neighbours'][neighbour_adj.chassisIdV]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
-                node['neighbours'][neighbour_adj.chassisIdV]['Description'] = neighbour_description
-                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.chassisIdV, switch)
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
+                node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
+                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
     def get_cluster_as(self):
         '''Returns the previously detected AS number'''
@@ -479,50 +481,80 @@ class VkaciBuilTopology(object):
         logger.info("Loading K8s Pods in Memory")
         ret = self.v1.list_pod_for_all_namespaces(watch=False)
         for i in ret.items:
-            # Ensure the node has a name, if a POD is Pening there will be no node name.
-            if i.spec.node_name:
-                if i.spec.node_name not in self.topology['nodes'].keys():
-                    self.topology['nodes'][i.spec.node_name] = {
-                    "node_ip": i.status.host_ip,
-                    "pods" : {},
-                    'bgp_peers': {},
-                    'neighbours': {},
-                    'labels': {},
-                    'node_sec_iface_conn': []
+            try:
+                node_name = i.spec.node_name
+                if node_name:
+                    nodes = self.topology['nodes']
+                    if node_name not in nodes:
+                        nodes[node_name] = {
+                            "node_ip": i.status.host_ip,
+                            "pods": {},
+                            'bgp_peers': {},
+                            'neighbours': {},
+                            'labels': {},
+                            'node_leaf_sec_iface_conn': [],
+                            'node_pod_sec_iface_conn': []
+                        }
+
+                    pods = nodes[node_name]['pods']
+                    pod_name = i.metadata.name
+                    pods[pod_name] = {
+                        "ip": i.status.pod_ip,
+                        "primary_iface": "",
+                        "ns": i.metadata.namespace,
+                        "labels": i.metadata.labels if i.metadata.labels is not None else {},
+                        "secondary_iface_details": {},
+                        "annotations": i.metadata.annotations if i.metadata.annotations is not None else {},
                     }
 
-                self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name] = {
-                    "ip": i.status.pod_ip,
-                    "primary_iface": "",
-                    "ns": i.metadata.namespace,
-                    "labels": i.metadata.labels if i.metadata.labels is not None else {},
-                    "secondary_ips": {},
-                    "annotations": i.metadata.annotations if i.metadata.annotations is not None else {},
-                }
-
-                if i.metadata.annotations is not None:
-                    for key, annotation in i.metadata.annotations.items():
-                        if key == "k8s.v1.cni.cncf.io/network-status":
-                            items_list = json.loads(annotation)
-                            for val in items_list:
-                                if val["ips"][0] != self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]["ip"]:
-                                    self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]['secondary_ips'][str(val["interface"])] = str(val["ips"][0])
-                                else:
-                                    self.topology['nodes'][i.spec.node_name]['pods'][i.metadata.name]['primary_iface'] = str(val["interface"])
+                    annotations = i.metadata.annotations
+                    if annotations is not None:
+                        for key, annotation in annotations.items():
+                            if key == "k8s.v1.cni.cncf.io/network-status":
+                                items_list = json.loads(annotation)
+                                pod_ip = i.status.pod_ip
+                                for val in items_list:
+                                    if val["ips"][0] != pod_ip:
+                                        iface_name = str(val["name"].split('/')[-1])
+                                        pod_iface = str(val["interface"])
+                                        pods[pod_name]['secondary_iface_details'][iface_name] = pod_iface
+                                    else:
+                                        pods[pod_name]['primary_iface'] = str(val["interface"])
+            except Exception as e:
+                logger.error(f"Error processing pod: {i.metadata.name}. Error: {str(e)}")
 
         cr = self.custom_obj.list_namespaced_custom_object(group="aci.fabricattachment", version="v1", namespace="aci-containers-system", plural="nodefabricnetworkattachments")
 
-        for nodeName, _ in self.topology['nodes'].items():
-            for i in cr.get("items"):
-                aciTopology = i["spec"].get("aciTopology")
-                if aciTopology is not None and i["spec"]["nodeName"] == nodeName:
-                    for _, link in i["spec"]["aciTopology"].items():
-                        fabricLinkSplit = link['fabricLink'].split("/")
-                        self.topology['nodes'][nodeName]['node_sec_iface_conn'].append({
-                            'switch_name': fabricLinkSplit[2].replace("node", "leaf"),
-                            'switch_interface': fabricLinkSplit[3] + "/" + fabricLinkSplit[4],
-                            'node_iface': link['localIface']
-                        })
+        for nodeName in self.topology['nodes']:
+            try:
+                for i in cr.get("items"):
+                    aciTopology = i["spec"].get("aciTopology")
+                    if aciTopology is not None and i["spec"]["nodeName"] == nodeName:
+                        for iface_name, link in i["spec"]["aciTopology"].items():
+                            fabricLink = link['fabricLink']
+                            fabricLinkSplit = fabricLink.split("/")
+                            switch_name = fabricLinkSplit[2].replace("node", "leaf")
+                            switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
+                            self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
+                                'switch_name': switch_name,
+                                'switch_interface': switch_interface,
+                                'node_iface': iface_name
+                            })
+
+                            pods = link.get("pods", [])
+                            for pod in pods:
+                                pod_iface = pod.get("localIface")
+                                pod_name = pod.get("podRef")["name"]
+                                network_ref = i["spec"].get("networkRef")
+                                node_network = network_ref["name"]
+                                self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
+                                    'node_iface': pod_iface,
+                                    'pod_name': pod_name,
+                                    'node_network': node_network,
+                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['secondary_iface_details'].get(node_network, "")
+                                })
+            except Exception as e:
+                logger.error(f"Error processing node: {nodeName}. Error: {str(e)}")
 
         pro = self.v1.list_node(watch=False)
         for i in pro.items:
@@ -665,16 +697,14 @@ class VkaciGraph(object):
     query = """
     WITH $json AS data
     UNWIND data.items AS n
-    UNWIND n.node_sec_iface_conn as conn
+    UNWIND n.node_leaf_sec_iface_conn as conn
     MERGE (node:Node {name: n.node_name, connected_primary_switch_iface: n.switch_iface, connected_switch_ifaces: n.switch_iface + ",\n" + conn.switch_interface, secondary_iface_info: conn.node_iface})
     ON CREATE SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
 
     FOREACH (p IN n.pods | 
         MERGE (pod:Pod {name: p.name})
-        ON CREATE SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels, pod.secondary_ips = p.secondary_ips, pod.annotations = p.annotations
-        MERGE (pod)-[:RUNNING_ON {interface: p.primary_iface}]->(node)
-        FOREACH (i IN RANGE(0, size(p.secondary_ips) - 1) | 
-            MERGE (pod)-[:RUNNING_ON_SEC {interface: split(toString(p.secondary_ips[i]), ':')[0]}]->(node))
+        ON CREATE SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels, pod.annotations = p.annotations
+        MERGE (pod)-[:RUNNING_ON {interface: p.primary_iface + " : "}]->(node)
         FOREACH (l IN p.labels | 
             MERGE (lab:Label {name: l}) 
             MERGE (lab)-[:ATTACHED_TO]->(pod))
@@ -698,16 +728,25 @@ class VkaciGraph(object):
     UNWIND s.nodes as v
     MATCH (node:Node) WHERE node.name = v
     MERGE (switch:Switch {name:s.name})
-    MERGE (node)-[:CONNECTED_TO {interface:node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
+    MERGE (node)-[:CONNECTED_TO {interface: "node_iface : " + node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
     """
 
     query3 = """
     WITH $json as data
     UNWIND data.items AS n
-    UNWIND n.node_sec_iface_conn AS conn
+    UNWIND n.node_leaf_sec_iface_conn AS conn
     MATCH (node:Node) WHERE node.name = n.node_name
     MATCH (switch:Switch) WHERE switch.name = conn.switch_name
     MERGE (node)-[:CONNECTED_TO_SEC {interface: conn.node_iface + " : " + conn.switch_interface}]->(switch)
+    """
+
+    query4 = """
+    WITH $json as data
+    UNWIND data.items AS n
+    UNWIND n.node_pod_sec_iface_conn AS conn
+    MATCH (pod:Pod) WHERE pod.name = conn.pod_name
+    MATCH (node:Node) WHERE node.name = n.node_name
+    MERGE (pod)-[:RUNNING_ON_SEC {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
     """
     
     def update_database(self):
@@ -720,6 +759,7 @@ class VkaciGraph(object):
         graph.run(self.query,json=data)
         graph.run(self.query2,json=switch_data)
         graph.run(self.query3,json=data)
+        graph.run(self.query4,json=data)
         tx = graph.begin()
         graph.commit(tx)
 
@@ -744,8 +784,7 @@ class VkaciGraph(object):
             
             pods = []
             for pod_name, pod in topology['nodes'][node]["pods"].items():
-                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()], "secondary_ips": [k+":"+v for k, v in pod["secondary_ips"].items()],
-                            "annotations": [k+":"+v for k, v in pod["annotations"].items()], "primary_iface": pod["primary_iface"]})
+                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()], "annotations": [k+":"+v for k, v in pod["annotations"].items()], "primary_iface": pod["primary_iface"]})
             
             bgp_peers = []
             for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
@@ -766,7 +805,8 @@ class VkaciGraph(object):
                 "vm_hosts": vm_hosts,
                 "bgp_peers": bgp_peers,
                 "switch_iface": "<i>"+" | ".join(list(switch_ifaces))+"</i>",
-                "node_sec_iface_conn": topology['nodes'][node]["node_sec_iface_conn"]
+                "node_leaf_sec_iface_conn": topology['nodes'][node]["node_leaf_sec_iface_conn"],
+                "node_pod_sec_iface_conn": topology['nodes'][node]["node_pod_sec_iface_conn"]
             })
             
         return data, switch_data
