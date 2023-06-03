@@ -121,12 +121,12 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
 
             "RUNNING_ON": {
                 "caption": "interface",
-                "color": "#000066"
+                "color": "#7A8A24"
             },
 
             "RUNNING_ON_SEC": {
                 "caption": "interface",
-                "color": "#FF3300"
+                "color": "#E6E600"
             },
 
             "ATTACHED_TO": {
