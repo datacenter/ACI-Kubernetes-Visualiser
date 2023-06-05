@@ -86,7 +86,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 dashes: true,
             },
             "CONNECTED_TO": {
-                color: "#F50505",
+                color: "#FF4500",
                 caption: "interface",
                 font: {
                     size: 16,
@@ -96,7 +96,17 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 },
             },
             "CONNECTED_TO_SEC": {
-                color: "#230CF0",
+                color: "#800080",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                },
+            },
+            "CONNECTED_TO_TER": {
+                color: "#008080",
                 caption: "interface",
                 font: {
                     size: 16,
@@ -117,7 +127,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                     multi: true,
                     vadjust: -10,
                 },
-                color: "#F50505",
+                color: "#FF4500",
             },
             "RUNNING_ON_SEC": {
                 caption: "interface",
@@ -128,7 +138,18 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                     multi: true,
                     vadjust: -10,
                 },
-                color: "#230CF0",
+                color: "#800080",
+            },
+            "RUNNING_ON_TER": {
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#008080",
             },
             "ATTACHED_TO": {
                 color: "#ff5050",
