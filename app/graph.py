@@ -505,7 +505,10 @@ class VkaciBuilTopology(object):
                             'neighbours': {},
                             'labels': {},
                             'node_leaf_sec_iface_conn': [],
-                            'node_pod_sec_iface_conn': []
+                            'node_pod_sec_iface_conn': [],
+                            'node_leaf_ter_iface_conn': [],
+                            'node_pod_ter_iface_conn': [],
+                            'node_leaf_all_iface_conn': [],
                         }
 
                     pods = nodes[node_name]['pods']
@@ -515,7 +518,7 @@ class VkaciBuilTopology(object):
                         "primary_iface": "",
                         "ns": i.metadata.namespace,
                         "labels": i.metadata.labels if i.metadata.labels is not None else {},
-                        "secondary_iface_details": {},
+                        "other_ifaces": {},
                         "annotations": i.metadata.annotations if i.metadata.annotations is not None else {},
                     }
 
@@ -529,7 +532,7 @@ class VkaciBuilTopology(object):
                                     if val["ips"][0] != pod_ip:
                                         iface_name = str(val["name"].split('/')[-1])
                                         pod_iface = str(val["interface"])
-                                        pods[pod_name]['secondary_iface_details'][iface_name] = pod_iface
+                                        pods[pod_name]['other_ifaces'][iface_name] = pod_iface
                                     else:
                                         pods[pod_name]['primary_iface'] = str(val["interface"])
             except Exception as e:
@@ -549,11 +552,18 @@ class VkaciBuilTopology(object):
                             fabricLinkSplit = fabricLink.split("/")
                             switch_name = fabricLinkSplit[2].replace("node", "leaf")
                             switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
-                            self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
-                                'switch_name': switch_name,
-                                'switch_interface': switch_interface,
-                                'node_iface': iface_name
-                            })
+                            if "sriov" in i["metadata"]["name"]:
+                                self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
+                                    'switch_name': switch_name,
+                                    'switch_interface': switch_interface,
+                                    'node_iface': iface_name
+                                })
+                            else:
+                                self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
+                                    'switch_name': switch_name,
+                                    'switch_interface': switch_interface,
+                                    'node_iface': iface_name
+                                })
 
                             pods = link.get("pods", [])
                             for pod in pods:
@@ -563,12 +573,24 @@ class VkaciBuilTopology(object):
                                 pod_name = pod.get("podRef")["name"]
                                 network_ref = i["spec"].get("networkRef")
                                 node_network = network_ref["name"]
-                                self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
-                                    'node_iface': node_iface,
-                                    'pod_name': pod_name,
-                                    'node_network': node_network,
-                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['secondary_iface_details'].get(node_network, "")
-                                })
+                                if "sriov" in i["metadata"]["name"]:
+                                    self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
+                                        'node_iface': node_iface,
+                                        'pod_name': pod_name,
+                                        'node_network': node_network,
+                                        'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                    })
+                                else:
+                                    self.topology['nodes'][nodeName]['node_pod_ter_iface_conn'].append({
+                                        'node_iface': node_iface,
+                                        'pod_name': pod_name,
+                                        'node_network': node_network,
+                                        'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                    })
+
+                self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'])
+                self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'])
+
             except Exception as e:
                 logger.error(f"Error processing node: {nodeName}. Error: {str(e)}")
 
@@ -714,7 +736,7 @@ class VkaciGraph(object):
     query = """
     WITH $json AS data
     UNWIND data.items AS n
-    UNWIND n.node_leaf_sec_iface_conn as conn
+    UNWIND n.node_leaf_all_iface_conn as conn
     MERGE (node:Node {name: n.node_name})
     ON CREATE SET node.ip = n.node_ip, node.connected_primary_switch_iface = n.switch_iface, node.mac = n.node_mac, node.labels = n.labels,
     node.connected_switch_ifaces = n.switch_iface + ",\n" + conn.switch_interface, node.secondary_iface_info = conn.node_iface
@@ -767,6 +789,24 @@ class VkaciGraph(object):
     MATCH (node:Node) WHERE node.name = n.node_name
     MERGE (pod)-[:RUNNING_ON_SEC {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
     """
+
+    query5 = """
+    WITH $json as data
+    UNWIND data.items AS n
+    UNWIND n.node_leaf_ter_iface_conn AS conn
+    MATCH (node:Node) WHERE node.name = n.node_name
+    MATCH (switch:Switch) WHERE switch.name = conn.switch_name
+    MERGE (node)-[:CONNECTED_TO_TER {interface: conn.node_iface + " : " + conn.switch_interface}]->(switch)
+    """
+
+    query6 = """
+    WITH $json as data
+    UNWIND data.items AS n
+    UNWIND n.node_pod_ter_iface_conn AS conn
+    MATCH (pod:Pod) WHERE pod.name = conn.pod_name
+    MATCH (node:Node) WHERE node.name = n.node_name
+    MERGE (pod)-[:RUNNING_ON_TER {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
+    """
     
     def update_database(self):
         '''Update the neo4j database with the data collected from ACI and K8s'''
@@ -779,6 +819,8 @@ class VkaciGraph(object):
         graph.run(self.query2,json=switch_data)
         graph.run(self.query3,json=data)
         graph.run(self.query4,json=data)
+        graph.run(self.query5,json=data)
+        graph.run(self.query6,json=data)
         tx = graph.begin()
         graph.commit(tx)
 
@@ -825,7 +867,10 @@ class VkaciGraph(object):
                 "bgp_peers": bgp_peers,
                 "switch_iface": " | ".join(list(switch_ifaces)),
                 "node_leaf_sec_iface_conn": topology['nodes'][node]["node_leaf_sec_iface_conn"],
-                "node_pod_sec_iface_conn": topology['nodes'][node]["node_pod_sec_iface_conn"]
+                "node_pod_sec_iface_conn": topology['nodes'][node]["node_pod_sec_iface_conn"],
+                "node_leaf_ter_iface_conn": topology['nodes'][node]["node_leaf_ter_iface_conn"],
+                "node_pod_ter_iface_conn": topology['nodes'][node]["node_pod_ter_iface_conn"],
+                "node_leaf_all_iface_conn": topology['nodes'][node]["node_leaf_all_iface_conn"]
             })
             
         return data, switch_data
