@@ -3,10 +3,7 @@ var server_user = "";
 var server_password = "";
 
 function neo_viz_config(showPodName, container, cypher, seed = null) {
-    var podCaption = "pod"
-    if (showPodName) {
-        podCaption = "name"
-    }
+    var podCaption = showPodName ? "name" : "pod";
 
     var config = {
         container_id: container,
@@ -16,135 +13,139 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
         initial_cypher: cypher,
         arrows: showPodName,
         fix_nodes_in_place_on_drag: true,
-
         layout: {
             improvedLayout: true,
         },
-
         physics: {
-
             adaptiveTimestep: true,
             timestep: 0.3,
             barnesHut: {
                 gravitationalConstant: -3000,
             },
-
             stabilization: {
-                iterations: 400, // CHANGEME: If want different stabilisation,
-                fit: true
-            }
+                iterations: 400,
+                fit: true,
+            },
+            dragView: true
         },
-
         labels: {
             "Node": {
                 caption: "name",
-                "size": 3,
+                size: 3,
                 image: './assets/cui-2.0.0/img/node.svg',
-                "font": {
-                    "size": 20,
-                    "color": "#6e1313",
-                    strokeWidth: 5
+                font: {
+                    size: 20,
+                    color: "#6e1313",
+                    strokeWidth: 2,
                 },
             },
             "Pod": {
                 caption: podCaption,
                 size: 2,
                 image: './assets/cui-2.0.0/img/pod.svg',
-                "font": {
-                    "size": 18,
-                    "color": "#41136e",
-                    strokeWidth: 5
+                font: {
+                    size: 18,
+                    color: "#41136e",
+                    strokeWidth: 2,
                 },
             },
             "VM_Host": {
                 caption: "name",
                 size: 5,
                 image: './assets/cui-2.0.0/img/esxi.png',
-                "font": {
-                    "size": 22,
-                    "color": "#000000",
-                    strokeWidth: 5
+                font: {
+                    size: 22,
+                    color: "#000000",
+                    strokeWidth: 2,
                 },
             },
             "Switch": {
                 caption: "name",
                 size: 4,
                 image: './assets/cui-2.0.0/img/switch.png',
-                "font": {
-                    "size": 22,
-                    "color": "#000000",
-                    strokeWidth: 5
+                font: {
+                    size: 22,
+                    color: "#000000",
+                    strokeWidth: 2,
                 },
             },
             "Label": {
                 caption: "name",
                 size: 2,
                 image: './assets/cui-2.0.0/img/label.svg',
-                "font": {
-                    "size": 20,
-                    "color": "#000000",
-                    strokeWidth: 5
+                font: {
+                    size: 20,
+                    color: "#000000",
+                    strokeWidth: 2,
                 },
             },
         },
         relationships: {
             "PEERED_INTO": {
-                "color": "#CD5C5C",
-                "dashes": "true"
+                color: "#CD5C5C",
+                dashes: true,
             },
-
             "CONNECTED_TO": {
-                "color": "#7A8A24",
-                "caption": "interface",
-                "font": {
-                    "size": 16,
-                    "color": "#000099",
-                    strokeWidth: 5,
-                    multi: true
+                color: "#F50505",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
                 },
             },
-
             "CONNECTED_TO_SEC": {
-                "color": "#E6E600",
-                "caption": "interface",
-                "font": {
-                    "size": 16,
-                    "color": "#800000",
-                    strokeWidth: 5,
-                    multi: true
+                color: "#230CF0",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
                 },
             },
-
             "RUNNING_IN": {
-                "color": "#0047AB"
+                color: "#0047AB",
             },
-
             "RUNNING_ON": {
-                "caption": "interface",
-                "color": "#7A8A24"
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#F50505",
             },
-
             "RUNNING_ON_SEC": {
-                "caption": "interface",
-                "color": "#E6E600"
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#230CF0",
             },
-
             "ATTACHED_TO": {
-                "color": "#ff5050"
+                color: "#ff5050",
             },
-
             [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
-                "thickness": "defaultThicknessProperty",
-                "caption": "defaultCaption"
+                thickness: "defaultThicknessProperty",
+                caption: "defaultCaption",
+                align: "top",
             },
-        }
+        },
     };
 
     if (seed) {
-        config.layout.randomSeed = seed
+        config.layout.randomSeed = seed;
     }
 
-    return config
+    return config;
 }
 
 // Views enums can be grouped as static members of a class
