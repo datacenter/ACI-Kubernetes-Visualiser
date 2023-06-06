@@ -436,18 +436,6 @@ class VkaciBuilTopology(object):
                         count = self.bgp_info[name]["prefix_count"]
                     node['bgp_peers'][name] = {"prefix_count": count}
 
-    def add_prefix(self, svc):
-        for leaf, route in self.bgp_info.items():
-            for prefix in route.keys():
-                if "/32" in prefix:
-                    svc_ip = prefix.split('/')[0]
-                    if svc_ip == svc['cluster_ip']:
-                        svc["prefix"]=prefix
-                    elif svc['external_i_ps']:
-                        for ext_svc_ip in svc['external_i_ps']:
-                            if svc_ip == ext_svc_ip:
-                                svc["prefix"]=prefix
-        return svc
 
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
@@ -516,10 +504,10 @@ class VkaciBuilTopology(object):
                 'name': i.metadata.name,
                 'cluster_ip':i.spec.cluster_ip,
                 'external_i_ps': i.spec.external_i_ps, 
+                'load_balancer_ip': i.status.load_balancer.ingress[0].ip if i.status.load_balancer.ingress is not None else None, 
                 'labels': i.metadata.labels if i.metadata.labels is not None else {},
-                'prefix': None
+                'ns': i.metadata.namespace,
             }
-            svc_info = self.add_prefix(svc_info)
             self.topology['services'][i.metadata.namespace].append(svc_info)
         
         logger.info("Pods, Nodes and Services Loaded")
@@ -598,8 +586,7 @@ class VkaciBuilTopology(object):
         for namespace in self.topology['services'].keys():
             if ns is None or ns == namespace:      
                 for s in self.topology["services"][namespace]:
-                    if s['prefix']:
-                        service_names.append(s["name"])
+                    service_names.append(s["name"])
         return natsorted(service_names)
 
     def get_namespaces(self):
@@ -761,7 +748,8 @@ class VkaciTable ():
         logger.debug('Finding Prexif Name for %s', prefix)
         for ns, svcs in topology['services'].items():
             for svc in svcs:
-                if prefix == svc['prefix']:
+                if prefix == svc['load_balancer_ip'] or prefix == svc['cluster_ip'] or prefix == svc['external_i_ps']:
+                    logger.debug('The prefix %s is in the ns %s with service name %s', prefix, ns, svc['name'])
                     return ns, svc['name']
         return "", ""
 
@@ -780,8 +768,8 @@ class VkaciTable ():
             if leaf_name in bgp_info.keys():
                 sorted_items = sorted(bgp_info[leaf_name].items())
                 for prefix, route in sorted_items:
-                    ns, svc_name = self.get_svc_name(prefix)
                     if prefix != "prefix_count":
+                        ns, svc_name = self.get_svc_name(prefix.split('/')[0])
                         hosts = []
                         for host in route["hosts"]:
                             hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
@@ -793,7 +781,7 @@ class VkaciTable ():
                     "image":"switch.png",
                     "data" : [
                         {"value": "BGP Peering", "image": "bgp.png", "data": bgp_peers},
-                        {"value": "Prefixes", "image": "ip.png", "data": bgp_prefixes}]
+                        {"value": "Prefixes", "image": "ip.png", "data": bgp_prefixes}],
                 })
         logger.debug("BGP Table View:")
         logger.debug(pformat(data))
