@@ -177,6 +177,9 @@ class View {
     static WithoutBgpPeers = new View("WithoutBgpPeers", draw_without_bgp_peers)
     static PodsAndNodes = new View("PodsAndNodes", draw_pods_and_nodes)
     static OnlyBgpPeers = new View("OnlyBgpPeers", draw_only_bgp_peers)
+    static OnlyPrimarylinks = new View("OnlyPrimarylinks", draw_only_primary_links)
+    static OnlySriovlinks = new View("OnlySriovlinks", draw_only_sriov_links)
+    static OnlyMacvlanlinks = new View("OnlyMacvlanlinks", draw_only_macvlan_links)
 
     constructor(name, drawFunc) {
         this.name = name
@@ -251,6 +254,31 @@ function draw_only_bgp_peers() {
     
     //draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, n,s")
 }
+
+function draw_only_primary_links() {
+    selectedView = View.OnlyPrimarylinks
+    let q = `MATCH (l:Label)-->(p:Pod)-[r:RUNNING_ON]->(m:Node)-[r2:CONNECTED_TO]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN p, m, r, r2, a`
+    draw(q)
+}
+
+function draw_only_sriov_links() {
+    selectedView = View.OnlySriovlinks
+    let q = `MATCH (l:Label)-->(p:Pod)-[r:RUNNING_ON_SEC]->(m:Node)-[r2:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN p, m, r, r2, a`
+    draw(q)
+}
+
+function draw_only_macvlan_links() {
+    selectedView = View.OnlyMacvlanlinks
+    let q = `MATCH (l:Label)-->(p:Pod)-[r:RUNNING_ON_TER]->(m:Node)-[r2:CONNECTED_TO_TER]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    q += addLabelQuery();
+    q += `RETURN p, m, r, r2, a`
+    draw(q)
+}
+
 
 function draw_namespace(namespace) {
     selectedNamespace = namespace
