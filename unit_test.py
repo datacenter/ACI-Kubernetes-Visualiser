@@ -65,8 +65,15 @@ services = [
             name="example service", namespace="appx", labels = {"app":"guestbook"}
         ),
         spec=client.V1ServiceSpec(
-            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"], load_balancer_ip=None
-        )  
+            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"], 
+        ),
+        status=client.V1ServiceStatus(
+        load_balancer=client.V1LoadBalancerStatus(
+            ingress=[
+                client.V1LoadBalancerIngress(ip='192.168.5.2')
+                ]
+        )
+    )
     )
 ]
 
@@ -186,7 +193,7 @@ class ApicMethodsMock(ApicMethodsResolve):
 @patch('kubernetes.client.CoreV1Api.list_node', MagicMock(return_value=client.V1NodeList(api_version="1", items=nodes)))
 @patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
 class TestVkaciGraph(unittest.TestCase):
-
+    maxDiff = None
     vars = {"APIC_IPS": "192.168.25.192,192.168.1.2",
             "TENANT": "Ciscolive",
             "VRF": "vrf-01",
@@ -221,8 +228,8 @@ class TestVkaciGraph(unittest.TestCase):
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                           'labels': {'app': 'redis'}, 'mac': 'MOCKMO1C'}},
-                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': None,
-                                           'labels': {'app': 'guestbook'}, 'prefix': '192.168.5.1/32'}]}}
+                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': '192.168.5.2','ns':'appx',
+                                           'labels': {'app': 'guestbook'}}]}}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -254,10 +261,10 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
-                                           'load_balancer_ip': None,
+                                           'load_balancer_ip': '192.168.5.2',
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
-                                           'prefix': '192.168.5.1/32'}]}}
+                                           'ns':'appx'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(False)]
@@ -288,10 +295,10 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
-                                           'load_balancer_ip': None,
+                                           'load_balancer_ip': '192.168.5.2',
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
-                                           'prefix': '192.168.5.1/32'}]}}
+                                           'ns':'appx'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = []
@@ -323,10 +330,10 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
-                                           'load_balancer_ip': None,
+                                           'load_balancer_ip': '192.168.5.2',
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
-                                           'prefix': '192.168.5.1/32'}]}}
+                                           'ns':'appx'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(desc=False)]
@@ -447,8 +454,8 @@ class TestVkaciGraph(unittest.TestCase):
     def test_services_table(self):
         """Test that a services table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': None, 
-        'labels': {'app': 'guestbook'}, 'prefix': '192.168.5.1/32', 'value': 'example service', 'ns': 'appx', 
+        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': '192.168.5.2', 
+        'labels': {'app': 'guestbook'}, 'value': 'example service', 'ns': 'appx', 
         'image': 'svc.svg', 'data': [{'value': 'app', 'label_value': 'guestbook', 'image': 'label.svg'}]}]}
 
         build = VkaciBuilTopology(
