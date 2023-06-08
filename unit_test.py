@@ -65,7 +65,7 @@ services = [
             name="example service", namespace="appx", labels = {"app":"guestbook"}
         ),
         spec=client.V1ServiceSpec(
-            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"]
+            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"], load_balancer_ip=None
         )  
     )
 ]
@@ -221,7 +221,7 @@ class TestVkaciGraph(unittest.TestCase):
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                           'labels': {'app': 'redis'}, 'mac': 'MOCKMO1C'}},
-                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],
+                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': None,
                                            'labels': {'app': 'guestbook'}, 'prefix': '192.168.5.1/32'}]}}
 
         build = VkaciBuilTopology(
@@ -254,6 +254,7 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
+                                           'load_balancer_ip': None,
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
                                            'prefix': '192.168.5.1/32'}]}}
@@ -287,6 +288,7 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
+                                           'load_balancer_ip': None,
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
                                            'prefix': '192.168.5.1/32'}]}}
@@ -321,6 +323,7 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
+                                           'load_balancer_ip': None,
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
                                            'prefix': '192.168.5.1/32'}]}}
@@ -444,7 +447,7 @@ class TestVkaciGraph(unittest.TestCase):
     def test_services_table(self):
         """Test that a services table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 
+        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': None, 
         'labels': {'app': 'guestbook'}, 'prefix': '192.168.5.1/32', 'value': 'example service', 'ns': 'appx', 
         'image': 'svc.svg', 'data': [{'value': 'app', 'label_value': 'guestbook', 'image': 'label.svg'}]}]}
 
