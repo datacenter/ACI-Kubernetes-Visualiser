@@ -748,7 +748,8 @@ class VkaciTable ():
         logger.debug('Finding Prexif Name for %s', prefix)
         for ns, svcs in topology['services'].items():
             for svc in svcs:
-                if prefix == svc['load_balancer_ip'] or prefix == svc['cluster_ip'] or prefix == svc['external_i_ps']:
+                logger.debug('Is %s in load_balancer_ip: %s cluster_ip: %s external_i_ps: %s', prefix, svc['load_balancer_ip'], svc['cluster_ip'],  svc['external_i_ps'])
+                if prefix == svc['load_balancer_ip'] or prefix == svc['cluster_ip'] or (svc['external_i_ps'] != None and prefix in svc['external_i_ps']):
                     logger.debug('The prefix %s is in the ns %s with service name %s', prefix, ns, svc['name'])
                     return ns, svc['name']
         return "", ""
