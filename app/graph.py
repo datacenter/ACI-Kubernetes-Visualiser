@@ -168,6 +168,7 @@ class VkaciBuilTopology(object):
         self.env = env
         self.apic_methods = apic_methods
         self.k8s_as = None
+        self.openshift = False
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -218,7 +219,6 @@ class VkaciBuilTopology(object):
             if switch not in node['neighbours'][neighbour_adj.sysName]['switches'].keys() and neighbour_adj:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
                 logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
-            node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
 
             # TODO: Get all the connected ifaces apart from primary and 
             # add in secondary_ifaces of the switch
@@ -254,6 +254,9 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
+
+            if self.openshift:
+                node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
 
     def get_cluster_as(self):
         '''Returns the previously detected AS number'''
@@ -329,6 +332,9 @@ class VkaciBuilTopology(object):
         
         # Get the K8s Cluster AS
         self.k8s_as = self.detect_cluster_as()
+        if self.k8s_as == None:
+            self.openshift = True
+            return
         overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
         self.bgp_info = {}
         vrf = self.env.tenant + ":" + self.env.vrf
@@ -536,22 +542,23 @@ class VkaciBuilTopology(object):
                         for iface_name, link in i["spec"]["aciTopology"].items():
                             if "sriov" in i["metadata"]["name"]:
                                 iface_name = "PF-" + iface_name
-                            fabricLink = link['fabricLink']
-                            fabricLinkSplit = fabricLink.split("/")
-                            switch_name = fabricLinkSplit[2].replace("node", "leaf")
-                            switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
-                            if "sriov" in i["metadata"]["name"]:
-                                self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
-                                    'switch_name': switch_name,
-                                    'switch_interface': switch_interface,
-                                    'node_iface': iface_name
-                                })
-                            else:
-                                self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
-                                    'switch_name': switch_name,
-                                    'switch_interface': switch_interface,
-                                    'node_iface': iface_name
-                                })
+                            fabricLinks = link.get("fabricLink", [])
+                            for fabricLink in fabricLinks:
+                                fabricLinkSplit = fabricLink.split("/")
+                                switch_name = fabricLinkSplit[2].replace("node", "leaf")
+                                switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
+                                if "sriov" in i["metadata"]["name"]:
+                                    self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
+                                        'switch_name': switch_name,
+                                        'switch_interface': switch_interface,
+                                        'node_iface': iface_name
+                                    })
+                                else:
+                                    self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
+                                        'switch_name': switch_name,
+                                        'switch_interface': switch_interface,
+                                        'node_iface': iface_name
+                                    })
 
                             pods = link.get("pods", [])
                             for pod in pods:
@@ -588,7 +595,7 @@ class VkaciBuilTopology(object):
             if n in self.topology['nodes'].keys():
                 self.topology['nodes'][n]['labels'] = i.metadata.labels if i.metadata.labels is not None else {}
                 
-        # self.update_bgp_info(self.apics[0])
+        self.update_bgp_info(self.apics[0])
 
         logger.info("Loading K8s Services in Memory")
         ret = self.v1.list_service_for_all_namespaces(watch=False)

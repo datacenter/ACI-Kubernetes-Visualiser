@@ -273,7 +273,9 @@ function draw_only_sriov_links() {
 
 function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
-    let q = `MATCH (l:Label)-->(p:Pod)-[r:RUNNING_ON_TER]->(m:Node)-[r2:CONNECTED_TO_TER]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    q = `MATCH (l:Label)
+        OPTIONAL MATCH (l)-->(p:Pod)-[r:RUNNING_ON_TER]->()
+        MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)`
     q += addLabelQuery();
     q += `RETURN p, m, r, r2, a`
     draw(q)
