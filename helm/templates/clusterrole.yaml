@@ -30,4 +30,3 @@ roleRef:
   kind: ClusterRole
   name: {{ include "vkaci.fullname" . }}-pods-list
   apiGroup: rbac.authorization.k8s.io
-  
