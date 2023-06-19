@@ -802,6 +802,26 @@ class VkaciGraph(object):
     MERGE (pod)-[:RUNNING_ON_TER {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
     """
     
+    query7 = """
+    WITH $json as data
+    UNWIND data.items as n
+    MERGE (node:Node {name: n.node_name})
+    FOREACH (v IN n.vm_hosts |
+        MERGE (vmh:VM_Host {name:v.host_name, description:v.description})
+        MERGE (node)-[:RUNNING_IN]->(vmh)
+    )
+    """
+
+    query8 = """
+    WITH $json as data
+    UNWIND data.items as s
+    WITH s, SIZE(s.nodes) as ncount
+    UNWIND s.vm_hosts as v
+    MATCH (vmh:VM_Host) WHERE vmh.name = v
+    MERGE (switch:Switch {name:s.name})
+    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    """
+
     def update_database(self):
         '''Update the neo4j database with the data collected from ACI and K8s'''
         graph = Graph(self.env.neo4j_url, auth=(self.env.neo4j_user, self.env.neo4j_password))
@@ -810,11 +830,15 @@ class VkaciGraph(object):
 
         graph.run("MATCH (n) DETACH DELETE n")
         graph.run(self.query,json=data)
-        graph.run(self.query2,json=switch_data)
-        graph.run(self.query3,json=data)
-        graph.run(self.query4,json=data)
-        graph.run(self.query5,json=data)
-        graph.run(self.query6,json=data)
+        if self.topology.openshift:
+            graph.run(self.query2,json=switch_data)
+            graph.run(self.query3,json=data)
+            graph.run(self.query4,json=data)
+            graph.run(self.query5,json=data)
+            graph.run(self.query6,json=data)
+        else:
+            graph.run(self.query7,json=data)
+            graph.run(self.query8,json=switch_data)
         tx = graph.begin()
         graph.commit(tx)
 
