@@ -169,6 +169,7 @@ class VkaciBuilTopology(object):
         self.apic_methods = apic_methods
         self.k8s_as = None
         self.openshift = False
+        self.nfna_cr = False
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -534,6 +535,9 @@ class VkaciBuilTopology(object):
 
         cr = self.custom_obj.list_namespaced_custom_object(group="aci.fabricattachment", version="v1", namespace="aci-containers-system", plural="nodefabricnetworkattachments")
 
+        if cr:
+            self.nfna_cr = True
+
         for nodeName in self.topology['nodes']:
             try:
                 for i in cr.get("items"):
@@ -830,7 +834,7 @@ class VkaciGraph(object):
 
         graph.run("MATCH (n) DETACH DELETE n")
         graph.run(self.query,json=data)
-        if self.topology.openshift:
+        if self.topology.nfna_cr:
             graph.run(self.query2,json=switch_data)
             graph.run(self.query3,json=data)
             graph.run(self.query4,json=data)

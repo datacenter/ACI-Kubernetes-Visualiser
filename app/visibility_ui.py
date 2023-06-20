@@ -19,7 +19,7 @@ def index():
     return render_template('index.html', version=__build__, env=env, pod_names=topology.get_pods(), 
     node_names=topology.get_nodes(), namespaces=topology.get_namespaces(), 
     leaf_names=topology.get_leafs(), label_names=topology.get_labels(),
-    openshift=topology.openshift)
+    openshift=topology.openshift, nfna_cr=topology.nfna_cr)
 
 @app.route('/pod_names')
 def pod_names():
