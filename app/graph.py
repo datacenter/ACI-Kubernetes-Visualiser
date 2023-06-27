@@ -458,7 +458,8 @@ class VkaciBuilTopology(object):
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
         logger.info("Start Topology Generation")
-        #self.topology = { }
+        self.topology = { 'nodes': {}, 'services': {}}
+        self.nfna_cr = False
         self.apics = []
 
         # Check APIC Ips
@@ -733,11 +734,8 @@ class VkaciGraph(object):
     query = """
     WITH $json AS data
     UNWIND data.items AS n
-    UNWIND n.node_leaf_all_iface_conn as conn
     MERGE (node:Node {name: n.node_name})
-    ON CREATE SET node.ip = n.node_ip, node.connected_primary_switch_iface = n.switch_iface, node.mac = n.node_mac, node.labels = n.labels,
-    node.connected_switch_ifaces = n.switch_iface + ",\n" + conn.switch_interface, node.secondary_iface_info = conn.node_iface
-    ON MATCH SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + n.switch_iface + ",\n" + conn.switch_interface, node.secondary_iface_info = node.secondary_iface_info + ",\n" + conn.node_iface
+    ON CREATE SET node.ip = n.node_ip, node.connected_primary_switch_iface = n.switch_iface, node.mac = n.node_mac, node.labels = n.labels, node.connected_switch_ifaces = "", node.secondary_iface_info = ""
 
     FOREACH (p IN n.pods | 
         MERGE (pod:Pod {name: p.name})
@@ -757,6 +755,15 @@ class VkaciGraph(object):
         MERGE (lab:Label {name: l}) 
         MERGE (lab)-[:ATTACHED_TO]->(node))
 
+    """
+
+    query1 = """
+    WITH $json AS data
+    UNWIND data.items AS n
+    UNWIND n.node_leaf_all_iface_conn as conn
+    MATCH (node:Node) WHERE node.name = n.node_name
+
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + n.switch_iface + ",\n" + conn.switch_interface, node.secondary_iface_info = node.secondary_iface_info + ",\n" + conn.node_iface
     """
 
     query2 = """
@@ -810,7 +817,7 @@ class VkaciGraph(object):
     UNWIND data.items as n
 
     MERGE (node:Node {name:n.node_name}) ON CREATE
-    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
+    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels, node.connected_primary_switch_iface = n.switch_iface
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels
@@ -818,7 +825,6 @@ class VkaciGraph(object):
     FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
     FOREACH (l IN n.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(node))
     """
 
@@ -826,10 +832,10 @@ class VkaciGraph(object):
     WITH $json as data
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
-    UNWIND s.vm_hosts as v
-    MATCH (vmh:VM_Host) WHERE vmh.name = v
+    UNWIND s.nodes as v
+    MATCH (node:Node) WHERE node.name = v
     MERGE (switch:Switch {name:s.name})
-    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    MERGE (node)-[:CONNECTED_TO {interface:node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
     """
 
     def update_database(self):
@@ -841,6 +847,7 @@ class VkaciGraph(object):
         graph.run("MATCH (n) DETACH DELETE n")
         if self.topology.nfna_cr:
             graph.run(self.query,json=data)
+            graph.run(self.query1,json=data)
             graph.run(self.query2,json=switch_data)
             graph.run(self.query3,json=data)
             graph.run(self.query4,json=data)
