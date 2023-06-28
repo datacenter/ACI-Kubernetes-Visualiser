@@ -763,7 +763,7 @@ class VkaciGraph(object):
     UNWIND n.node_leaf_all_iface_conn as conn
     MATCH (node:Node) WHERE node.name = n.node_name
 
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + n.switch_iface + ",\n" + conn.switch_interface, node.secondary_iface_info = node.secondary_iface_info + ",\n" + conn.node_iface
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + "(" + conn.node_iface + " : " + conn.switch_interface+ ")", node.secondary_iface_info = node.secondary_iface_info + ",\n" + conn.node_iface
     """
 
     query2 = """
@@ -774,6 +774,7 @@ class VkaciGraph(object):
     MATCH (node:Node) WHERE node.name = v
     MERGE (switch:Switch {name:s.name})
     MERGE (node)-[:CONNECTED_TO {interface: "br-ex : " + node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + "(" + "br-ex : " + node.connected_primary_switch_iface + ")"
     """
 
     query3 = """

@@ -265,7 +265,9 @@ function draw_only_primary_links() {
 
 function draw_only_sriov_links() {
     selectedView = View.OnlySriovlinks
-    let q = `MATCH (l:Label)-->(p:Pod)-[r:RUNNING_ON_SEC]->(m:Node)-[r2:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `MATCH (l:Label)
+            OPTIONAL MATCH (l)-->(p:Pod)-[r:RUNNING_ON_SEC]->() WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a) `
     q += addLabelQuery();
     q += `RETURN p, m, r, r2, a`
     draw(q)
@@ -273,9 +275,9 @@ function draw_only_sriov_links() {
 
 function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
-    q = `MATCH (l:Label)
-        OPTIONAL MATCH (l)-->(p:Pod)-[r:RUNNING_ON_TER]->()
-        MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)`
+    let q = `MATCH (l:Label)
+            OPTIONAL MATCH (l)-->(p:Pod)-[r:RUNNING_ON_TER]->() WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)`
     q += addLabelQuery();
     q += `RETURN p, m, r, r2, a`
     draw(q)
