@@ -170,6 +170,8 @@ class VkaciBuilTopology(object):
         self.k8s_as = None
         self.openshift = False
         self.nfna_cr = False
+        self.sriov = False
+        self.macvlan = False
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -460,6 +462,8 @@ class VkaciBuilTopology(object):
         logger.info("Start Topology Generation")
         self.topology = { 'nodes': {}, 'services': {}}
         self.nfna_cr = False
+        self.sriov = False
+        self.macvlan = False
         self.apics = []
 
         # Check APIC Ips
@@ -552,12 +556,14 @@ class VkaciBuilTopology(object):
                                     switch_name = fabricLinkSplit[2].replace("node", "leaf")
                                     switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
                                     if "sriov" in i["metadata"]["name"]:
+                                        self.sriov = True
                                         self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
                                             'switch_name': switch_name,
                                             'switch_interface': switch_interface,
                                             'node_iface': iface_name
                                         })
                                     else:
+                                        self.macvlan = True
                                         self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
                                             'switch_name': switch_name,
                                             'switch_interface': switch_interface,
