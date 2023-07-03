@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10-slim-bullseye
 WORKDIR /app
 ENV PATH "$PATH:/app"
 COPY requirements.txt requirements.txt
