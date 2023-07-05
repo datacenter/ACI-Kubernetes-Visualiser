@@ -169,7 +169,6 @@ class VkaciBuilTopology(object):
         self.apic_methods = apic_methods
         self.k8s_as = None
         self.openshift = False
-        self.nfna_cr = False
         self.sriov = False
         self.macvlan = False
 
@@ -461,7 +460,6 @@ class VkaciBuilTopology(object):
         '''Update the topology by querying the APIC and K8s cluster'''
         logger.info("Start Topology Generation")
         self.topology = { 'nodes': {}, 'services': {}}
-        self.nfna_cr = False
         self.sriov = False
         self.macvlan = False
         self.apics = []
@@ -541,7 +539,6 @@ class VkaciBuilTopology(object):
         cr = self.custom_obj.list_namespaced_custom_object(group="aci.fabricattachment", version="v1", namespace="aci-containers-system", plural="nodefabricnetworkattachments")
 
         if cr.get("items"):
-            self.nfna_cr = True
             for nodeName in self.topology['nodes']:
                 try:
                     for i in cr.get("items"):
@@ -852,14 +849,16 @@ class VkaciGraph(object):
         data, switch_data = self.build_graph_data(topology)
 
         graph.run("MATCH (n) DETACH DELETE n")
-        if self.topology.nfna_cr:
+        if self.topology.sriov or self.topology.macvlan:
             graph.run(self.query,json=data)
             graph.run(self.query1,json=data)
             graph.run(self.query2,json=switch_data)
-            graph.run(self.query3,json=data)
-            graph.run(self.query4,json=data)
-            graph.run(self.query5,json=data)
-            graph.run(self.query6,json=data)
+            if self.topology.sriov:
+                graph.run(self.query3,json=data)
+                graph.run(self.query4,json=data)
+            if self.topology.macvlan:
+                graph.run(self.query5,json=data)
+                graph.run(self.query6,json=data)
         else:
             graph.run(self.query7,json=data)
             graph.run(self.query8,json=switch_data)
