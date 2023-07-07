@@ -536,65 +536,72 @@ class VkaciBuilTopology(object):
             except Exception as e:
                 logger.error(f"Error processing pod: {i.metadata.name}. Error: {str(e)}")
 
-        cr = self.custom_obj.list_namespaced_custom_object(group="aci.fabricattachment", version="v1", namespace="aci-containers-system", plural="nodefabricnetworkattachments")
+        try:
+            cr = self.custom_obj.list_namespaced_custom_object(group="aci.fabricattachment", version="v1", namespace="aci-containers-system", plural="nodefabricnetworkattachments")
 
-        if cr.get("items"):
-            for nodeName in self.topology['nodes']:
-                try:
-                    for i in cr.get("items"):
-                        aciTopology = i["spec"].get("aciTopology")
-                        if aciTopology is not None and i["spec"]["nodeName"] == nodeName:
-                            for iface_name, link in i["spec"]["aciTopology"].items():
-                                if "sriov" in i["metadata"]["name"]:
-                                    iface_name = "PF-" + iface_name
-                                fabricLinks = link.get("fabricLink", [])
-                                for fabricLink in fabricLinks:
-                                    fabricLinkSplit = fabricLink.split("/")
-                                    switch_name = fabricLinkSplit[2].replace("node", "leaf")
-                                    switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
+            if cr.get("items"):
+                for nodeName in self.topology['nodes']:
+                    try:
+                        for i in cr.get("items"):
+                            aciTopology = i["spec"].get("aciTopology")
+                            if aciTopology is not None and i["spec"]["nodeName"] == nodeName:
+                                for iface_name, link in i["spec"]["aciTopology"].items():
                                     if "sriov" in i["metadata"]["name"]:
-                                        self.sriov = True
-                                        self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
-                                            'switch_name': switch_name,
-                                            'switch_interface': switch_interface,
-                                            'node_iface': iface_name
-                                        })
-                                    else:
-                                        self.macvlan = True
-                                        self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
-                                            'switch_name': switch_name,
-                                            'switch_interface': switch_interface,
-                                            'node_iface': iface_name
-                                        })
+                                        iface_name = "PF-" + iface_name
+                                    fabricLinks = link.get("fabricLink", [])
+                                    for fabricLink in fabricLinks:
+                                        fabricLinkSplit = fabricLink.split("/")
+                                        switch_name = fabricLinkSplit[2].replace("node", "leaf")
+                                        switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
+                                        if "sriov" in i["metadata"]["name"]:
+                                            self.sriov = True
+                                            self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
+                                                'switch_name': switch_name,
+                                                'switch_interface': switch_interface,
+                                                'node_iface': iface_name
+                                            })
+                                        else:
+                                            self.macvlan = True
+                                            self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
+                                                'switch_name': switch_name,
+                                                'switch_interface': switch_interface,
+                                                'node_iface': iface_name
+                                            })
 
-                                pods = link.get("pods", [])
-                                for pod in pods:
-                                    node_iface = pod.get("localIface")
-                                    if "sriov" in i["metadata"]["name"]:
-                                        node_iface = "VF-" + node_iface
-                                    pod_name = pod.get("podRef")["name"]
-                                    network_ref = i["spec"].get("networkRef")
-                                    node_network = network_ref["name"]
-                                    if "sriov" in i["metadata"]["name"]:
-                                        self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
-                                            'node_iface': node_iface,
-                                            'pod_name': pod_name,
-                                            'node_network': node_network,
-                                            'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
-                                        })
-                                    else:
-                                        self.topology['nodes'][nodeName]['node_pod_ter_iface_conn'].append({
-                                            'node_iface': node_iface,
-                                            'pod_name': pod_name,
-                                            'node_network': node_network,
-                                            'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
-                                        })
+                                    pods = link.get("pods", [])
+                                    for pod in pods:
+                                        node_iface = pod.get("localIface")
+                                        if "sriov" in i["metadata"]["name"]:
+                                            node_iface = "VF-" + node_iface
+                                        pod_name = pod.get("podRef")["name"]
+                                        network_ref = i["spec"].get("networkRef")
+                                        node_network = network_ref["name"]
+                                        if "sriov" in i["metadata"]["name"]:
+                                            self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
+                                                'node_iface': node_iface,
+                                                'pod_name': pod_name,
+                                                'node_network': node_network,
+                                                'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                            })
+                                        else:
+                                            self.topology['nodes'][nodeName]['node_pod_ter_iface_conn'].append({
+                                                'node_iface': node_iface,
+                                                'pod_name': pod_name,
+                                                'node_network': node_network,
+                                                'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                            })
 
-                    self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'])
-                    self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'])
+                        self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'])
+                        self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'])
 
-                except Exception as e:
-                    logger.error(f"Error processing node: {nodeName}. Error: {str(e)}")
+                    except Exception as e:
+                        logger.error(f"Error processing node: {nodeName}. Error: {str(e)}")
+
+        except Exception as e:
+            if e.status == 404:
+                logger.info(f"CRD nodefabricnetworkattachments not detected, SR-IOV/MACVLAN topology support is disabled")
+            else:
+                logger.error(f"Unexpected error processing list_namespaced_custom_object. Error: {str(e)}")
 
         pro = self.v1.list_node(watch=False)
         for i in pro.items:
@@ -766,7 +773,7 @@ class VkaciGraph(object):
     UNWIND n.node_leaf_all_iface_conn as conn
     MATCH (node:Node) WHERE node.name = n.node_name
 
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + "(" + conn.node_iface + " : " + conn.switch_interface+ ")", node.secondary_iface_info = node.secondary_iface_info + ",\n" + conn.node_iface
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + conn.node_iface + " : " + conn.switch_interface+ ")", node.secondary_iface_info = node.secondary_iface_info + " " + conn.node_iface
     """
 
     query2 = """
@@ -777,7 +784,7 @@ class VkaciGraph(object):
     MATCH (node:Node) WHERE node.name = v
     MERGE (switch:Switch {name:s.name})
     MERGE (node)-[:CONNECTED_TO {interface: "br-ex : " + node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + ",\n" + "(" + "br-ex : " + node.connected_primary_switch_iface + ")"
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + "br-ex : " + node.connected_primary_switch_iface + ")"
     """
 
     query3 = """

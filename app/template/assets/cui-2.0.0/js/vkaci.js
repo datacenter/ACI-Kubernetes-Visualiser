@@ -25,8 +25,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
             stabilization: {
                 iterations: 400,
                 fit: true,
-            },
-            dragView: true
+            }
         },
         labels: {
             "Node": {
@@ -211,7 +210,7 @@ function addLabelQuery() {
 
 function draw_all() {
     selectedView = View.All
-    let q = `MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN p, m, r, r2, a`
     draw(q)
@@ -220,7 +219,7 @@ function draw_all() {
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
-    let q = `MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN m, r2, a`
     draw(q)
@@ -229,7 +228,7 @@ function draw_without_pods() {
 
 function draw_without_bgp_peers() {
     selectedView = View.WithoutBgpPeers
-    let q = ` MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = ` MATCH (p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN u, r1, m, v,s`
     draw(q)
@@ -238,7 +237,7 @@ function draw_without_bgp_peers() {
 
 function draw_pods_and_nodes() {
     selectedView = View.PodsAndNodes
-    let q = ` MATCH (l:Label)-->(p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = ` MATCH (p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN p,r1,n`
     draw(q)
@@ -247,7 +246,7 @@ function draw_pods_and_nodes() {
 
 function draw_only_bgp_peers() {
     selectedView = View.OnlyBgpPeers
-    let q = ` MATCH (l:Label)-->(p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = ` MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN r, n,s`
     draw(q)
@@ -257,29 +256,28 @@ function draw_only_bgp_peers() {
 
 function draw_only_primary_links() {
     selectedView = View.OnlyPrimarylinks
-    let q = `MATCH (l:Label)-->(p:Pod)-[r:RUNNING_ON]->(m:Node)-[r2:CONNECTED_TO]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO]->(a)`
     q += addLabelQuery();
-    q += `RETURN p, m, r, r2, a`
+    q += `RETURN p, n, m, r, r2, a`
     draw(q)
 }
 
 function draw_only_sriov_links() {
     selectedView = View.OnlySriovlinks
-    let q = `MATCH (l:Label)
-            OPTIONAL MATCH (l)-->(p:Pod)-[r:RUNNING_ON_SEC]->() WHERE p.ns =~ '${selectedNamespace}'
-            MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a) `
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a)`
     q += addLabelQuery();
-    q += `RETURN p, m, r, r2, a`
+    q += `RETURN p, n, m, r, r2, a`
     draw(q)
 }
 
 function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
-    let q = `MATCH (l:Label)
-            OPTIONAL MATCH (l)-->(p:Pod)-[r:RUNNING_ON_TER]->() WHERE p.ns =~ '${selectedNamespace}'
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_TER]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
             MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)`
     q += addLabelQuery();
-    q += `RETURN p, m, r, r2, a`
+    q += `RETURN p, n, m, r, r2, a`
     draw(q)
 }
 
