@@ -52,7 +52,7 @@ The helm chart can currently be found in the source code for VKACI and is also a
 To access the webui you have the following options:
 
 - Expose the service as Type `Node Port`: With this config the Client will access the UI service by connecting to any of the nodes on port `nodePort`. Remember to set the `externalTrafficPolicy` to Cluster to ensure regardless of where the vkaci pod runs it can be accessed.
-**Reccomended for**: Kube-Router or Calico
+**Recommended for**: Kube-Router or Calico
 
 ```yaml
 service:
@@ -62,7 +62,7 @@ service:
 ```
 
 - Expose the service as Type `Node Port` and set an `externalIPs`. With this config the Client will access the webui service by using the defined `externalIPs` as entry point into your cluster on port `80`. For this config to work the CNI must advertise via BGP the `externalIPs` and the client needs to be able to route to the `externalIPs`
-**Reccomended for**: Kube-Router or Calico
+**Recommended for**: Kube-Router or Calico
 
 ```yaml
 service:
@@ -73,7 +73,7 @@ service:
 ```
 
 - Expose the service as Type `LoadBalancer`. With this config the Client will access the neo4j service by using the allocated IP as entry point into your cluster on port `80`. For this config to work the CNI must advertise via BGP the `loadBalancerIP` and the client needs to be able to route to the `loadBalancerIP`.
-**Reccomended for**: Cilium
+**Recommended for**: Cilium
 
 ```yaml
 service:
@@ -82,14 +82,14 @@ service:
 
 #### neo4j External Connectivity:
 
-Currently the Client (Web Browser) needs to be able to accees the neo4j database directly. This can be acheived by exposing the neo4j service as `NodePort` or `LoadBalancer` type. This is done by configuring the `neo4j-standalone.services.default`.
+Currently the Client (Web Browser) needs to be able to access the neo4j database directly. This can be achieved by exposing the neo4j service as `NodePort` or `LoadBalancer` type. This is done by configuring the `neo4j-standalone.services.default`.
 Based on this configuration the vkaci deployment will be configured to pass, to the browser, the neo4j service IP.
 
 Depending on your network and CNI you might wish to expose the neo4j service in different ways, here are a few options:
 
 - Expose the service as Type `Node Port` set a `port` and Configure the `nodeExternalIP` and to one of your K8s node IP addresses: With this config the Client will access the neo4j service by using the `nodeExternalIP` on port `port` as entry point into your cluster.
 
-**Reccomended for**: Kube-Router or Calico
+**Recommended for**: Kube-Router or Calico
 
 ```yaml
 neo4j-standalone:
@@ -104,7 +104,7 @@ neo4j-standalone:
 
 - Expose the service as Type `Node Port` and Configure a single `externalIPs`. With this config the Client will access the neo4j service by using the defined `externalIPs` as entry point into your cluster on port `7687`. For this config to work the CNI must advertise via BGP the `externalIPs` and the client needs to be able to route to the `externalIPs`
 
-**Reccomended for**: Kube-Router or Calico
+**Recommended for**: Kube-Router or Calico
 
 ```yaml
 neo4j-standalone:
@@ -117,9 +117,9 @@ neo4j-standalone:
         - 192.168.14.1
 ```
 
-- Expose the service as Type `LoadBalancer` and Configure a `loadBalancerIP`. With this config the Client will access the neo4j service by using the defined `loadBalancerIP` as entry point into your cluster on port `7687`. For this config to work the CNI must advertise via BGP the `loadBalancerIP` and the client needs to be able to route to the `loadBalancerIP`. This config is reccomended for Cilium, you must manually select a `loadBalancerIP`.
+- Expose the service as Type `LoadBalancer` and Configure a `loadBalancerIP`. With this config the Client will access the neo4j service by using the defined `loadBalancerIP` as entry point into your cluster on port `7687`. For this config to work the CNI must advertise via BGP the `loadBalancerIP` and the client needs to be able to route to the `loadBalancerIP`. This config is Recommended for Cilium, you must manually select a `loadBalancerIP`.
 
-**Reccomended for**: Cilium
+**Recommended for**: Cilium
 
 ```yaml
 neo4j-standalone:
@@ -149,7 +149,7 @@ neo4j-standalone:
         - 192.168.14.0
 ```
 
-[Here](values_examples) you can find more exmaples!
+[Here](values_examples) you can find more examples!
 
 To generate the base64 data for apicKeyData from the apic key file use the base64 command. Eg.
 
@@ -204,4 +204,4 @@ neo4j-standalone:
 helm install -n vkaci vkaci vkaci/vkaci -f values.yaml
 ```
 
-- In a few seconds the application should be rechable on the `externalIPs` you have specified
+- In a few seconds the application should be reachable on the `externalIPs` you have specified.
