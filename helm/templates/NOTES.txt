@@ -1,13 +1,24 @@
 VKACI is now starting, it can take a moment before is accessible. 
-{{- if eq .Values.service.type "LoadBalancer" }}
 Execut the below script to get the vkaci access URL.
-export SERVICE_IP=$(kubectl  get svc test-vkaci  --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
-export SERVICE_PORT=$(kubectl get svc --namespace default test-vkaci  --output jsonpath='{.spec.ports[0].port}')
+
+if command -v oc &> /dev/null
+then
+    export CMD="oc"
+elif command -v kubectl &> /dev/null
+then
+    export CMD="kubectl"
+else
+    echo "kubectl or oc not found"
+    exit 1
+fi
+{{- if eq .Values.service.type "LoadBalancer" }}
+export SERVICE_IP=$($CMD  get svc test-vkaci  --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
+export SERVICE_PORT=$($CMD get svc --namespace {{ .Release.Namespace }} {{ include "vkaci.fullname" .}}  --output jsonpath='{.spec.ports[0].port}')
 echo http://$SERVICE_IP:$SERVICE_PORT
 {{- else if and (eq .Values.service.type "NodePort") (.Values.service.externalIPs)}}
-Execut the below script to get the vkaci access URL.
-export SERVICE_IP=$(kubectl get svc --namespace default test-vkaci  --output jsonpath='{.spec.externalIPs[0]}')
-export SERVICE_PORT=$(kubectl get svc --namespace default test-vkaci  --output jsonpath='{.spec.ports[0].port}')
+
+export SERVICE_IP=$($CMD get svc --namespace {{ .Release.Namespace }} {{ include "vkaci.fullname" .}}  --output jsonpath='{.spec.externalIPs[0]}')
+export SERVICE_PORT=$($CMD get svc --namespace {{ .Release.Namespace }} {{ include "vkaci.fullname" .}}  --output jsonpath='{.spec.ports[0].port}')
 echo http://$SERVICE_IP:$SERVICE_PORT
 {{- else if (eq .Values.service.type "NodePort") }}
 Connect to any of your K8s Node IP on port {{ .Values.service.nodePort }} to access the web UI

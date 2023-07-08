@@ -178,7 +178,7 @@ function renderServicesTable() {
       { id: "ns", header: ["Namespace", { content: "selectFilter" }], width: 200 },
       { id: "cluster_ip", header: ["Cluster IP", { content: "textFilter" }], width: 200 },
       { id: "external_i_ps", header: ["External IP", { content: "textFilter" }], width: 200 },
-      { id: "prefix", header: ["Prefix", { content: "textFilter" }], width: 200 },
+      { id: "load_balancer_ip", header: ["LB IP", { content: "textFilter" }], width: 200 },
     ],
 
     autoheight: true,

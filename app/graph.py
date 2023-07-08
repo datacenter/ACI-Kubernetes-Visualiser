@@ -36,6 +36,8 @@ class VkaciEnvVariables(object):
         else:
             self.apic_ip = []
 
+        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/app/aci-meta/aci-meta.json")
+
         self.tenant = self.enviro().get("TENANT")
         self.vrf = self.enviro().get("VRF")
 
@@ -165,6 +167,7 @@ class VkaciBuilTopology(object):
         self.bgp_info = {}
         self.env = env
         self.apic_methods = apic_methods
+        self.k8s_as = None
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -242,49 +245,79 @@ class VkaciBuilTopology(object):
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
     def get_cluster_as(self):
-        ''' Get the AS from K8s Configuration this assumes Calico is used'''
-        asn = 0
+        '''Returns the previously detected AS number'''
+        return self.k8s_as
+    
+    def detect_cluster_as(self):
+        ''' Detect the AS from K8s Configuration'''
+        asn = None
         logger.debug("Detect Cluster AS")
         # Try to get Cluster AS from Calico Config
         try: 
-            logger.debug("Try to detect Calico")
-            res =  self.custom_obj.get_cluster_custom_object(
-                group="crd.projectcalico.org",
-                version="v1",
-                name="default",
-                plural="bgpconfigurations"
-            )
-            logger.info('Calico BGP Config Detected!')
+            logger.info("Try to detect Calico")
+            res = self.get_calico_custom_object()
             asn = str(res['spec']['asNumber'])
+            logger.info('Calico BGP Config Detected!')
+            return asn
         except Exception as e:
-            # The the CRD does not exists I get an 404 not found exeption
+            # If the CRD does not exists it returns a 404 not found exeption
             pass
          # Try to get Cluster AS from kube-rotuer Config
         try: 
-            logger.debug("Try to detect Kube-Router")
+            logger.info("Try to detect Kube-Router")
             pods = self.get_pods(ns='kube-system')
             kr_pod = False
             for pod in pods:
                 if "kube-router" in pod:
-                    #I just need one so I break immediately
+                    # Only check the asn on the first kube-router pod found
                     kr_pod = self.v1.read_namespaced_pod(pod,'kube-system')
                     break
             if kr_pod:
                 for arg in kr_pod.spec.containers[0].args:
                     if "--cluster-asn=" in arg:
                         asn = arg[14:]
-                logger.info('Kube-Router Detected! Cluster AS=%s',asn)
+                        logger.info('Kube-Router Detected! Cluster AS=%s',asn)
+                        return asn
         except Exception as e:
             pass
-        if asn == 0:
+         # Try to get Cluster AS from Cilium Config
+        try: 
+            # VKACI only supports a single AS per Cluster. A set is used to ensure that
+            asn_set = set()
+            logger.info("Try to detect Cilium")
+            # Get all the CiliumBGPPeeringPolicies traverse them and the virtualRouters and add all the found ASN in the set
+            CiliumBGPPeeringPolicies = self.list_cilium_custom_objects()
+            for policy in CiliumBGPPeeringPolicies['items']:
+                for virtualrotuer in policy['spec']['virtualRouters']:
+                    asn_set.add(str(virtualrotuer['localASN']))
+            if len(asn_set) == 1:
+                asn = asn_set.pop()
+                logger.info('Cilium Detected! Cluster AS=%s',asn)
+                return asn
+            elif len(asn_set) > 1:
+                logger.info('Cilium Detected! More than one AS is used, this is an unsupported configuration!')
+        except Exception as e:
+            pass
+        if asn is None:
             logger.error("Can't detect K8s Cluster AS, BGP topology will not work corectly")
         return asn
+
+    def get_calico_custom_object(self):
+        return self.custom_obj.get_cluster_custom_object(
+                group="crd.projectcalico.org",
+                version="v1",
+                name="default",
+                plural="bgpconfigurations"
+            )
+
+    def list_cilium_custom_objects(self):
+        return self.custom_obj.list_cluster_custom_object(group="cilium.io", version="v2alpha1", plural="ciliumbgppeeringpolicies")
 
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
         
         # Get the K8s Cluster AS
-        k8s_as = self.get_cluster_as()
+        self.k8s_as = self.detect_cluster_as()
         overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
         self.bgp_info = {}
         vrf = self.env.tenant + ":" + self.env.vrf
@@ -303,7 +336,7 @@ class VkaciBuilTopology(object):
                     self.bgp_info[leaf][route] = {}
                     self.bgp_info[leaf][route]['hosts'] = []
                     self.bgp_info[leaf][route]['k8s_route'] = True
-                if hop.tag == k8s_as:
+                if hop.tag == self.k8s_as:
                     #self.bgp_info[leaf][route]['ip'].add(next_hop)
                     host_name = ""
                     image = "node.svg"
@@ -327,6 +360,7 @@ class VkaciBuilTopology(object):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
         if 'mac' not in node:
             logger.error("Could not resolved the mac address of node with ip %s", node['node_ip'] )
+            logger.error("This usually happnes if the Tenant/VRF config is wrong, I am configured to use '%s', is it correct?", self.aci_vrf)
             exit()
         #Find the mac to interface mapping
         logger.info("Find the mac to interface mapping for Node %s with MAC %s", node['node_ip'], node['mac'])
@@ -402,18 +436,6 @@ class VkaciBuilTopology(object):
                         count = self.bgp_info[name]["prefix_count"]
                     node['bgp_peers'][name] = {"prefix_count": count}
 
-    def add_prefix(self, svc):
-        for leaf, route in self.bgp_info.items():
-            for prefix in route.keys():
-                if "/32" in prefix:
-                    svc_ip = prefix.split('/')[0]
-                    if svc_ip == svc['cluster_ip']:
-                        svc["prefix"]=prefix
-                    elif svc['external_i_ps']:
-                        for ext_svc_ip in svc['external_i_ps']:
-                            if svc_ip == ext_svc_ip:
-                                svc["prefix"]=prefix
-        return svc
 
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
@@ -428,7 +450,7 @@ class VkaciBuilTopology(object):
 
         #Create list of APICs and set the useX509CertAuth parameters
         for i in self.env.apic_ip:
-            self.apics.append(Node('https://' + i))
+            self.apics.append(Node('https://' + i, aciMetaFilePath=self.env.aciMetaFilePath))
         logger.info("APICs To Probe %s", self.env.apic_ip)
         for apic in self.apics:
             if self.is_local_mode():
@@ -482,10 +504,10 @@ class VkaciBuilTopology(object):
                 'name': i.metadata.name,
                 'cluster_ip':i.spec.cluster_ip,
                 'external_i_ps': i.spec.external_i_ps, 
+                'load_balancer_ip': i.status.load_balancer.ingress[0].ip if i.status.load_balancer.ingress is not None else None, 
                 'labels': i.metadata.labels if i.metadata.labels is not None else {},
-                'prefix': None
+                'ns': i.metadata.namespace,
             }
-            svc_info = self.add_prefix(svc_info)
             self.topology['services'][i.metadata.namespace].append(svc_info)
         
         logger.info("Pods, Nodes and Services Loaded")
@@ -564,8 +586,7 @@ class VkaciBuilTopology(object):
         for namespace in self.topology['services'].keys():
             if ns is None or ns == namespace:      
                 for s in self.topology["services"][namespace]:
-                    if s['prefix']:
-                        service_names.append(s["name"])
+                    service_names.append(s["name"])
         return natsorted(service_names)
 
     def get_namespaces(self):
@@ -727,7 +748,9 @@ class VkaciTable ():
         logger.debug('Finding Prexif Name for %s', prefix)
         for ns, svcs in topology['services'].items():
             for svc in svcs:
-                if prefix == svc['prefix']:
+                logger.debug('Is %s in load_balancer_ip: %s cluster_ip: %s external_i_ps: %s', prefix, svc['load_balancer_ip'], svc['cluster_ip'],  svc['external_i_ps'])
+                if prefix == svc['load_balancer_ip'] or prefix == svc['cluster_ip'] or (svc['external_i_ps'] != None and prefix in svc['external_i_ps']):
+                    logger.debug('The prefix %s is in the ns %s with service name %s', prefix, ns, svc['name'])
                     return ns, svc['name']
         return "", ""
 
@@ -746,8 +769,8 @@ class VkaciTable ():
             if leaf_name in bgp_info.keys():
                 sorted_items = sorted(bgp_info[leaf_name].items())
                 for prefix, route in sorted_items:
-                    ns, svc_name = self.get_svc_name(prefix)
                     if prefix != "prefix_count":
+                        ns, svc_name = self.get_svc_name(prefix.split('/')[0])
                         hosts = []
                         for host in route["hosts"]:
                             hosts.append({"value": host["hostname"], "ip": host['ip'], "image":host["image"]})
@@ -759,7 +782,7 @@ class VkaciTable ():
                     "image":"switch.png",
                     "data" : [
                         {"value": "BGP Peering", "image": "bgp.png", "data": bgp_peers},
-                        {"value": "Prefixes", "image": "ip.png", "data": bgp_prefixes}]
+                        {"value": "Prefixes", "image": "ip.png", "data": bgp_prefixes}],
                 })
         logger.debug("BGP Table View:")
         logger.debug(pformat(data))

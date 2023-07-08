@@ -25,5 +25,5 @@ except Exception as e:
 
 url = "https://" + os.environ.get("APIC_IPS").split(',')[0] + '/acimeta/aci-meta.json'
 r = requests.get(url, verify=False, allow_redirects=True)
-open(os.path.expanduser("~") + '/.aci-meta/aci-meta.json','wb').write(r.content)
+open('/app/aci-meta/aci-meta.json','wb').write(r.content)
 logger.info("ACI Metadata Loaded")

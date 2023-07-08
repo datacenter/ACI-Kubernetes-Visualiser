@@ -42,13 +42,12 @@ podAnnotations: {}
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+#This ire required for OpenShift to run the container as non-root 
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000700000
+  seccompProfile:
+    type: RuntimeDefault
 
 service:
   type: NodePort
