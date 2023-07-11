@@ -210,16 +210,17 @@ function addLabelQuery() {
 
 function draw_all() {
     selectedView = View.All
-    let q = `MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2*1..2]->(a)`
     q += addLabelQuery();
-    q += `RETURN p, m, r, r2, a`
+    q += `RETURN p, m, n, r, r2, a`
     draw(q)
     //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
-    let q = `MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `MATCH (m:Node)-[r2*1..2]->(a)`
     q += addLabelQuery();
     q += `RETURN m, r2, a`
     draw(q)
