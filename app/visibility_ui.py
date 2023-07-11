@@ -19,7 +19,7 @@ def index():
     return render_template('index.html', version=__build__, env=env, pod_names=topology.get_pods(), 
     node_names=topology.get_nodes(), namespaces=topology.get_namespaces(), 
     leaf_names=topology.get_leafs(), label_names=topology.get_labels(),
-    openshift=topology.openshift, sriov=topology.sriov, macvlan=topology.macvlan)
+    asnPresent=topology.asnPresent, sriov=topology.sriov, macvlan=topology.macvlan)
 
 @app.route('/pod_names')
 def pod_names():

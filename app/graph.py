@@ -37,7 +37,7 @@ class VkaciEnvVariables(object):
         else:
             self.apic_ip = []
 
-        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/root/.aci-meta/aci-meta.json")
+        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/app/aci-meta/aci-meta.json")
 
         self.tenant = self.enviro().get("TENANT")
         self.vrf = self.enviro().get("VRF")
@@ -168,7 +168,7 @@ class VkaciBuilTopology(object):
         self.env = env
         self.apic_methods = apic_methods
         self.k8s_as = None
-        self.openshift = False
+        self.asnPresent = True
         self.sriov = False
         self.macvlan = False
 
@@ -257,7 +257,7 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
 
-            if self.openshift:
+            if not self.asnPresent:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
 
     def get_cluster_as(self):
@@ -335,7 +335,7 @@ class VkaciBuilTopology(object):
         # Get the K8s Cluster AS
         self.k8s_as = self.detect_cluster_as()
         if self.k8s_as == None:
-            self.openshift = True
+            self.asnPresent = False
             return
         overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
         self.bgp_info = {}

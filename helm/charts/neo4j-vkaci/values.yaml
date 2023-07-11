@@ -214,7 +214,7 @@ config:
 # securityContext defines privilege and access control settings for a Pod or Container. Making sure that we dont run Neo4j as root user.
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000700000
+  runAsUser: 1000690000
   fsGroupChangePolicy: "Always"
   seccompProfile:
     type: RuntimeDefault

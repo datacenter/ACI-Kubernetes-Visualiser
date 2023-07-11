@@ -133,11 +133,11 @@
                            <button class="btn btn--white btn--dropdown selected view">Different Views</button>
                            <div id="selected_views" class="dropdown__menu dropdown__menu--openleft">
                               <a id="PodsAndNodes" onclick="draw_pods_and_nodes()">Pods & Nodes</a>
-                              {% if not openshift %}
+                              {% if asnPresent %}
                                  <a id="WithoutBgpPeers" onclick="draw_without_bgp_peers()">Without Bgp Peers</a>
                               {% endif %}
                               <a id="WithoutPods" onclick="draw_without_pods()">Without Pods</a>
-                              {% if not openshift %}
+                              {% if asnPresent %}
                                  <a id="OnlyBgpPeers" onclick="draw_only_bgp_peers()">BGP Peers</a>
                               {% endif %}
                               {% if sriov or macvlan %}
