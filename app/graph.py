@@ -783,8 +783,8 @@ class VkaciGraph(object):
     UNWIND s.nodes as v
     MATCH (node:Node) WHERE node.name = v
     MERGE (switch:Switch {name:s.name})
-    MERGE (node)-[:CONNECTED_TO {interface: "br-ex : " + node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + "br-ex : " + node.connected_primary_switch_iface + ")"
+    MERGE (node)-[:CONNECTED_TO {interface: s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + s.interface + ")"
     """
 
     query3 = """
@@ -828,7 +828,7 @@ class VkaciGraph(object):
     UNWIND data.items as n
 
     MERGE (node:Node {name:n.node_name}) ON CREATE
-    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels, node.connected_primary_switch_iface = n.switch_iface
+    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
 
     FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
     SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels
@@ -836,6 +836,7 @@ class VkaciGraph(object):
     FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
+    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
     FOREACH (l IN n.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(node))
     """
 
@@ -843,10 +844,10 @@ class VkaciGraph(object):
     WITH $json as data
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
-    UNWIND s.nodes as v
-    MATCH (node:Node) WHERE node.name = v
+    UNWIND s.vm_hosts as v
+    MATCH (vmh:VM_Host) WHERE vmh.name = v
     MERGE (switch:Switch {name:s.name})
-    MERGE (node)-[:CONNECTED_TO {interface:node.connected_primary_switch_iface, nodes:s.nodes, node_count:ncount}]->(switch)
+    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
     """
 
     def update_database(self):
