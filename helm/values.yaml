@@ -45,7 +45,7 @@ podSecurityContext: {}
 #This ire required for OpenShift to run the container as non-root 
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000760000
+  runAsUser: 1000700000
   seccompProfile:
     type: RuntimeDefault
 

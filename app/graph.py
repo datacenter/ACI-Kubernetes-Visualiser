@@ -781,10 +781,10 @@ class VkaciGraph(object):
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
     UNWIND s.nodes as v
-    MATCH (node:Node) WHERE node.name = v
+    MATCH (node:Node) WHERE node.name = v.name
     MERGE (switch:Switch {name:s.name})
-    MERGE (node)-[:CONNECTED_TO {interface: s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + s.interface + ")"
+    MERGE (node)-[:CONNECTED_TO {interface: v.interface, node_count:ncount}]->(switch)
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.interface + ")"
     """
 
     query3 = """
@@ -836,7 +836,7 @@ class VkaciGraph(object):
     FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
 
     FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-    FOREACH (v IN n.vm_hosts | MERGE (vmh:VM_Host {name:v.host_name, description:v.description}) MERGE (node)-[:RUNNING_IN]->(vmh))
+
     FOREACH (l IN n.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(node))
     """
 
@@ -844,10 +844,10 @@ class VkaciGraph(object):
     WITH $json as data
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
-    UNWIND s.vm_hosts as v
-    MATCH (vmh:VM_Host) WHERE vmh.name = v
+    UNWIND s.nodes as v
+    MATCH (node:Node) WHERE node.name = v.name
     MERGE (switch:Switch {name:s.name})
-    MERGE (vmh)-[:CONNECTED_TO {interface:s.interface, nodes:s.nodes, node_count:ncount}]->(switch)
+    MERGE (node)-[:CONNECTED_TO {interface:v.interface, node_count:ncount}]->(switch)
     """
 
     def update_database(self):
@@ -882,8 +882,11 @@ class VkaciGraph(object):
             for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
                 for switchName, interfaces in neighbour_data['switches'].items():
                     if switchName not in switch_items.keys():
-                        switch_items[switchName] = {"name": switchName, "vm_hosts": [], "interface": " | ".join(list(interfaces)), "nodes": []}
-                    switch_items[switchName]["nodes"].append(node)
+                        switch_items[switchName] = {"name": switchName, "vm_hosts": [], "nodes": []}
+                    switch_items[switchName]["nodes"].append({
+                        "name": node,
+                        "interface": " | ".join(list(interfaces))
+                    })
                     switch_items[switchName]["vm_hosts"].append(neighbour)
         switch_data = { "items": list(switch_items.values()) }
 
