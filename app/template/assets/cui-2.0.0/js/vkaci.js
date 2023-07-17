@@ -273,13 +273,20 @@ function draw_leaf() {
 
 function draw_node() {
     var str = $("#nodename").val();
+    var asnPresent = $("#asnPresent").val();
     if (!str.trim()) return;
     var seed = "0.7578607868826415:1645663636870"
     // var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
-    let q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+    if (asnPresent) {
+    var q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
          MATCH (n)-[r3:PEERED_INTO]->(s1)
-         WHERE n.name = "${str}" AND n.name IN r2.nodes RETURN *
+         WHERE n.name = "" AND n.name IN r2.nodes RETURN *
     `;
+    } else {
+    var q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+        WHERE n.name = "" AND n.name IN r2.nodes RETURN *
+   `;
+    }
     var config_node = neo_viz_config(true, "viz_node", q, seed)
     var viz_node = new NeoVis.default(config_node);
     viz_node.render();
@@ -292,16 +299,23 @@ function draw_node() {
 var viz_pod = null
 function draw_pod() {
     var str = $("#podname").val();
+    var asnPresent = $("#asnPresent").val();
     if (!str.trim()) return;
     var seed = "0.8660747593468698:1645662423690"
     var t = "name"
     if (checkIfValidIP(str)) {
         t = "ip"
     }
+    if (asnPresent) {
     var p = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
         MATCH (n)-[r3:PEERED_INTO]->(s1)
         WHERE p.${t} = "${str}" AND n.name IN r2.nodes RETURN *
     `;
+    } else {
+    var p = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+        WHERE p.${t} = "${str}" AND n.name IN r2.nodes RETURN *
+    `;
+    }
     var config_pod = neo_viz_config(true, "viz_pod", p , seed)
     viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();

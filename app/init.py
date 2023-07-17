@@ -14,7 +14,6 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-
 logger.info("Loading ACI Metadata")
 try:
     url = "https://" + os.environ.get("APIC_IPS").split(',')[0]
@@ -25,5 +24,8 @@ except Exception as e:
 
 url = "https://" + os.environ.get("APIC_IPS").split(',')[0] + '/acimeta/aci-meta.json'
 r = requests.get(url, verify=False, allow_redirects=True)
-open('/app/aci-meta/aci-meta.json','wb').write(r.content)
+if os.environ.get("MODE") == "LOCAL":
+    open('/tmp/aci-meta-vkaci.json','wb').write(r.content)
+else:
+    open('/app/aci-meta/aci-meta.json','wb').write(r.content)
 logger.info("ACI Metadata Loaded")
