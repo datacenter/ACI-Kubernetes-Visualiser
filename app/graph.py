@@ -405,7 +405,6 @@ class VkaciBuilTopology(object):
         #This return a list of all the interfaces in that proto path 
         pathtDn = self.apic_methods.path_fixup(apic, pathtDn)
         lldp_neighbours = self.apic_methods.get_lldpif(apic, pathtDn)
-        logger.debug("lldp_neighbours %s %s ",pathtDn, lldp_neighbours[0].dn)
         cdp_neighbours = self.apic_methods.get_cdpif(apic, pathtDn)
 
         if len(lldp_neighbours) > 0:
