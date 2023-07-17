@@ -280,11 +280,11 @@ function draw_node() {
     if (asnPresent) {
     var q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
          MATCH (n)-[r3:PEERED_INTO]->(s1)
-         WHERE n.name = "" AND n.name IN r2.nodes RETURN *
+         WHERE n.name = "${str}" AND n.name IN r2.nodes RETURN *
     `;
     } else {
     var q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
-        WHERE n.name = "" AND n.name IN r2.nodes RETURN *
+        WHERE n.name = "${str}" AND n.name IN r2.nodes RETURN *
    `;
     }
     var config_node = neo_viz_config(true, "viz_node", q, seed)
