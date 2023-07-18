@@ -243,10 +243,7 @@ class VkaciBuilTopology(object):
             if neighbour_adj_port:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
-                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
-            
-            if not self.asnPresent:
-                node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
+                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)        
 
     def get_cluster_as(self):
         '''Returns the previously detected AS number'''
