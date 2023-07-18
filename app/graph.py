@@ -29,21 +29,21 @@ class VkaciEnvVariables(object):
         """Constructor with real environment variables"""
         super().__init__()
         self.dict_env = dict_env
-
+        self.mode = self.enviro().get("MODE")
+        if self.mode is None:
+            self.mode = "None"
         self.apic_ip = self.enviro().get("APIC_IPS")
         if self.apic_ip is not None:
             self.apic_ip = self.apic_ip.split(',')
         else:
             self.apic_ip = []
-
-        self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/app/aci-meta/aci-meta.json")
+        if self.mode ==  "LOCAL":
+            self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/tmp/aci-meta-vkaci.json")
+        else:
+            self.aciMetaFilePath = self.enviro().get("ACI_META_FILE", "/app/aci-meta/aci-meta.json")
 
         self.tenant = self.enviro().get("TENANT")
         self.vrf = self.enviro().get("VRF")
-
-        self.mode = self.enviro().get("MODE")
-        if self.mode is None:
-            self.mode = "None"
 
         self.kube_config = self.enviro().get("KUBE_CONFIG")
         self.cert_user= self.enviro().get("CERT_USER")
@@ -168,6 +168,7 @@ class VkaciBuilTopology(object):
         self.env = env
         self.apic_methods = apic_methods
         self.k8s_as = None
+        self.asnPresent = True
 
         if self.env.tenant is not None and self.env.vrf is not None:
             self.aci_vrf = 'uni/tn-' + self.env.tenant + '/ctx-' + self.env.vrf
@@ -242,7 +243,7 @@ class VkaciBuilTopology(object):
             if neighbour_adj_port:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour_adj_port + '-' + neighbour.id)
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
-                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)
+                logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)        
 
     def get_cluster_as(self):
         '''Returns the previously detected AS number'''
@@ -318,6 +319,9 @@ class VkaciBuilTopology(object):
         
         # Get the K8s Cluster AS
         self.k8s_as = self.detect_cluster_as()
+        if self.k8s_as == None:
+            self.asnPresent = False
+            return
         overlay_ip_to_switch = self.apic_methods.get_overlay_ip_to_switch_map(apic)
         self.bgp_info = {}
         vrf = self.env.tenant + ":" + self.env.vrf
@@ -359,7 +363,7 @@ class VkaciBuilTopology(object):
     def update_node(self, apic, node):
         '''Gets a K8s node and populates it with the LLDP/CDP and BGP information'''
         if 'mac' not in node:
-            logger.error("Could not resolved the mac address of node with ip %s", node['node_ip'] )
+            logger.error("Could not resolve the mac address of node with ip %s", node['node_ip'] )
             logger.error("This usually happnes if the Tenant/VRF config is wrong, I am configured to use '%s', is it correct?", self.aci_vrf)
             exit()
         #Find the mac to interface mapping
@@ -400,9 +404,6 @@ class VkaciBuilTopology(object):
         lldp_neighbours = self.apic_methods.get_lldpif(apic, pathtDn)
         cdp_neighbours = self.apic_methods.get_cdpif(apic, pathtDn)
 
-        if (len(lldp_neighbours) == 0 and len(cdp_neighbours) == 0 ):
-            logger.error("No LLDP or CDP neighbour detected, the topology will be incomplete.")
-
         if len(lldp_neighbours) > 0:
             # Prefer LLDP over CDP
             for lldp_neighbour in lldp_neighbours:
@@ -415,7 +416,7 @@ class VkaciBuilTopology(object):
                 if cdp_neighbour.operSt == "up":
                     logger.debug("CDP ADD")
                     self.add_neighbour(node, cdp_neighbour)
-
+        
         #Find the BGP Peer for the K8s Nodes, here I need to know the VRF of the K8s Node so that I can find the BGP entries in the right VRF. 
         # This is important as we might have IP reused in different VRFs. Luckilly the EP info has the VRF in it. 
         # The VRF format is  uni/tn-common/ctx-calico and we care about the tenant and ctx so we can split by /.
@@ -701,7 +702,9 @@ class VkaciGraph(object):
                 "vm_hosts": vm_hosts,
                 "bgp_peers": bgp_peers
             })
-            
+        logger.debug('build_graph_data')
+        logger.debug(pformat(data))
+        logger.debug(pformat(switch_data))
         return data, switch_data
 
 class VkaciTable ():
