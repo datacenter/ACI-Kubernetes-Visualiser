@@ -101,3 +101,10 @@ neo4j-standalone:
   config:
     dbms.default_database: neo4j
     dbms.config.strict_validation: 'true'
+
+lldpd:
+  enabled: false
+  image:
+    repository: ghcr.io/lldpd/lldpd
+    tag: latest
+    pullPolicy: Always
