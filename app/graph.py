@@ -21,7 +21,7 @@ formatter = logging.Formatter(
         '%(asctime)s %(name)-1s %(levelname)-1s [%(threadName)s] %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 class VkaciEnvVariables(object):
     '''Parse the environment variables'''
