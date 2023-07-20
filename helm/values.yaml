@@ -101,3 +101,14 @@ neo4j-standalone:
   config:
     dbms.default_database: neo4j
     dbms.config.strict_validation: 'true'
+
+lldpd:
+  enabled: false
+  # By default LLDPD runs on every interface.
+  # You specify which interface to listen and send LLDPDU to
+  # Refer to https://lldpd.github.io/usage.html for details on the syntax
+  # interfaces: "!eno*v*,eno*"
+  image:
+    repository: ghcr.io/lldpd/lldpd
+    tag: latest
+    pullPolicy: Always

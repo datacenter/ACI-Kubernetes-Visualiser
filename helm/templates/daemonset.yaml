@@ -1,0 +1,43 @@
+{{- if .Values.lldpd.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: "{{ .Release.Name }}-lldpd"
+spec:
+  selector:
+    matchLabels:
+      name: lldpd
+  template:
+    metadata:
+      labels:
+        name: lldpd
+    spec:
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: lldpd
+        image: "{{ .Values.lldpd.image.repository }}:{{ .Values.lldpd.image.tag }}"
+        {{- if .Values.lldpd.interfaces }}
+        command: ["lldpd"]
+        args: ["-d","-I", "{{ .Values.lldpd.interfaces }}"]
+        {{- end }}
+        imagePullPolicy: {{ .Values.lldpd.image.pullPolicy }}
+        securityContext:
+          capabilities:
+            drop: ["ALL"]
+            add: ["NET_ADMIN", "NET_RAW"]
+          privileged: true
+        volumeMounts:
+        - name: os-release
+          mountPath: /etc/os-release
+      volumes:
+        - name: os-release
+          hostPath:
+            path: /etc/os-release
+      hostNetwork: true
+{{- end }}
