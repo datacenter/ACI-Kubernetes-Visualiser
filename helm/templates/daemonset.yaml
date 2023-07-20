@@ -22,12 +22,15 @@ spec:
       containers:
       - name: lldpd
         image: "{{ .Values.lldpd.image.repository }}:{{ .Values.lldpd.image.tag }}"
+        {{- if .Values.lldpd.interfaces }}
+        command: ["lldpd"]
+        args: ["-d","-I", "{{ .Values.lldpd.interfaces }}"]
+        {{- end }}
         imagePullPolicy: {{ .Values.lldpd.image.pullPolicy }}
         securityContext:
           capabilities:
-            add:
-            - NET_ADMIN
-            - NET_RAW
+            drop: ["ALL"]
+            add: ["NET_ADMIN", "NET_RAW"]
           privileged: true
         volumeMounts:
         - name: os-release
