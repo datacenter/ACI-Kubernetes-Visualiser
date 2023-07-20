@@ -189,6 +189,7 @@ class ApicMethodsMock(ApicMethodsResolve):
 @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
 @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
 @patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods)))
+@patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value={"items":[]}))
 @patch('kubernetes.client.CoreV1Api.list_service_for_all_namespaces', MagicMock(return_value=client.V1ServiceList(api_version="1", items=services)))
 @patch('kubernetes.client.CoreV1Api.list_node', MagicMock(return_value=client.V1NodeList(api_version="1", items=nodes)))
 @patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={'spec': {'asNumber': 56001}}))
@@ -223,12 +224,12 @@ class TestVkaciGraph(unittest.TestCase):
         """Test that a valid topology is created"""
         # Arrange
         expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}},
-                                                   'kube-router-xfgr': {'ip': '192.168.1.2', 'ns': 'kube-system', 'labels': {}}},
+                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2', 'primary_iface': '', 'ns': 'kube-system', 'labels': {}, 'other_ifaces': {}, 'annotations': {}}},
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                          'labels': {'app': 'redis'}, 'mac': 'MOCKMO1C'}},
-                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': '192.168.5.2','ns':'appx',
+                                          'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
+                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
                                            'labels': {'app': 'guestbook'}}]}}
 
         build = VkaciBuilTopology(
@@ -246,6 +247,7 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
+                                          'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'CiscoLabs5': {'Description': 'Cisco '
                                                                         'version '
@@ -253,11 +255,16 @@ class TestVkaciGraph(unittest.TestCase):
                                                                         'switches': {'leaf-203': {'vmxnic2-eth1/1'}}}},
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
+                                                                  'primary_iface': '',
                                                                   'labels': {'guest': 'frontend'},
+                                                                  'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'dockerimage'},
                                                     'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'primary_iface': '',
                                                                   'labels': {},
+                                                                  'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'kube-system'}
+
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
@@ -283,14 +290,19 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
+                                          'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {},
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
+                                                                  'primary_iface': '',
                                                                   'labels': {'guest': 'frontend'},
+                                                                  'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'dockerimage'},
                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'primary_iface': '',
                                                                   'labels': {},
+                                                                  'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'kube-system'}
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
@@ -317,15 +329,20 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
+                                          'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'esxi4.cam.ciscolabs.com': {'Description': '',
                                                                         'switches': {'leaf-204': set()}}},
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
+                                                                  'primary_iface': '',
                                                                   'labels': {'guest': 'frontend'},
+                                                                  'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'dockerimage'},
                                                     'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                  'primary_iface': '',
                                                                   'labels': {},
+                                                                  'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'kube-system'},
                                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',

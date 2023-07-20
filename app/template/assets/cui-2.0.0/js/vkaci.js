@@ -4,10 +4,7 @@ var server_password = "";
 var asnPresent = true;
 
 function neo_viz_config(showPodName, container, cypher, seed = null) {
-    var podCaption = "pod"
-    if (showPodName) {
-        podCaption = "name"
-    }
+    var podCaption = showPodName ? "name" : "pod";
 
     var config = {
         container_id: container,
@@ -17,118 +14,159 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
         initial_cypher: cypher,
         arrows: showPodName,
         fix_nodes_in_place_on_drag: true,
-
         layout: {
             improvedLayout: true,
         },
-
         physics: {
-
             adaptiveTimestep: true,
             timestep: 0.3,
             barnesHut: {
                 gravitationalConstant: -3000,
             },
-
             stabilization: {
-                iterations: 400, // CHANGEME: If want different stabilisation,
-                fit: true
+                iterations: 400,
+                fit: true,
             }
         },
-
         labels: {
             "Node": {
                 caption: "name",
-                "size": 3,
+                size: 3,
                 image: './assets/cui-2.0.0/img/node.svg',
-                "font": {
-                    "size": 20,
-                    "color": "#6e1313",
-                    strokeWidth: 5
+                font: {
+                    size: 20,
+                    color: "#6e1313",
+                    strokeWidth: 2,
                 },
             },
             "Pod": {
                 caption: podCaption,
                 size: 2,
                 image: './assets/cui-2.0.0/img/pod.svg',
-                "font": {
-                    "size": 18,
-                    "color": "#41136e",
-                    strokeWidth: 5
+                font: {
+                    size: 18,
+                    color: "#41136e",
+                    strokeWidth: 2,
                 },
             },
             "VM_Host": {
                 caption: "name",
                 size: 5,
                 image: './assets/cui-2.0.0/img/esxi.png',
-                "font": {
-                    "size": 22,
-                    "color": "#000000",
-                    strokeWidth: 5
+                font: {
+                    size: 22,
+                    color: "#000000",
+                    strokeWidth: 2,
                 },
             },
             "Switch": {
                 caption: "name",
                 size: 4,
                 image: './assets/cui-2.0.0/img/switch.png',
-                "font": {
-                    "size": 22,
-                    "color": "#000000",
-                    strokeWidth: 5
+                font: {
+                    size: 22,
+                    color: "#000000",
+                    strokeWidth: 2,
                 },
             },
             "Label": {
                 caption: "name",
                 size: 2,
                 image: './assets/cui-2.0.0/img/label.svg',
-                "font": {
-                    "size": 20,
-                    "color": "#000000",
-                    strokeWidth: 5
+                font: {
+                    size: 20,
+                    color: "#000000",
+                    strokeWidth: 2,
                 },
             },
         },
         relationships: {
             "PEERED_INTO": {
-                "color": "#CD5C5C",
-                "dashes": "true"
+                color: "#CD5C5C",
+                dashes: true,
             },
-
             "CONNECTED_TO": {
-                "color": "#7A8A24",
-                "caption": "interface",
-                "font": {
-                    "size": 16,
-                    "color": "#000099",
-                    strokeWidth: 5,
-                    multi: true
+                color: "#FF4500",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
                 },
             },
-
+            "CONNECTED_TO_SEC": {
+                color: "#800080",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                },
+            },
+            "CONNECTED_TO_TER": {
+                color: "#008080",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                },
+            },
             "RUNNING_IN": {
-                "color": "#0047AB"
+                color: "#0047AB",
             },
-
             "RUNNING_ON": {
-                "color": "#DAA520"
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#FF4500",
             },
-
+            "RUNNING_ON_SEC": {
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#800080",
+            },
+            "RUNNING_ON_TER": {
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#008080",
+            },
             "ATTACHED_TO": {
-                "color": "#ff5050"
+                color: "#ff5050",
             },
-
             [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
-                "thickness": "defaultThicknessProperty",
-                "caption": "defaultCaption"
+                thickness: "defaultThicknessProperty",
+                caption: "defaultCaption",
+                align: "top",
             },
-        }
+        },
     };
 
     if (seed) {
-        config.layout.randomSeed = seed
+        config.layout.randomSeed = seed;
     }
 
-    return config
+    return config;
 }
 
 // Views enums can be grouped as static members of a class
@@ -139,6 +177,9 @@ class View {
     static WithoutBgpPeers = new View("WithoutBgpPeers", draw_without_bgp_peers)
     static PodsAndNodes = new View("PodsAndNodes", draw_pods_and_nodes)
     static OnlyBgpPeers = new View("OnlyBgpPeers", draw_only_bgp_peers)
+    static OnlyPrimarylinks = new View("OnlyPrimarylinks", draw_only_primary_links)
+    static OnlySriovlinks = new View("OnlySriovlinks", draw_only_sriov_links)
+    static OnlyMacvlanlinks = new View("OnlyMacvlanlinks", draw_only_macvlan_links)
 
     constructor(name, drawFunc) {
         this.name = name
@@ -170,16 +211,17 @@ function addLabelQuery() {
 
 function draw_all() {
     selectedView = View.All
-    let q = `MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2*1..2]->(a)`
     q += addLabelQuery();
-    q += `RETURN p, m, r, r2, a`
+    q += `RETURN p, m, n, r, r2, a`
     draw(q)
     //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
-    let q = `MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = `MATCH (m:Node)-[r2*1..2]->(a)`
     q += addLabelQuery();
     q += `RETURN m, r2, a`
     draw(q)
@@ -188,7 +230,7 @@ function draw_without_pods() {
 
 function draw_without_bgp_peers() {
     selectedView = View.WithoutBgpPeers
-    let q = ` MATCH (l:Label)-->(p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = ` MATCH (p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN u, r1, m, v,s`
     draw(q)
@@ -197,22 +239,50 @@ function draw_without_bgp_peers() {
 
 function draw_pods_and_nodes() {
     selectedView = View.PodsAndNodes
-    let q = ` MATCH (l:Label)-->(p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = ` MATCH (p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN p,r1,n`
-    draw(q, true)
+    draw(q)
     //draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
 function draw_only_bgp_peers() {
     selectedView = View.OnlyBgpPeers
-    let q = ` MATCH (l:Label)-->(p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
+    let q = ` MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN r, n,s`
     draw(q)
     
     //draw("MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, n,s")
 }
+
+function draw_only_primary_links() {
+    selectedView = View.OnlyPrimarylinks
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO]->(a)`
+    q += addLabelQuery();
+    q += `RETURN p, n, m, r, r2, a`
+    draw(q)
+}
+
+function draw_only_sriov_links() {
+    selectedView = View.OnlySriovlinks
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a)`
+    q += addLabelQuery();
+    q += `RETURN p, n, m, r, r2, a`
+    draw(q)
+}
+
+function draw_only_macvlan_links() {
+    selectedView = View.OnlyMacvlanlinks
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_TER]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+            MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)`
+    q += addLabelQuery();
+    q += `RETURN p, n, m, r, r2, a`
+    draw(q)
+}
+
 
 function draw_namespace(namespace) {
     selectedNamespace = namespace
@@ -278,13 +348,15 @@ function draw_node() {
     var seed = "0.7578607868826415:1645663636870"
     // var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
     if (asnPresent) {
-        var q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+        var q = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
             MATCH (n)-[r3:PEERED_INTO]->(s1)
-            WHERE n.name = "${str}" AND n.name IN r2.nodes RETURN *
+            WHERE n.name = "${str}"
+            RETURN *
         `;
     } else {
-        var q = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
-            WHERE n.name = "${str}" AND n.name IN r2.nodes RETURN *
+        var q = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
+            WHERE n.name = "${str}"
+            RETURN *
         `;
     }
     var config_node = neo_viz_config(true, "viz_node", q, seed)
@@ -306,13 +378,15 @@ function draw_pod() {
         t = "ip"
     }
     if (asnPresent) {
-        var p = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
+        var p = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
             MATCH (n)-[r3:PEERED_INTO]->(s1)
-            WHERE p.${t} = "${str}" AND n.name IN r2.nodes RETURN *
+            WHERE p.${t} = "${str}"
+            RETURN *
         `;
     } else {
-        var p = `MATCH (p:Pod)-[r]->(n:Node)-[r1]->(v:VM_Host)-[r2]->(s:Switch)
-            WHERE p.${t} = "${str}" AND n.name IN r2.nodes RETURN *
+        var p = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
+            WHERE p.${t} = "${str}"
+            RETURN *
         `;
     }
     var config_pod = neo_viz_config(true, "viz_pod", p , seed)
