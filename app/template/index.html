@@ -284,7 +284,9 @@
                            <div id="selected_table" class="dropdown__menu dropdown__menu--openleft">
                               <a id="LeafsAndPods" onclick="table_leafs_pods()">Leafs & Pods</a>
                               <a id="LeafsAndNodes" onclick="table_leafs_nodes()">Leafs & Nodes</a>
-                              <a id="BgpPeers" onclick="table_bgp_peers()">BGP Peers</a>
+                              {% if asnPresent %}
+                                 <a id="BgpPeers" onclick="table_bgp_peers()">BGP Peers</a>
+                              {% endif %}
                               <a id="Services" onclick="table_services()">Services</a>
                               <div class="dropdown__divider"></div>
                               <a id="All" onclick="table_all()">View All</a>

@@ -259,27 +259,30 @@ function draw_only_bgp_peers() {
 function draw_only_primary_links() {
     selectedView = View.OnlyPrimarylinks
     let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            MATCH (m:Node)-[r2:CONNECTED_TO]->(a)`
+            OPTIONAL MATCH (m:Node)-[r2:CONNECTED_TO]->(a)
+            OPTIONAL MATCH (o:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO]-(b)`
     q += addLabelQuery();
-    q += `RETURN p, n, m, r, r2, a`
+    q += `RETURN p, n, m, o, r, r2, r1, r3, v, a, b`
     draw(q)
 }
 
 function draw_only_sriov_links() {
     selectedView = View.OnlySriovlinks
     let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a)`
+            OPTIONAL MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a)
+            OPTIONAL MATCH (o:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_SEC]->(b)`
     q += addLabelQuery();
-    q += `RETURN p, n, m, r, r2, a`
+    q += `RETURN p, n, m, o, r, r2, r1, r3, v, a, b`
     draw(q)
 }
 
 function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
     let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_TER]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)`
+            OPTIONAL MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)
+            OPTIONAL MATCH (o:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_TER]->(b)`
     q += addLabelQuery();
-    q += `RETURN p, n, m, r, r2, a`
+    q += `RETURN p, n, m, o, r, r2, r1, r3, v, a, b`
     draw(q)
 }
 
@@ -333,7 +336,7 @@ function draw_leaf() {
     var str = $("#leafname").val();
     if (!str.trim()) return;
     var seed = "0.8455348811333163:1645676676633"
-    var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
+    var config_leaf = neo_viz_config(false, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
     var viz_leaf = new NeoVis.default(config_leaf);
     viz_leaf.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 
@@ -354,12 +357,13 @@ function draw_node() {
             RETURN *
         `;
     } else {
-        var q = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
-            WHERE n.name = "${str}"
-            RETURN *
+        var q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node) WHERE n.name = "${str}"
+                OPTIONAL MATCH (m:Node)-[r2]->(s:Switch) WHERE m.name = "${str}"
+                OPTIONAL MATCH (o:Node)-[r3]->(v:VM_Host)-[r4]->(l:Switch) WHERE o.name = "${str}"
+                RETURN *
         `;
     }
-    var config_node = neo_viz_config(true, "viz_node", q, seed)
+    var config_node = neo_viz_config(false, "viz_node", q, seed)
     var viz_node = new NeoVis.default(config_node);
     viz_node.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645580358235
@@ -384,12 +388,12 @@ function draw_pod() {
             RETURN *
         `;
     } else {
-        var p = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
-            WHERE p.${t} = "${str}"
-            RETURN *
+        var p = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch) WHERE p.${t} = "${str}"
+                OPTIONAL MATCH (q:Pod)-[r3]->(m:Node)-[r4]->(v:VM_Host)-[r5]->(l:Switch) WHERE q.${t} = "${str}"
+                RETURN *
         `;
     }
-    var config_pod = neo_viz_config(true, "viz_pod", p , seed)
+    var config_pod = neo_viz_config(false, "viz_pod", p , seed)
     viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529

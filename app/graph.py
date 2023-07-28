@@ -739,11 +739,13 @@ class VkaciGraph(object):
         self.topology = topology
 
     # Build query.
+
+    #Query to bring up basic the graph nodes
     query = """
     WITH $json AS data
     UNWIND data.items AS n
     MERGE (node:Node {name: n.node_name})
-    ON CREATE SET node.ip = n.node_ip, node.connected_primary_switch_iface = n.switch_iface, node.mac = n.node_mac, node.labels = n.labels, node.connected_switch_ifaces = "", node.secondary_iface_info = ""
+    ON CREATE SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
 
     FOREACH (p IN n.pods | 
         MERGE (pod:Pod {name: p.name})
@@ -759,22 +761,19 @@ class VkaciGraph(object):
         MERGE (node)-[:PEERED_INTO]->(switch)
     )
 
+    FOREACH (v IN n.vm_hosts | 
+        MERGE (vmh:VM_Host {name:v.host_name, description:v.description})
+        MERGE (node)-[:RUNNING_IN]->(vmh)
+    )
+
     FOREACH (l IN n.labels | 
         MERGE (lab:Label {name: l}) 
         MERGE (lab)-[:ATTACHED_TO]->(node))
 
     """
 
+    #Query to add primary relationship between a node and a switch for baremetal case
     query1 = """
-    WITH $json AS data
-    UNWIND data.items AS n
-    UNWIND n.node_leaf_all_iface_conn as conn
-    MATCH (node:Node) WHERE node.name = n.node_name
-
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + conn.node_iface + " : " + conn.switch_interface+ ")", node.secondary_iface_info = node.secondary_iface_info + " " + conn.node_iface
-    """
-
-    query2 = """
     WITH $json as data
     UNWIND data.items as s
     WITH s, SIZE(s.nodes) as ncount
@@ -782,19 +781,82 @@ class VkaciGraph(object):
     MATCH (node:Node) WHERE node.name = v.name
     MERGE (switch:Switch {name:s.name})
     MERGE (node)-[:CONNECTED_TO {interface: v.interface, node_count:ncount}]->(switch)
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.interface + ")"
     """
 
+    #Query to add primary relationship between a vm and a switch for non baremetal case
+    query2 = """
+    WITH $json as data
+    UNWIND data.items as s
+    UNWIND s.vm_hosts as v
+    MATCH (vmh:VM_Host) WHERE vmh.name = v.name
+    MERGE (switch:Switch {name:s.name})
+    MERGE (vmh)-[:CONNECTED_TO {interface:v.interface}]->(switch)
+    """
+
+    #Query to intialize both primary and secondary interfaces info in the node on hovering
     query3 = """
+    WITH $json AS data
+    UNWIND data.items AS n
+    MATCH (node:Node) WHERE node.name = n.node_name
+    SET node.connected_switch_ifaces = "", node.secondary_iface_info = ""
+    """
+
+
+    #Query to add primary interface info on hovering over the node for baremetal case
+    query4 = """
+    WITH $json as data
+    UNWIND data.items as s
+    UNWIND s.nodes as v
+    MATCH (node:Node) WHERE node.name = v.name
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.switch_name + "-" + v.interface + ")"
+    """
+
+    #Query to add primary interface info on hovering over the node for non baremetal case
+    query5 = """
+    WITH $json as data
+    UNWIND data.items as s
+    UNWIND s.vm_hosts as v
+    MATCH (node:Node) WHERE node.name = v.node
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.switch_name + "-" + v.interface + ")"
+    """
+
+    #Query to add sriov and macvlan interfaces info in the node on hovering
+    query6 = """
+    WITH $json AS data
+    UNWIND data.items AS n
+    UNWIND n.node_leaf_all_iface_conn as conn
+    MATCH (node:Node) WHERE node.name = n.node_name
+
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + conn.node_iface + " : " + conn.switch_name + "-" + conn.switch_interface+ ")",
+    node.secondary_iface_info = CASE WHEN NOT node.secondary_iface_info CONTAINS conn.node_iface THEN node.secondary_iface_info + " " + conn.node_iface
+    ELSE node.secondary_iface_info
+    END
+    """
+
+    #Query to add sriov relationship between a node and a switch for baremetal case
+    query7 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_leaf_sec_iface_conn AS conn
+    WITH n, conn, CASE WHEN n.vm_hosts IS NOT NULL AND size(n.vm_hosts) = 0 THEN true ELSE false END AS vm_hosts_empty WHERE vm_hosts_empty
     MATCH (node:Node) WHERE node.name = n.node_name
     MATCH (switch:Switch) WHERE switch.name = conn.switch_name
     MERGE (node)-[:CONNECTED_TO_SEC {interface: conn.node_iface + " : " + conn.switch_interface}]->(switch)
     """
 
-    query4 = """
+    #Query to add sriov relationship between a vm and a switch for non baremetal case
+    query8 = """
+    WITH $json as data
+    UNWIND data.items AS n
+    UNWIND n.vm_hosts AS v
+    UNWIND n.node_leaf_sec_iface_conn AS conn
+    MATCH (vmh:VM_Host) WHERE vmh.name = v.host_name
+    MATCH (switch:Switch) WHERE switch.name = conn.switch_name
+    MERGE (vmh)-[:CONNECTED_TO_SEC {interface: conn.node_iface + " : " + conn.switch_interface}]->(switch)
+    """
+
+    #Query to add sriov relationship between a node and a pod
+    query9 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_pod_sec_iface_conn AS conn
@@ -803,49 +865,36 @@ class VkaciGraph(object):
     MERGE (pod)-[:RUNNING_ON_SEC {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
     """
 
-    query5 = """
+    #Query to add macvlan relationship between a node and a switch for baremetal case
+    query10 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_leaf_ter_iface_conn AS conn
+    WITH n, conn, CASE WHEN n.vm_hosts IS NOT NULL AND size(n.vm_hosts) = 0 THEN true ELSE false END AS vm_hosts_empty WHERE vm_hosts_empty
     MATCH (node:Node) WHERE node.name = n.node_name
     MATCH (switch:Switch) WHERE switch.name = conn.switch_name
     MERGE (node)-[:CONNECTED_TO_TER {interface: conn.node_iface + " : " + conn.switch_interface}]->(switch)
     """
 
-    query6 = """
+    #Query to add macvlan relationship between a vm and a switch for non baremetal case
+    query11 = """
+    WITH $json as data
+    UNWIND data.items AS n
+    UNWIND n.vm_hosts AS v
+    UNWIND n.node_leaf_ter_iface_conn AS conn
+    MATCH (vmh:VM_Host) WHERE vmh.name = v.host_name
+    MATCH (switch:Switch) WHERE switch.name = conn.switch_name
+    MERGE (vmh)-[:CONNECTED_TO_TER {interface: conn.node_iface + " : " + conn.switch_interface}]->(switch)
+    """
+
+    #Query to add macvlan relationship between a node and a pod
+    query12 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_pod_ter_iface_conn AS conn
     MATCH (pod:Pod) WHERE pod.name = conn.pod_name
     MATCH (node:Node) WHERE node.name = n.node_name
     MERGE (pod)-[:RUNNING_ON_TER {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
-    """
-
-    query7 = """
-    WITH $json as data
-    UNWIND data.items as n
-
-    MERGE (node:Node {name:n.node_name}) ON CREATE
-    SET node.ip = n.node_ip, node.mac = n.node_mac, node.labels = n.labels
-
-    FOREACH (p IN n.pods | MERGE (pod:Pod {name:p.name}) ON CREATE
-    SET pod.ip = p.ip, pod.ns = p.ns, pod.labels = p.labels
-    MERGE (pod)-[:RUNNING_ON]->(node)
-    FOREACH (l IN p.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(pod)))
-
-    FOREACH (b IN n.bgp_peers | MERGE (switch: Switch {name:b.name, prefix_count:b.prefix_count}) MERGE (node)-[:PEERED_INTO]->(switch))
-
-    FOREACH (l IN n.labels | MERGE (lab:Label {name:l}) MERGE (lab)-[:ATTACHED_TO]->(node))
-    """
-
-    query8 = """
-    WITH $json as data
-    UNWIND data.items as s
-    WITH s, SIZE(s.nodes) as ncount
-    UNWIND s.nodes as v
-    MATCH (node:Node) WHERE node.name = v.name
-    MERGE (switch:Switch {name:s.name})
-    MERGE (node)-[:CONNECTED_TO {interface:v.interface, node_count:ncount}]->(switch)
     """
 
     def update_database(self):
@@ -855,43 +904,58 @@ class VkaciGraph(object):
         data, switch_data = self.build_graph_data(topology)
 
         graph.run("MATCH (n) DETACH DELETE n")
+        graph.run(self.query,json=data)
         if self.topology.sriov or self.topology.macvlan:
-            graph.run(self.query,json=data)
-            graph.run(self.query1,json=data)
+            graph.run(self.query1,json=switch_data)
             graph.run(self.query2,json=switch_data)
+            graph.run(self.query3,json=data)
+            graph.run(self.query4,json=switch_data)
+            graph.run(self.query5,json=switch_data)
+            graph.run(self.query6,json=data)
             if self.topology.sriov:
-                graph.run(self.query3,json=data)
-                graph.run(self.query4,json=data)
+                graph.run(self.query7,json=data)
+                graph.run(self.query8,json=data)
+                graph.run(self.query9,json=data)
             if self.topology.macvlan:
-                graph.run(self.query5,json=data)
-                graph.run(self.query6,json=data)
+                graph.run(self.query10,json=data)
+                graph.run(self.query11,json=data)
+                graph.run(self.query12,json=data)
         else:
-            graph.run(self.query7,json=data)
-            graph.run(self.query8,json=switch_data)
+            graph.run(self.query1,json=switch_data)
+            graph.run(self.query2,json=switch_data)
         tx = graph.begin()
         graph.commit(tx)
 
     def build_graph_data(self, topology):
         '''generate the neo4j data to insert in the DB'''
         data = { "items": [] }
-
         switch_items = {}
         for node in topology['nodes'].keys():
             for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
                 for switchName, interfaces in neighbour_data['switches'].items():
                     if switchName not in switch_items.keys():
                         switch_items[switchName] = {"name": switchName, "vm_hosts": [], "nodes": []}
-                    switch_items[switchName]["nodes"].append({
-                        "name": node,
-                        "interface": " | ".join(list(interfaces))
-                    })
-                    switch_items[switchName]["vm_hosts"].append(neighbour)
+                    # If condition will be true for baremetal case
+                    if node == neighbour:
+                        switch_items[switchName]["nodes"].append({
+                            "name": node,
+                            "interface": " | ".join(list(interfaces)),
+                            "switch_name": switchName
+                        })
+                    else:
+                        switch_items[switchName]["vm_hosts"].append({
+                            "name": neighbour if neighbour != "" else "VM Host",
+                            "interface": " | ".join(list(interfaces)),
+                            "switch_name": switchName,
+                            "node" : node
+                        })
         switch_data = { "items": list(switch_items.values()) }
 
         for node in topology['nodes'].keys():
             vm_hosts = []
             for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
-                vm_hosts.append({"host_name": neighbour, "description": neighbour_data['Description']})
+                if node != neighbour:
+                    vm_hosts.append({"host_name": neighbour if neighbour != "" else "VM Host", "description": neighbour_data['Description'] if neighbour_data['Description'] != "" else "Hypervisor"})
             
             pods = []
             for pod_name, pod in topology['nodes'][node]["pods"].items():
@@ -900,11 +964,6 @@ class VkaciGraph(object):
             bgp_peers = []
             for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
                 bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})
-
-            switch_ifaces = set()
-            for neighbour, neighbour_data in topology['nodes'][node]["neighbours"].items():
-                for switchName, interfaces in neighbour_data['switches'].items():
-                    switch_ifaces.update(set(interfaces))
 
             #nodes
             data["items"].append({
@@ -915,7 +974,6 @@ class VkaciGraph(object):
                 "pods": pods,
                 "vm_hosts": vm_hosts,
                 "bgp_peers": bgp_peers,
-                "switch_iface": " | ".join(list(switch_ifaces)),
                 "node_leaf_sec_iface_conn": topology['nodes'][node]["node_leaf_sec_iface_conn"],
                 "node_pod_sec_iface_conn": topology['nodes'][node]["node_pod_sec_iface_conn"],
                 "node_leaf_ter_iface_conn": topology['nodes'][node]["node_leaf_ter_iface_conn"],
