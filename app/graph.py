@@ -802,17 +802,26 @@ class VkaciGraph(object):
     """
 
 
-    #Query to add primary interface info on hovering over the node
+    #Query to add primary interface info on hovering over the node for baremetal case
     query4 = """
     WITH $json as data
     UNWIND data.items as s
     UNWIND s.nodes as v
     MATCH (node:Node) WHERE node.name = v.name
-    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.interface + ")"
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.switch_name + "-" + v.interface + ")"
+    """
+
+    #Query to add primary interface info on hovering over the node for non baremetal case
+    query5 = """
+    WITH $json as data
+    UNWIND data.items as s
+    UNWIND s.vm_hosts as v
+    MATCH (node:Node) WHERE node.name = v.node
+    SET node.connected_switch_ifaces = node.connected_switch_ifaces + " (" + v.switch_name + "-" + v.interface + ")"
     """
 
     #Query to add sriov and macvlan interfaces info in the node on hovering
-    query5 = """
+    query6 = """
     WITH $json AS data
     UNWIND data.items AS n
     UNWIND n.node_leaf_all_iface_conn as conn
@@ -825,7 +834,7 @@ class VkaciGraph(object):
     """
 
     #Query to add sriov relationship between a node and a switch for baremetal case
-    query6 = """
+    query7 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_leaf_sec_iface_conn AS conn
@@ -836,7 +845,7 @@ class VkaciGraph(object):
     """
 
     #Query to add sriov relationship between a vm and a switch for non baremetal case
-    query7 = """
+    query8 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.vm_hosts AS v
@@ -847,7 +856,7 @@ class VkaciGraph(object):
     """
 
     #Query to add sriov relationship between a node and a pod
-    query8 = """
+    query9 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_pod_sec_iface_conn AS conn
@@ -857,7 +866,7 @@ class VkaciGraph(object):
     """
 
     #Query to add macvlan relationship between a node and a switch for baremetal case
-    query9 = """
+    query10 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_leaf_ter_iface_conn AS conn
@@ -868,7 +877,7 @@ class VkaciGraph(object):
     """
 
     #Query to add macvlan relationship between a vm and a switch for non baremetal case
-    query10 = """
+    query11 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.vm_hosts AS v
@@ -879,7 +888,7 @@ class VkaciGraph(object):
     """
 
     #Query to add macvlan relationship between a node and a pod
-    query11 = """
+    query12 = """
     WITH $json as data
     UNWIND data.items AS n
     UNWIND n.node_pod_ter_iface_conn AS conn
@@ -901,15 +910,16 @@ class VkaciGraph(object):
             graph.run(self.query2,json=switch_data)
             graph.run(self.query3,json=data)
             graph.run(self.query4,json=switch_data)
-            graph.run(self.query5,json=data)
+            graph.run(self.query5,json=switch_data)
+            graph.run(self.query6,json=data)
             if self.topology.sriov:
-                graph.run(self.query6,json=data)
                 graph.run(self.query7,json=data)
                 graph.run(self.query8,json=data)
-            if self.topology.macvlan:
                 graph.run(self.query9,json=data)
+            if self.topology.macvlan:
                 graph.run(self.query10,json=data)
                 graph.run(self.query11,json=data)
+                graph.run(self.query12,json=data)
         else:
             graph.run(self.query1,json=switch_data)
             graph.run(self.query2,json=switch_data)
@@ -929,12 +939,15 @@ class VkaciGraph(object):
                     if node == neighbour:
                         switch_items[switchName]["nodes"].append({
                             "name": node,
-                            "interface": " | ".join(list(interfaces))
+                            "interface": " | ".join(list(interfaces)),
+                            "switch_name": switchName
                         })
                     else:
                         switch_items[switchName]["vm_hosts"].append({
                             "name": neighbour if neighbour != "" else "VM Host",
-                            "interface": " | ".join(list(interfaces))
+                            "interface": " | ".join(list(interfaces)),
+                            "switch_name": switchName,
+                            "node" : node
                         })
         switch_data = { "items": list(switch_items.values()) }
 
