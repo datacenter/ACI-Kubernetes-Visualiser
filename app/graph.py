@@ -258,7 +258,7 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)        
 
-            if not self.asnPresent:
+            else:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
 
     def get_cluster_as(self):
@@ -544,50 +544,51 @@ class VkaciBuilTopology(object):
                             aciTopology = i["spec"].get("aciTopology")
                             if aciTopology is not None and i["spec"]["nodeName"] == nodeName:
                                 for iface_name, link in i["spec"]["aciTopology"].items():
-                                    if "sriov" in i["metadata"]["name"]:
-                                        iface_name = "PF-" + iface_name
-                                    fabricLinks = link.get("fabricLink", [])
-                                    for fabricLink in fabricLinks:
-                                        fabricLinkSplit = fabricLink.split("/")
-                                        switch_name = fabricLinkSplit[2].replace("node", "leaf")
-                                        switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
-                                        if "sriov" in i["metadata"]["name"]:
-                                            self.sriov = True
-                                            self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
-                                                'switch_name': switch_name,
-                                                'switch_interface': switch_interface,
-                                                'node_iface': iface_name
-                                            })
-                                        else:
-                                            self.macvlan = True
-                                            self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
-                                                'switch_name': switch_name,
-                                                'switch_interface': switch_interface,
-                                                'node_iface': iface_name
-                                            })
-
                                     pods = link.get("pods", [])
-                                    for pod in pods:
-                                        node_iface = pod.get("localIface")
+                                    if pods:
                                         if "sriov" in i["metadata"]["name"]:
-                                            node_iface = "VF-" + node_iface
-                                        pod_name = pod.get("podRef")["name"]
-                                        network_ref = i["spec"].get("networkRef")
-                                        node_network = network_ref["name"]
-                                        if "sriov" in i["metadata"]["name"]:
-                                            self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
-                                                'node_iface': node_iface,
-                                                'pod_name': pod_name,
-                                                'node_network': node_network,
-                                                'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
-                                            })
-                                        else:
-                                            self.topology['nodes'][nodeName]['node_pod_ter_iface_conn'].append({
-                                                'node_iface': node_iface,
-                                                'pod_name': pod_name,
-                                                'node_network': node_network,
-                                                'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
-                                            })
+                                            iface_name = "PF-" + iface_name
+                                        fabricLinks = link.get("fabricLink", [])
+                                        for fabricLink in fabricLinks:
+                                            fabricLinkSplit = fabricLink.split("/")
+                                            switch_name = fabricLinkSplit[2].replace("node", "leaf")
+                                            switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
+                                            if "sriov" in i["metadata"]["name"]:
+                                                self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
+                                                    'switch_name': switch_name,
+                                                    'switch_interface': switch_interface,
+                                                    'node_iface': iface_name
+                                                })
+                                            else:
+                                                self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'].append({
+                                                    'switch_name': switch_name,
+                                                    'switch_interface': switch_interface,
+                                                    'node_iface': iface_name
+                                                })
+
+                                        for pod in pods:
+                                            node_iface = pod.get("localIface")
+                                            if "sriov" in i["metadata"]["name"]:
+                                                node_iface = "VF-" + node_iface
+                                            pod_name = pod.get("podRef")["name"]
+                                            network_ref = i["spec"].get("networkRef")
+                                            node_network = network_ref["name"]
+                                            if "sriov" in i["metadata"]["name"]:
+                                                self.sriov = True
+                                                self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
+                                                    'node_iface': node_iface,
+                                                    'pod_name': pod_name,
+                                                    'node_network': node_network,
+                                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                                })
+                                            else:
+                                                self.macvlan = True
+                                                self.topology['nodes'][nodeName]['node_pod_ter_iface_conn'].append({
+                                                    'node_iface': node_iface,
+                                                    'pod_name': pod_name,
+                                                    'node_network': node_network,
+                                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                                })
 
                         self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'])
                         self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_ter_iface_conn'])
