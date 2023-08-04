@@ -258,7 +258,7 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName]['Description'] = neighbour_description
                 logger.info("Added neighbour details %s to %s - %s", neighbour_adj_port + '-' + neighbour.id, neighbour_adj.sysName, switch)        
 
-            else:
+            if not self.asnPresent and not neighbour_adj_port:
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch].add(neighbour.id)
 
     def get_cluster_as(self):
