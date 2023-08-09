@@ -211,19 +211,26 @@ function addLabelQuery() {
 
 function draw_all() {
     selectedView = View.All
-    let q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            MATCH (m:Node)-[r2*1..2]->(a)`
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-  [r2:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.ns =~ '${selectedNamespace}'
+            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
     q += addLabelQuery();
-    q += `RETURN p, m, n, r, r2, a`
+    q += `RETURN *`
     draw(q)
     //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
-    let q = `MATCH (m:Node)-[r2*1..2]->(a)`
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-  [r2:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.ns =~ '${selectedNamespace}'
+            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
     q += addLabelQuery();
-    q += `RETURN m, r2, a`
+    q += `RETURN n, r1, v, r2, a, n1, r4, b, n2, r6, v1, r7, c, n3, r9, d, n4, r11, e`
     draw(q)
     //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return m,r2,a")
 }
@@ -258,31 +265,28 @@ function draw_only_bgp_peers() {
 
 function draw_only_primary_links() {
     selectedView = View.OnlyPrimarylinks
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (m:Node)-[r2:CONNECTED_TO]->(a)
-            OPTIONAL MATCH (o:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO]-(b)`
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON]->(n:Node)-[r1:CONNECTED_TO]->(a) WHERE p.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO]-(b) WHERE p1.ns =~ '${selectedNamespace}'`
     q += addLabelQuery();
-    q += `RETURN p, n, m, o, r, r2, r1, r3, v, a, b`
+    q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
     draw(q)
 }
 
 function draw_only_sriov_links() {
     selectedView = View.OnlySriovlinks
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (m:Node)-[r2:CONNECTED_TO_SEC]->(a)
-            OPTIONAL MATCH (o:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_SEC]->(b)`
+    let q = `OPTIONAl MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON_SEC]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'`
     q += addLabelQuery();
-    q += `RETURN p, n, m, o, r, r2, r1, r3, v, a, b`
+    q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
     draw(q)
 }
 
 function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_TER]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (m:Node)-[r2:CONNECTED_TO_TER]->(a)
-            OPTIONAL MATCH (o:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_TER]->(b)`
+    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_TER]->(n:Node)-[r1:CONNECTED_TO_TER]->(a) WHERE p.ns =~ '${selectedNamespace}'
+            OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON_TER]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO_TER]->(b) WHERE p1.ns =~ '${selectedNamespace}'`
     q += addLabelQuery();
-    q += `RETURN p, n, m, o, r, r2, r1, r3, v, a, b`
+    q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
     draw(q)
 }
 
@@ -357,9 +361,8 @@ function draw_node() {
             RETURN *
         `;
     } else {
-        var q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node) WHERE n.name = "${str}"
-                OPTIONAL MATCH (m:Node)-[r2]->(s:Switch) WHERE m.name = "${str}"
-                OPTIONAL MATCH (o:Node)-[r3]->(v:VM_Host)-[r4]->(l:Switch) WHERE o.name = "${str}"
+        var q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node)-[r1]->(s:Switch) WHERE n.name = "${str}"
+                OPTIONAL MATCH (p1:Pod)-[r2]->(m:Node)-[r3]->(v:VM_Host)-[r4]->(l:Switch) WHERE m.name = "${str}"
                 RETURN *
         `;
     }
