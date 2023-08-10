@@ -361,9 +361,12 @@ function draw_node() {
             RETURN *
         `;
     } else {
-        var q = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node)-[r1]->(s:Switch) WHERE n.name = "${str}"
-                OPTIONAL MATCH (p1:Pod)-[r2]->(m:Node)-[r3]->(v:VM_Host)-[r4]->(l:Switch) WHERE m.name = "${str}"
-                RETURN *
+        var q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-      [r2:CONNECTED_TO_SEC]->(a) WHERE n.name = "${str}"
+            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE n1.name = "${str}"
+            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE n2.name = "${str}"
+            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE n3.name = "${str}"
+            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE n4.name = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
+            RETURN *
         `;
     }
     var config_node = neo_viz_config(false, "viz_node", q, seed)
@@ -391,9 +394,12 @@ function draw_pod() {
             RETURN *
         `;
     } else {
-        var p = `OPTIONAL MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch) WHERE p.${t} = "${str}"
-                OPTIONAL MATCH (q:Pod)-[r3]->(m:Node)-[r4]->(v:VM_Host)-[r5]->(l:Switch) WHERE q.${t} = "${str}"
-                RETURN *
+        var p = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-      [r2:CONNECTED_TO_SEC]->(a) WHERE p.${t} = "${str}"
+            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.${t} = "${str}"
+            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.${t} = "${str}"
+            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.${t} = "${str}"
+            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.${t} = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
+            RETURN *
         `;
     }
     var config_pod = neo_viz_config(false, "viz_pod", p , seed)
