@@ -872,33 +872,6 @@ class TestVkaciGraph(unittest.TestCase):
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
                 )
-            ),
-            client.V1Pod(
-                status=client.V1PodStatus(
-                    host_ip="192.168.1.2", pod_ip="192.168.1.2"
-                ),
-                metadata=client.V1ObjectMeta(
-                    name="kube-router-xfgr", namespace="kube-system"
-                ),
-                spec=client.V1PodSpec(
-                    node_name="1234abc", containers=[client.V1Container(name="kube-router",
-                        args=[
-                            "--run-router=true",
-                            "--run-firewall=true",
-                            "--run-service-proxy=true",
-                            "--bgp-graceful-restart=true",
-                            "--bgp-holdtime=3s",
-                            "--kubeconfig=/var/lib/kube-router/kubeconfig",
-                            "--cluster-asn=56002",
-                            "--advertise-external-ip",
-                            "--advertise-loadbalancer-ip",
-                            "--advertise-pod-cidr=true",
-                            "--enable-ibgp=false",
-                            "--enable-overlay=false",
-                            "--enable-pod-egress=false",
-                            "--override-nexthop=true"
-                        ])]
-                    )
             )
         ]
         nfna = {
@@ -926,8 +899,7 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}},
-                                                   'kube-router-xfgr': {'ip': '192.168.1.2', 'primary_iface': '', 'ns': 'kube-system', 'labels': {}, 'other_ifaces': {}, 'annotations': {}}},
+                                                'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                                 'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
                             'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
@@ -953,33 +925,6 @@ class TestVkaciGraph(unittest.TestCase):
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
                 )
-            ),
-            client.V1Pod(
-                status=client.V1PodStatus(
-                    host_ip="192.168.1.2", pod_ip="192.168.1.2"
-                ),
-                metadata=client.V1ObjectMeta(
-                    name="kube-router-xfgr", namespace="kube-system"
-                ),
-                spec=client.V1PodSpec(
-                    node_name="1234abc", containers=[client.V1Container(name="kube-router",
-                        args=[
-                            "--run-router=true",
-                            "--run-firewall=true",
-                            "--run-service-proxy=true",
-                            "--bgp-graceful-restart=true",
-                            "--bgp-holdtime=3s",
-                            "--kubeconfig=/var/lib/kube-router/kubeconfig",
-                            "--cluster-asn=56002",
-                            "--advertise-external-ip",
-                            "--advertise-loadbalancer-ip",
-                            "--advertise-pod-cidr=true",
-                            "--enable-ibgp=false",
-                            "--enable-overlay=false",
-                            "--enable-pod-egress=false",
-                            "--override-nexthop=true"
-                        ])]
-                    )
             )
         ]
         nfna = {
@@ -1007,8 +952,7 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}},
-                                                   'kube-router-xfgr': {'ip': '192.168.1.2', 'primary_iface': '', 'ns': 'kube-system', 'labels': {}, 'other_ifaces': {}, 'annotations': {}}},
+                                                'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                                 'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
                             'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
