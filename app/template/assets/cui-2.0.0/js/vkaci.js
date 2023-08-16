@@ -215,7 +215,7 @@ function draw_all() {
             OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'
             OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.ns =~ '${selectedNamespace}'
             OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.ns =~ '${selectedNamespace}'
-            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
+            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
     q += addLabelQuery();
     q += `RETURN *`
     draw(q)
@@ -228,7 +228,7 @@ function draw_without_pods() {
             OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'
             OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.ns =~ '${selectedNamespace}'
             OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.ns =~ '${selectedNamespace}'
-            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
+            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
     q += addLabelQuery();
     q += `RETURN n, r1, v, r2, a, n1, r4, b, n2, r6, v1, r7, c, n3, r9, d, n4, r11, e`
     draw(q)
@@ -365,7 +365,7 @@ function draw_node() {
             OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE n1.name = "${str}"
             OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE n2.name = "${str}"
             OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE n3.name = "${str}"
-            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE n4.name = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
+            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE n4.name = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
             RETURN *
         `;
     }
@@ -398,7 +398,7 @@ function draw_pod() {
             OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.${t} = "${str}"
             OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.${t} = "${str}"
             OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.${t} = "${str}"
-            MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.${t} = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
+            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.${t} = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
             RETURN *
         `;
     }
