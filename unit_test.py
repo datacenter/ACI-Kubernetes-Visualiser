@@ -860,6 +860,66 @@ class TestVkaciGraph(unittest.TestCase):
                 self.assertDictEqual(result, expected)
                 self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
+    def test_sriov_macvlan_only_diff_ns(self):
+        pods = [
+            client.V1Pod(
+                status=client.V1PodStatus(
+                    host_ip="192.168.1.2", pod_ip="192.158.1.4"
+                ),
+                metadata=client.V1ObjectMeta(
+                    name="sriov-pod", namespace="sriov", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+                ),
+                spec=client.V1PodSpec(
+                    node_name="1234abc", containers=[]
+                )
+            ),
+            client.V1Pod(
+                status=client.V1PodStatus(
+                    host_ip="192.168.1.2", pod_ip="192.158.1.6"
+                ),
+                metadata=client.V1ObjectMeta(
+                    name="macvlan-pod", namespace="macvlan", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
+                ),
+                spec=client.V1PodSpec(
+                    node_name="1234abc", containers=[]
+                )
+            )
+        ]
+
+        with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
+            with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
+                expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
+                                                'pods': {
+                                                         'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'sriov', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                        'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'macvlan', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
+                                                        },
+                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [{
+                                                            'switch_name': 'leaf-101',
+                                                            'switch_interface': 'eth1/3',
+                                                            'node_iface': 'PF-ens1f2'
+                                                            }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                     'switch_name': 'leaf-101',
+                                                     'switch_interface': 'eth1/37',
+                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
+                                                            'switch_name': 'leaf-101',
+                                                            'switch_interface': 'eth1/3',
+                                                            'node_iface': 'PF-ens1f2'
+                                                            },{
+                                                     'switch_name': 'leaf-101',
+                                                     'switch_interface': 'eth1/37',
+                                                     'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
+                                                'labels': {'app': 'guestbook'}}]}}
+
+                build = VkaciBuilTopology(
+                    VkaciEnvVariables(self.vars), ApicMethodsMock())
+                # Act
+                result = build.update()
+                # Assert
+                self.assertDictEqual(result, expected)
+                self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
+
     def test_sriov_without_pod(self):
         pods = [
             client.V1Pod(
