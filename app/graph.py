@@ -546,14 +546,14 @@ class VkaciBuilTopology(object):
                                 for iface_name, link in i["spec"]["aciTopology"].items():
                                     pods = link.get("pods", [])
                                     if pods:
-                                        if "sriov" in i["metadata"]["name"]:
+                                        if "sriov" in i["spec"]["primaryCni"]:
                                             iface_name = "PF-" + iface_name
                                         fabricLinks = link.get("fabricLink", [])
                                         for fabricLink in fabricLinks:
                                             fabricLinkSplit = fabricLink.split("/")
                                             switch_name = fabricLinkSplit[2].replace("node", "leaf")
                                             switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
-                                            if "sriov" in i["metadata"]["name"]:
+                                            if "sriov" in i["spec"]["primaryCni"]:
                                                 self.topology['nodes'][nodeName]['node_leaf_sec_iface_conn'].append({
                                                     'switch_name': switch_name,
                                                     'switch_interface': switch_interface,
@@ -568,12 +568,12 @@ class VkaciBuilTopology(object):
 
                                         for pod in pods:
                                             node_iface = pod.get("localIface")
-                                            if "sriov" in i["metadata"]["name"]:
+                                            if "sriov" in i["spec"]["primaryCni"]:
                                                 node_iface = "VF-" + node_iface
                                             pod_name = pod.get("podRef")["name"]
                                             network_ref = i["spec"].get("networkRef")
                                             node_network = network_ref["name"]
-                                            if "sriov" in i["metadata"]["name"]:
+                                            if "sriov" in i["spec"]["primaryCni"]:
                                                 self.sriov = True
                                                 self.topology['nodes'][nodeName]['node_pod_sec_iface_conn'].append({
                                                     'node_iface': node_iface,
