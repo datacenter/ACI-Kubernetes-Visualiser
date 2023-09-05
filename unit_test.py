@@ -30,7 +30,8 @@ nfna = {
             "nodeName": "1234abc",
             "networkRef": {
                 "name": "sriov-net1"
-            }
+            },
+            "primaryCni": "sriov"
         },
         "metadata" : {
             "name" : "sriov"
@@ -57,7 +58,8 @@ nfna = {
             "nodeName": "1234abc",
             "networkRef": {
                 "name": "macvlan-net1"
-            }
+            },
+            "primaryCni": "macvlan"
         },
         "metadata" : {
             "name" : "macvlan"
@@ -702,7 +704,8 @@ class TestVkaciGraph(unittest.TestCase):
                     "nodeName": "1234abc",
                     "networkRef": {
                         "name": "sriov-net1"
-                    }
+                    },
+                    "primaryCni": "sriov"
                 },
                 "metadata" : {
                     "name" : "sriov"
@@ -768,7 +771,8 @@ class TestVkaciGraph(unittest.TestCase):
                     "nodeName": "1234abc",
                     "networkRef": {
                         "name": "macvlan-net1"
-                    }
+                    },
+                    "primaryCni": "macvlan"
                 },
                 "metadata" : {
                     "name" : "macvlan"
@@ -948,7 +952,8 @@ class TestVkaciGraph(unittest.TestCase):
                     "nodeName": "1234abc",
                     "networkRef": {
                         "name": "sriov-net1"
-                    }
+                    },
+                    "primaryCni": "sriov"
                 },
                 "metadata" : {
                     "name" : "sriov"
@@ -1001,7 +1006,8 @@ class TestVkaciGraph(unittest.TestCase):
                     "nodeName": "1234abc",
                     "networkRef": {
                         "name": "macvlan-net1"
-                    }
+                    },
+                    "primaryCni": "macvlan"
                 },
                 "metadata" : {
                     "name" : "macvlan"
