@@ -40,7 +40,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 },
             },
             "Pod": {
-                caption: podCaption,
+                caption: "name",
                 size: 2,
                 image: './assets/cui-2.0.0/img/pod.svg',
                 font: {

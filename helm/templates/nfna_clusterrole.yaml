@@ -1,4 +1,5 @@
 # Add permission to list the nodefabricnetworkattachments
+{{- if .Values.cno }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -27,3 +28,4 @@ roleRef:
   kind: Role # this must be Role or ClusterRole
   name: {{ include "vkaci.fullname" . }}-nodefabricnetworkattachments-reader # this must match the name of the Role or ClusterRole you wish to bind to
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

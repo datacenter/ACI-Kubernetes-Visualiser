@@ -112,3 +112,5 @@ lldpd:
     repository: ghcr.io/lldpd/lldpd
     tag: latest
     pullPolicy: Always
+
+cno: false
