@@ -525,7 +525,7 @@ class VkaciBuilTopology(object):
                                 items_list = json.loads(annotation)
                                 pod_ip = i.status.pod_ip
                                 for val in items_list:
-                                    if val["ips"][0] != pod_ip:
+                                    if val["interface"] != "eth0":
                                         iface_name = str(val["name"].split('/')[-1])
                                         pod_iface = str(val["interface"])
                                         pods[pod_name]['other_ifaces'][iface_name] = pod_iface
