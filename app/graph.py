@@ -223,9 +223,6 @@ class VkaciBuilTopology(object):
                 node['neighbours'][neighbour_adj.sysName]['switches'][switch] = set()
                 logger.info("Found %s as Neighbour to %s:", switch, neighbour_adj.sysName)
 
-            # TODO: Get all the connected ifaces apart from primary and 
-            # add in secondary_ifaces of the switch
-            
             #LLDP Class is portId (I.E. VMNICX)
             neighbour_description = getattr(neighbour_adj, 'sysDesc', None)
             if not neighbour_description:
@@ -523,7 +520,6 @@ class VkaciBuilTopology(object):
                         for key, annotation in annotations.items():
                             if key == "k8s.v1.cni.cncf.io/network-status":
                                 items_list = json.loads(annotation)
-                                pod_ip = i.status.pod_ip
                                 for val in items_list:
                                     if val["interface"] != "eth0":
                                         iface_name = str(val["name"].split('/')[-1])
@@ -598,7 +594,7 @@ class VkaciBuilTopology(object):
 
         except Exception as e:
             if e.status == 404:
-                logger.info(f"CRD nodefabricnetworkattachments not detected, SR-IOV/MACVLAN topology support is disabled")
+                logger.error(f"CRD nodefabricnetworkattachments not detected, SR-IOV/MACVLAN topology support is disabled. Error: {str(e)}")
             else:
                 logger.error(f"Unexpected error processing list_namespaced_custom_object. Error: {str(e)}")
 

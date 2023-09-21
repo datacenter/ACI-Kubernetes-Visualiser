@@ -40,7 +40,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 },
             },
             "Pod": {
-                caption: "name",
+                caption: podCaption,
                 size: 2,
                 image: './assets/cui-2.0.0/img/pod.svg',
                 font: {
@@ -340,7 +340,7 @@ function draw_leaf() {
     var str = $("#leafname").val();
     if (!str.trim()) return;
     var seed = "0.8455348811333163:1645676676633"
-    var config_leaf = neo_viz_config(false, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
+    var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
     var viz_leaf = new NeoVis.default(config_leaf);
     viz_leaf.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 
@@ -369,7 +369,7 @@ function draw_node() {
             RETURN *
         `;
     }
-    var config_node = neo_viz_config(false, "viz_node", q, seed)
+    var config_node = neo_viz_config(true, "viz_node", q, seed)
     var viz_node = new NeoVis.default(config_node);
     viz_node.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645580358235
@@ -402,7 +402,7 @@ function draw_pod() {
             RETURN *
         `;
     }
-    var config_pod = neo_viz_config(false, "viz_pod", p , seed)
+    var config_pod = neo_viz_config(true, "viz_pod", p , seed)
     viz_pod = new NeoVis.default(config_pod);
     viz_pod.render();
     // Get seed method: This number is printed when you use getSeed in order for the objects within a certain view to not overlap each ther everytime you click show 1645578356529
