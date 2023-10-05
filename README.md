@@ -80,6 +80,30 @@ Cluster Network Graph Example: Without specific Namespace
 
 ![Cluster Network Graph Example: Without specific Namespace](readme-img/fig4.png)
 
+VKACI can have 3 types of topologies based on the setup.
+1. Baremetal: In this case the nodes are directly connected to the leaf(s) 
+2. Esxi5: In this case, the nodes run on a hypervisor which in turn is connected to the leaf(s)
+3. Hybrid: This is a combination of baremetal and Esxi5 where some nodes are directly connected to the leaf(s) and some are running on a hypervisor which is connected to the leaf(s)
+
+The VKACI has the support of secondary links as well. It can have SRIOV and MacVlan links. For better visualization, VKACI provides three different filtered views of the topology.
+1. Primary Links: These are the traditional links with which different topology nodes are connected to each other
+2. SRIOV Links: These are the secondary links between the different topology nodes. It is denoted by purple lines as shown in the figure.
+
+![Cluster Network Graph Example: Sriov Links](readme-img/fig8.png)
+
+The label of the links between a node and a leaf is denoted as node-interface:leaf-interface. So, in the above example, PF-ens1f2 is a node interface and eth1/41 is a leaf interface. Similarly, the label of the links between a node and a pod is denoted as pod-interface:node-interface. So, in the above example net1 is a pod interface and VF-ens1f2v2 is a node interface.
+
+3. MacVlan Links: These are the secondary links between the different topology nodes and are denoted by teal coloured links as shown in the figure.
+
+![Cluster Network Graph Example: MacVlan Links](readme-img/fig9.png)
+
+The labels of the MacVlan links are displayed in the same way as are being displayed for SRIOV links.
+
+4. View All: This view provides the view of all the nodes and links for all namespaces or for a particular namespace. The below image shows an example of hybrid topology in the View All menu.
+
+![Cluster Network Graph Example:  View All](readme-img/fig10.png)
+
+Worker2 is directly connected to to the leaf-101 and leaf-102 whereas worker1 runs on a hypervisor which is connected to the leaf(s)
 #### Table View
 
 The secondary view of Vkaci outlines the cluster network in different tree table configurations.
