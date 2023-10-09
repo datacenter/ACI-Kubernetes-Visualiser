@@ -113,7 +113,7 @@ Vkaci topology update process
 
 #### Libraries Used
 
-VKACI is a web application using Python 3.9 and Flask as its server technology. To enable graph-based representation, Neo4j is used to save the transformed network topology.
+VKACI is a web application using Python 3.10 and Flask as its server technology. To enable graph-based representation, Neo4j is used to save the transformed network topology.
 
 #### Python Libraries
 
@@ -155,6 +155,9 @@ Note: VMM Integration is not required nor supported, physical domain for Floatin
 1. Calico - Calico is a networking and security solution for containers, virtual machines, and native host-based workloads that is open source. Calico includes a pure Linux eBPF data plane, a normal Linux networking data plane, and a Windows HNS data plane. Calico offers a complete networking stack, but it may also be used to enforce network policies in conjunction with cloud provider CNIs [6].
 
 2. Kube-router - Kube-router is a project that provides a unified solution for CNI networking for pods, an IPVS-based network service proxy, and network policy enforcement using iptables. Kube-router includes a service proxy hence kube-proxy will not be installed in the cluster [5].
+
+3. Cilium - Cilium is an open source, cloud native solution for providing, securing, and observing network connectivity between workloads, fueled by the revolutionary Kernel technology eBPF
+ [7].
 
 ## Installing
 
@@ -262,6 +265,16 @@ neo4j-standalone:
     default:
       type: LoadBalancer
       loadBalancerIP: 192.168.14.0 #
+```
+#### LLDP/CDP Requirements
+
+In order to build a complete topology vkaci relies on LLDP or CDP to discover what is connected to the ACI leaf. If the K8s node is a Virtual Machine the Hypervisor needs to be configured with LLDP or CDP. 
+If the K8s node is baremetal LLDPD needs to be running on every node. The user can isntall LLDPD manually or have vkaci install a daemonSet that runns LLDPD.
+
+**Enabling LLDPD DaemonSet by setting the following in the values.yml**
+```yaml
+lldpd:
+  enabled: true
 ```
 
 **Example values.yml:**
@@ -400,7 +413,6 @@ This is most likely because your APIC is configured in a way that we have not en
 
 ### Potential Improvements
 
-- Add support for the Cilium CNI plugin
 - Add support for clusters using NDFC
 - Remove the Neo4j direct connection requirement by implementing a REST interface within the Vkaci service for graph data.
 
@@ -418,4 +430,5 @@ This is most likely because your APIC is configured in a way that we have not en
 
 [6] Tigera, &quot;About Calico,&quot; _projectcalico.docs.tigera.io_, 2022. <https://projectcalico.docs.tigera.io/about/about-calico> (accessed Mar. 01, 2022).
 
+[7] Cilium - <https://cilium.io/>
 © 2022 Cisco and/or its affiliates. All rights reserved. This document is Cisco Public Information.
