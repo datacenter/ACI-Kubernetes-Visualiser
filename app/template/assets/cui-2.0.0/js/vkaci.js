@@ -12,7 +12,6 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
         server_user: server_user,
         server_password: server_password,
         initial_cypher: cypher,
-        arrows: showPodName,
         fix_nodes_in_place_on_drag: true,
         layout: {
             improvedLayout: true,
@@ -249,7 +248,7 @@ function draw_pods_and_nodes() {
     let q = ` MATCH (p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
     q += addLabelQuery();
     q += `RETURN p,r1,n`
-    draw(q)
+    draw(q, true)
     //draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
@@ -269,7 +268,7 @@ function draw_only_primary_links() {
             OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO]-(b) WHERE p1.ns =~ '${selectedNamespace}'`
     q += addLabelQuery();
     q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
-    draw(q)
+    draw(q, true)
 }
 
 function draw_only_sriov_links() {
@@ -278,7 +277,7 @@ function draw_only_sriov_links() {
             OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON_SEC]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'`
     q += addLabelQuery();
     q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
-    draw(q)
+    draw(q, true)
 }
 
 function draw_only_macvlan_links() {
@@ -287,7 +286,7 @@ function draw_only_macvlan_links() {
             OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON_TER]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO_TER]->(b) WHERE p1.ns =~ '${selectedNamespace}'`
     q += addLabelQuery();
     q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
-    draw(q)
+    draw(q, true)
 }
 
 
