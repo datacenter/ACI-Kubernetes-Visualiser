@@ -1,8 +1,8 @@
 kubernetes
 flask
-py2neo
 prettyprint
 gunicorn
 gevent
 natsort
 https://github.com/datacenter/pyaci/archive/master.zip
+https://github.com/overhangio/py2neo/releases/download/2021.2.3/py2neo-2021.2.3.tar.gz
