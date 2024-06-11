@@ -1,6 +1,6 @@
 # VKACI APIC Variables
 # All of these will need to be set correctly
-apicIps: "10.67.185.102,10.67.185.41,10.67.185.42"
+apicIps: "IP1, IP2, IP3"
 apicCertName: "nkt_user_Xvpp3k"
 apicUsername: "nkt_user_Xvpp3k"
 vrfTenant: "Cilium"
