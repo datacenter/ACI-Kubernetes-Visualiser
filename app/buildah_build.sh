@@ -3,13 +3,15 @@
 export MANIFEST_NAME="vkaci"
 export MANIFEST_NAME_INIT="vkaci-init"
 # Set the required variables
-export REGISTRY="quay.io"
-export USER="datacenter"
+export REGISTRY=harbor.cam.ciscolabs.com 
+export USER=library
+#export REGISTRY="quay.io"
+#export USER="datacenter"
 export IMAGE_NAME="vkaci"
 export IMAGE_NAME_INIT="vkaci-init"
 if [ -z "$1" ]
     then
-        export IMAGE_TAG="v1.1.0"
+        export IMAGE_TAG="v2.1.0"
     else
         export IMAGE_TAG="$1"
 fi

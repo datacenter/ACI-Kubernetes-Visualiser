@@ -13,7 +13,7 @@ rules:
   resources: ["bgpconfigurations"]
   verbs: ["list","get"]
 - apiGroups: ["cilium.io"]
-  resources: ["ciliumbgppeeringpolicies"]
+  resources: ["ciliumbgpclusterconfigs"]
   verbs: ["list","get"]
 ---
 kind: ClusterRoleBinding

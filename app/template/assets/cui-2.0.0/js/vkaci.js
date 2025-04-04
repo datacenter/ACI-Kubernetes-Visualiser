@@ -94,7 +94,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                     multi: true,
                 },
             },
-            "CONNECTED_TO_SEC": {
+            "CONNECTED_TO_SRIOV": {
                 color: "#800080",
                 caption: "interface",
                 font: {
@@ -104,8 +104,18 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                     multi: true,
                 },
             },
-            "CONNECTED_TO_TER": {
+            "CONNECTED_TO_MACVLAN": {
                 color: "#008080",
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                },
+            },
+            "CONNECTED_TO_BR": {
+                color: "#FF0000",
                 caption: "interface",
                 font: {
                     size: 16,
@@ -128,7 +138,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 },
                 color: "#FF4500",
             },
-            "RUNNING_ON_SEC": {
+            "RUNNING_ON_SRIOV": {
                 caption: "interface",
                 font: {
                     size: 16,
@@ -139,7 +149,7 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                 },
                 color: "#800080",
             },
-            "RUNNING_ON_TER": {
+            "RUNNING_ON_MACVLAN": {
                 caption: "interface",
                 font: {
                     size: 16,
@@ -149,6 +159,17 @@ function neo_viz_config(showPodName, container, cypher, seed = null) {
                     vadjust: -10,
                 },
                 color: "#008080",
+            },
+            "RUNNING_ON_BR": {
+                caption: "interface",
+                font: {
+                    size: 16,
+                    color: "#000000",
+                    strokeWidth: 2,
+                    multi: true,
+                    vadjust: -10,
+                },
+                color: "#FF0000",
             },
             "ATTACHED_TO": {
                 color: "#ff5050",
@@ -179,6 +200,7 @@ class View {
     static OnlyPrimarylinks = new View("OnlyPrimarylinks", draw_only_primary_links)
     static OnlySriovlinks = new View("OnlySriovlinks", draw_only_sriov_links)
     static OnlyMacvlanlinks = new View("OnlyMacvlanlinks", draw_only_macvlan_links)
+    static OnlyBridgelinks = new View("OnlyBridgelinks", draw_only_bridge_links)
 
     constructor(name, drawFunc) {
         this.name = name
@@ -199,10 +221,10 @@ function getLabelFilterString() {
     return lblStr
 }
 
-function addLabelQuery() {
+function addPodLabelQuery() {
     if (selectedLabelFilters.size > 0) {
         var lblStr = getLabelFilterString();
-        return `AND l.name IN [${lblStr}] `;
+        return `MATCH (l:Label)-->(p) WHERE l.name IN [${lblStr}] `;
         // q += `AND l2.name IN [${lblStr}]) `
     }
     return "";
@@ -210,52 +232,61 @@ function addLabelQuery() {
 
 function draw_all() {
     selectedView = View.All
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-  [r2:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
-    q += addLabelQuery();
-    q += `RETURN *`
+    //let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SRIOV]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-[r2:CONNECTED_TO_SRIOV]->(a) WHERE p.ns =~ '${selectedNamespace}'
+    //        OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SRIOV]->(n1:Node)-[r4:CONNECTED_TO_SRIOV]->(b) WHERE p1.ns =~ '${selectedNamespace}'
+    //       OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_MACVLAN]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_MACVLAN]->(c) WHERE p2.ns =~ '${selectedNamespace}'
+    //        OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_MACVLAN]->(n3:Node)-[r9:CONNECTED_TO_MACVLAN]->(d) WHERE p3.ns =~ '${selectedNamespace}'
+    //        OPTIONAL MATCH (p4:Pod)-[r10:RUNNING_ON_BR]->(n4:Node)-[r11:RUNNING_IN]->(v2:VM_Host)-[r12:CONNECTED_TO_BR]->(e) WHERE p4.ns =~ '${selectedNamespace}'
+    //        OPTIONAL MATCH (p5:Pod)-[r13:RUNNING_ON_BR]->(n5:Node)-[r14:CONNECTED_TO_BR]->(f) WHERE p5.ns =~ '${selectedNamespace}'
+    //        OPTIONAL MATCH (p6:Pod)-[r15]->(n6:Node)-[r16*1..2]->(g) WHERE p6.ns =~ '${selectedNamespace}' AND (NOT TYPE(r15) IN ['RUNNING_ON_SRIOV', 'RUNNING_ON_MACVLAN', 'RUNNING_ON_BR']) AND NONE(rel IN r16 WHERE TYPE(rel) IN ['CONNECTED_TO_SRIOV', 'CONNECTED_TO_MACVLAN', 'CONNECTED_TO_BR'])`
+
+    // if we return everything, we don't need a complex query as above. We can just return all the nodes and relationships with a 2 hop depth for the node
+    // so we also include the case where the nodes are VMs. Also in this case we should limit the returned number of nodes to 1000 or we have too much data
+    let q = ``
+    q += addPodLabelQuery();
+    q +=`MATCH (p:Pod) WITH p LIMIT 1000
+    MATCH (l:Label)-->(p:Pod)-[r1]->(n:Node)-[r2*1..2]->(g) WHERE p.ns =~ '${selectedNamespace}'`
+    q += `RETURN p, r1, r2, g, n`
     draw(q)
     //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return *")
 }
 
 function draw_without_pods() {
     selectedView = View.WithoutPods
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-  [r2:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.ns =~ '${selectedNamespace}' AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])`
-    q += addLabelQuery();
-    q += `RETURN n, r1, v, r2, a, n1, r4, b, n2, r6, v1, r7, c, n3, r9, d, n4, r11, e`
+    // if we return everything, we don't need a complex query. We can just return all the nodes and relationships with a 2 hop depth for the node
+    // We also include the case where the nodes are VMs. 
+    // Limit the returned number of nodes to 100 that should be enough for the graph to be readable
+    let q = ``
+    q += addPodLabelQuery();
+    q +=  `MATCH (p:Pod)-->(n:Node)-[r2*1..2]->(g)`
+    q += `RETURN n, r2, g`
     draw(q)
     //draw("MATCH (p:Pod)-[r]->(m:Node)-[r2*1..2]->(a) where p.ns =~ '" + selectedNamespace + "' return m,r2,a")
 }
 
 function draw_without_bgp_peers() {
     selectedView = View.WithoutBgpPeers
-    let q = ` MATCH (p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
-    q += addLabelQuery();
+    let q = ``
+    q += addPodLabelQuery();
+    q +=` MATCH (p:Pod)-[r]->(m:Node)-[u:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
     q += `RETURN u, r1, m, v,s`
     draw(q)
-    // draw("MATCH (p:Pod)-->(n:Node)-[r:RUNNING_IN]-(v:VM_Host)-[r1:CONNECTED_TO]-(l:Switch) WHERE p.ns =~ '" + selectedNamespace + "' RETURN r, r1, n, v, l")
 }
 
 function draw_pods_and_nodes() {
     selectedView = View.PodsAndNodes
-    let q = ` MATCH (p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
-    q += addLabelQuery();
+    let q = ``
+    q += addPodLabelQuery();
+    q +=` MATCH (l:Label)-->(p:Pod)-[r1]->(n:Node) WHERE p.ns =~ '${selectedNamespace}' `
     q += `RETURN p,r1,n`
     draw(q, true)
-    //draw("MATCH (p:Pod)-[r]->(n2) WHERE p.ns =~ '" + selectedNamespace + "' RETURN *", true)
 }
 
 function draw_only_bgp_peers() {
     selectedView = View.OnlyBgpPeers
-    let q = ` MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
-    q += addLabelQuery();
+    let q = ``
+    q += addPodLabelQuery();
+    q +=` MATCH (p:Pod)-->(n:Node)-[r:PEERED_INTO]->(s:Switch) WHERE p.ns =~ '${selectedNamespace}' `
     q += `RETURN r, n,s`
     draw(q)
     
@@ -264,31 +295,47 @@ function draw_only_bgp_peers() {
 
 function draw_only_primary_links() {
     selectedView = View.OnlyPrimarylinks
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON]->(n:Node)-[r1:CONNECTED_TO]->(a) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO]-(b) WHERE p1.ns =~ '${selectedNamespace}'`
-    q += addLabelQuery();
-    q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
+    let q = ``
+    q += addPodLabelQuery();
+    q +=`MATCH (p)-[r:RUNNING_ON]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+        OPTIONAL MATCH (n)-[r1:CONNECTED_TO]->(a)
+        OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO]->(b)
+        RETURN p, n, r, r1, r2, r3, v, a, b`
     draw(q, true)
 }
 
 function draw_only_sriov_links() {
     selectedView = View.OnlySriovlinks
-    let q = `OPTIONAl MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:CONNECTED_TO_SEC]->(a) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON_SEC]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.ns =~ '${selectedNamespace}'`
-    q += addLabelQuery();
-    q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
+    let q = ``
+    q += addPodLabelQuery();
+    q +=`MATCH (p)-[r:RUNNING_ON_SRIOV]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+        OPTIONAL MATCH (n)-[r1:CONNECTED_TO_SRIOV]->(a)
+        OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_SRIOV]->(b)
+        RETURN p, n, r, r1, r2, r3, v, a, b`
     draw(q, true)
 }
 
 function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
-    let q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_TER]->(n:Node)-[r1:CONNECTED_TO_TER]->(a) WHERE p.ns =~ '${selectedNamespace}'
-            OPTIONAL MATCH (p1:Pod)-[r2:RUNNING_ON_TER]->(n1:Node)-[r3:RUNNING_IN]->(v:VM_Host)-[r4:CONNECTED_TO_TER]->(b) WHERE p1.ns =~ '${selectedNamespace}'`
-    q += addLabelQuery();
-    q += `RETURN p, p1, n, n1, r, r2, r1, r3, r4, v, a, b`
+    let q = ``
+    q += addPodLabelQuery();
+    q +=`MATCH (p)-[r:RUNNING_ON_MACVLAN]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+        OPTIONAL MATCH (n)-[r1:CONNECTED_TO_MACVLAN]->(a)
+        OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_MACVLAN]->(b)
+        RETURN p, n, r, r1, r2, r3, v, a, b`
     draw(q, true)
 }
 
+function draw_only_bridge_links() {
+    selectedView = View.OnlyBridgelinks
+    let q = ``
+    q += addPodLabelQuery();
+    q +=`MATCH (p)-[r:RUNNING_ON_BR]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+        OPTIONAL MATCH (n)-[r1:CONNECTED_TO_BR]->(a)
+        OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_BR]->(b)
+        RETURN p, n, r, r1, r2, r3, v, a, b`
+    draw(q, true)
+}
 
 function draw_namespace(namespace) {
     selectedNamespace = namespace
@@ -338,7 +385,7 @@ function draw(query, pods = false) {
 function draw_leaf() {
     var str = $("#leafname").val();
     if (!str.trim()) return;
-    var seed = "0.8455348811333163:1645676676633"
+    var seed = 0.8455348811333163
     var config_leaf = neo_viz_config(true, "viz_leaf", 'MATCH (s:Switch)<-[r]-(m) WHERE s.name= "' + str + '" RETURN *', seed)
     var viz_leaf = new NeoVis.default(config_leaf);
     viz_leaf.render();
@@ -351,7 +398,7 @@ function draw_leaf() {
 function draw_node() {
     var str = $("#nodename").val();
     if (!str.trim()) return;
-    var seed = "0.7578607868826415:1645663636870"
+    var seed = 0.7578607868826415
     // var config_node = neo_viz_config(true, "viz_node", 'MATCH (p:Pod)-[r]->(n:Node)-[r1*1..3]->(m) WHERE n.name= "' + str + '" RETURN *', seed)
     if (asnPresent) {
         var q = `MATCH (p:Pod)-[r]->(n:Node)-[r2]->(s:Switch)
@@ -360,13 +407,8 @@ function draw_node() {
             RETURN *
         `;
     } else {
-        var q = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-      [r2:CONNECTED_TO_SEC]->(a) WHERE n.name = "${str}"
-            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE n1.name = "${str}"
-            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE n2.name = "${str}"
-            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE n3.name = "${str}"
-            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE n4.name = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
-            RETURN *
-        `;
+        var q = `MATCH (n:Node)-[r*1..2]->(g) WHERE n.name = "${str}"
+                RETURN *`;
     }
     var config_node = neo_viz_config(true, "viz_node", q, seed)
     var viz_node = new NeoVis.default(config_node);
@@ -381,7 +423,7 @@ var viz_pod = null
 function draw_pod() {
     var str = $("#podname").val();
     if (!str.trim()) return;
-    var seed = "0.8660747593468698:1645662423690"
+    var seed = 0.8660747593468698
     var t = "name"
     if (checkIfValidIP(str)) {
         t = "ip"
@@ -393,11 +435,13 @@ function draw_pod() {
             RETURN *
         `;
     } else {
-        var p = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SEC]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-      [r2:CONNECTED_TO_SEC]->(a) WHERE p.${t} = "${str}"
-            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SEC]->(n1:Node)-[r4:CONNECTED_TO_SEC]->(b) WHERE p1.${t} = "${str}"
-            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_TER]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_TER]->(c) WHERE p2.${t} = "${str}"
-            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_TER]->(n3:Node)-[r9:CONNECTED_TO_TER]->(d) WHERE p3.${t} = "${str}"
-            OPTIONAL MATCH (p4:Pod)-[r10]->(n4:Node)-[r11*1..2]->(e) WHERE p4.${t} = "${str}" AND (NOT TYPE(r10) IN ['RUNNING_ON_SEC', 'RUNNING_ON_TER']) AND NONE(rel IN r11 WHERE TYPE(rel) IN ['CONNECTED_TO_SEC', 'CONNECTED_TO_TER'])
+        var p = `OPTIONAL MATCH (p:Pod)-[r:RUNNING_ON_SRIOV]->(n:Node)-[r1:RUNNING_IN]->(v:VM_Host)-      [r2:CONNECTED_TO_SRIOV]->(a) WHERE p.${t} = "${str}"
+            OPTIONAL MATCH (p1:Pod)-[r3:RUNNING_ON_SRIOV]->(n1:Node)-[r4:CONNECTED_TO_SRIOV]->(b) WHERE p1.${t} = "${str}"
+            OPTIONAL MATCH (p2:Pod)-[r5:RUNNING_ON_MACVLAN]->(n2:Node)-[r6:RUNNING_IN]->(v1:VM_Host)-[r7:CONNECTED_TO_MACVLAN]->(c) WHERE p2.${t} = "${str}"
+            OPTIONAL MATCH (p3:Pod)-[r8:RUNNING_ON_MACVLAN]->(n3:Node)-[r9:CONNECTED_TO_MACVLAN]->(d) WHERE p3.${t} = "${str}"
+            OPTIONAL MATCH (p4:Pod)-[r10:RUNNING_ON_BR]->(n4:Node)-[r11:RUNNING_IN]->(v2:VM_Host)-[r12:CONNECTED_TO_BR]->(e) WHERE p4.${t} = "${str}"
+            OPTIONAL MATCH (p5:Pod)-[r13:RUNNING_ON_BR]->(n5:Node)-[r14:CONNECTED_TO_BR]->(f) WHERE p5.${t} = "${str}"
+            OPTIONAL MATCH (p6:Pod)-[r15]->(n6:Node)-[r16*1..2]->(g) WHERE p6.${t} = "${str}" AND (NOT TYPE(r15) IN ['RUNNING_ON_SRIOV', 'RUNNING_ON_MACVLAN', 'RUNNING_ON_BR']) AND NONE(rel IN r16 WHERE TYPE(rel) IN ['CONNECTED_TO_SRIOV', 'CONNECTED_TO_MACVLAN', 'CONNECTED_TO_BR'])
             RETURN *
         `;
     }

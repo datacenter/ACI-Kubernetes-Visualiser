@@ -141,13 +141,16 @@
                               {% if asnPresent %}
                                  <a id="OnlyBgpPeers" onclick="draw_only_bgp_peers()">BGP Peers</a>
                               {% endif %}
-                              {% if sriov or macvlan %}
+                              {% if sriov or macvlan or bridge %}
                                  <a id="OnlyPrimarylinks" onclick="draw_only_primary_links()">Primary Links</a>
                                  {% if sriov %}
                                     <a id="OnlySriovlinks" onclick="draw_only_sriov_links()">SRIOV Links</a>
                                  {% endif %}
                                  {% if macvlan %}
                                     <a id="OnlyMacvlanlinks" onclick="draw_only_macvlan_links()">MacVlan Links</a>
+                                 {% endif %}
+                                 {% if bridge %}
+                                    <a id="OnlyBridgelinks" onclick="draw_only_bridge_links()">Bridge Links</a>
                                  {% endif %}
                               {% endif %}
                               <div class="dropdown__divider"></div>
@@ -526,7 +529,7 @@
       <!-- End Main Content -->
 
    </div>
-   
+
    <script src="./assets/cui-2.0.0/js/styleguide.js"></script>
    <script src="./assets/cui-2.0.0/js/neovis.js"></script>
    <script src="./assets/cui-2.0.0/js/vkaci-table.js"></script>
@@ -563,8 +566,8 @@
          if(!event.inputType) $("#podBttn").click();
       });
 
-      document.getElementById('input-label-filter').addEventListener('input', function (event) {
-         if(!event.inputType) label_values();
+      document.getElementById('input-label-filter').addEventListener('change', function (event) {
+         label_values();
       });
 
    </script>

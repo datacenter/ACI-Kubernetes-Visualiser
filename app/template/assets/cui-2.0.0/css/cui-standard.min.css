@@ -8243,7 +8243,7 @@ body.cui .dropdown {
   outline: none; }
   body.cui .dropdown .dropdown__menu {
     list-style: none;
-    display: inline-flex;
+    display: block;
     flex-direction: column;
     opacity: 0;
     background: var(--cui-dropdown-background-color);
@@ -8255,7 +8255,7 @@ body.cui .dropdown {
     position: absolute;
     pointer-events: auto;
     top: calc(100% + 5px);
-    height: 0;
+    height: 50px;
     width: auto;
     min-width: var(--cui-dropdown-menu-min-width);
     max-height: var(--cui-dropdown-max-height);

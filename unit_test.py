@@ -312,14 +312,14 @@ class TestVkaciGraph(unittest.TestCase):
                                                    },
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                          'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [{
+                                          'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/3',
                                                      'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
                     'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
                                            'labels': {'app': 'guestbook'}}]}}
 
@@ -338,14 +338,14 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
-                                          'node_leaf_sec_iface_conn': [{
+                                          'node_leaf_sriov_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/3',
                                                      'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'CiscoLabs5': {'Description': 'Cisco '
                                                                         'version '
@@ -390,14 +390,14 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
-                                          'node_leaf_sec_iface_conn': [{
+                                          'node_leaf_sriov_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/3',
                                                      'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {},
                                           'node_ip': '192.168.1.2',
@@ -438,14 +438,14 @@ class TestVkaciGraph(unittest.TestCase):
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
-                                           'node_leaf_sec_iface_conn': [{
+                                           'node_leaf_sriov_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/3',
                                                      'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'esxi4.cam.ciscolabs.com': {'Description': '',
                                                                         'switches': {'leaf-204': set()}}},
@@ -719,11 +719,11 @@ class TestVkaciGraph(unittest.TestCase):
                                                         'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}}
                                                         },
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [{
+                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
                                                             'switch_name': 'leaf-101',
                                                             'switch_interface': 'eth1/3',
                                                             'node_iface': 'PF-ens1f2'
-                                                            }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}], 'mac': 'MOCKMO1C'}},
+                                                            }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}], 'mac': 'MOCKMO1C'}},
                             'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
                                                 'labels': {'app': 'guestbook'}}]}}
 
@@ -786,10 +786,10 @@ class TestVkaciGraph(unittest.TestCase):
                                                         'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
                                                         },
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [{
+                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
                                                      'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
@@ -838,14 +838,14 @@ class TestVkaciGraph(unittest.TestCase):
                                                         'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
                                                         },
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [{
+                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
                                                             'switch_name': 'leaf-101',
                                                             'switch_interface': 'eth1/3',
                                                             'node_iface': 'PF-ens1f2'
-                                                            }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                            }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
                                                             'switch_name': 'leaf-101',
                                                             'switch_interface': 'eth1/3',
                                                             'node_iface': 'PF-ens1f2'
@@ -898,14 +898,14 @@ class TestVkaciGraph(unittest.TestCase):
                                                         'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'macvlan', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
                                                         },
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [{
+                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
                                                             'switch_name': 'leaf-101',
                                                             'switch_interface': 'eth1/3',
                                                             'node_iface': 'PF-ens1f2'
-                                                            }], 'node_pod_sec_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_ter_iface_conn': [{
+                                                            }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
                                                      'switch_name': 'leaf-101',
                                                      'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_ter_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
+                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
                                                             'switch_name': 'leaf-101',
                                                             'switch_interface': 'eth1/3',
                                                             'node_iface': 'PF-ens1f2'
@@ -966,7 +966,7 @@ class TestVkaciGraph(unittest.TestCase):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
                                                 'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
+                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
                             'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
                                                 'labels': {'app': 'guestbook'}}]}}
 
@@ -1020,7 +1020,7 @@ class TestVkaciGraph(unittest.TestCase):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
                                                 'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
                                                 'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sec_iface_conn': [], 'node_pod_sec_iface_conn': [], 'node_leaf_ter_iface_conn': [], 'node_pod_ter_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
+                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
                             'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
                                                 'labels': {'app': 'guestbook'}}]}}
 
