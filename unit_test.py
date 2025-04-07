@@ -12,7 +12,7 @@ nfna = {
     "items": [{
         "spec": {
             "aciTopology": {
-                "ens1f2" : 
+                "ens1f2":
                     {
                         "fabricLink": [
                             "abc/def/node-101/[eth1/3]"
@@ -33,14 +33,14 @@ nfna = {
             },
             "primaryCni": "sriov"
         },
-        "metadata" : {
-            "name" : "sriov"
+        "metadata": {
+            "name": "sriov"
         }
     },
-    {
+        {
         "spec": {
             "aciTopology": {
-                "bond1" : 
+                "bond1":
                     {
                         "fabricLink": [
                             "abc/def/node-101/[eth1/37]"
@@ -61,8 +61,35 @@ nfna = {
             },
             "primaryCni": "macvlan"
         },
-        "metadata" : {
-            "name" : "macvlan"
+        "metadata": {
+            "name": "macvlan"
+        }
+    }, {
+        "spec": {
+            "aciTopology": {
+                "br1":
+                    {
+                        "fabricLink": [
+                            "abc/def/node-101/[eth1/38]"
+                        ],
+                        "pods": [
+                            {
+                                "localIface": "pod111111",
+                                "podRef": {
+                                    "name": "bridge-pod"
+                                }
+                            }
+                        ]
+                    }
+            },
+            "nodeName": "1234abc",
+            "networkRef": {
+                "name": "bridge-net1"
+            },
+            "primaryCni": "bridge"
+        },
+        "metadata": {
+            "name": "bridge"
         }
     }]
 }
@@ -73,7 +100,7 @@ pods = [
             host_ip="192.168.1.2", pod_ip="192.158.1.3"
         ),
         metadata=client.V1ObjectMeta(
-            name="dateformat", namespace="dockerimage", labels={"guest":"frontend"}
+            name="dateformat", namespace="dockerimage", labels={"guest": "frontend"}
         ),
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[]
@@ -88,41 +115,52 @@ pods = [
         ),
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[client.V1Container(name="kube-router",
-                args=[
-                    "--run-router=true",
-                    "--run-firewall=true",
-                    "--run-service-proxy=true",
-                    "--bgp-graceful-restart=true",
-                    "--bgp-holdtime=3s",
-                    "--kubeconfig=/var/lib/kube-router/kubeconfig",
-                    "--cluster-asn=56002",
-                    "--advertise-external-ip",
-                    "--advertise-loadbalancer-ip",
-                    "--advertise-pod-cidr=true",
-                    "--enable-ibgp=false",
-                    "--enable-overlay=false",
-                    "--enable-pod-egress=false",
-                    "--override-nexthop=true"
-                ])]
-            )
+                                                                args=[
+                                                                    "--run-router=true",
+                                                                    "--run-firewall=true",
+                                                                    "--run-service-proxy=true",
+                                                                    "--bgp-graceful-restart=true",
+                                                                    "--bgp-holdtime=3s",
+                                                                    "--kubeconfig=/var/lib/kube-router/kubeconfig",
+                                                                    "--cluster-asn=56002",
+                                                                    "--advertise-external-ip",
+                                                                    "--advertise-loadbalancer-ip",
+                                                                    "--advertise-pod-cidr=true",
+                                                                    "--enable-ibgp=false",
+                                                                    "--enable-overlay=false",
+                                                                    "--enable-pod-egress=false",
+                                                                    "--override-nexthop=true"
+                                                                ])]
+        )
     ),
-     client.V1Pod(
+    client.V1Pod(
         status=client.V1PodStatus(
             host_ip="192.168.1.2", pod_ip="192.158.1.4"
         ),
         metadata=client.V1ObjectMeta(
-            name="sriov-pod", namespace="dockerimage", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+            name="sriov-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
         ),
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[]
         )
     ),
-     client.V1Pod(
+    client.V1Pod(
         status=client.V1PodStatus(
             host_ip="192.168.1.2", pod_ip="192.158.1.6"
         ),
         metadata=client.V1ObjectMeta(
-            name="macvlan-pod", namespace="dockerimage", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
+            name="macvlan-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
+        ),
+        spec=client.V1PodSpec(
+            node_name="1234abc", containers=[]
+        )
+    ),
+    client.V1Pod(
+        status=client.V1PodStatus(
+            host_ip="192.168.1.2", pod_ip="192.158.1.7"
+        ),
+        metadata=client.V1ObjectMeta(
+            name="br-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}])}
         ),
         spec=client.V1PodSpec(
             node_name="1234abc", containers=[]
@@ -134,8 +172,8 @@ pods = [
 nodes = [
     client.V1Node(
         metadata=client.V1ObjectMeta(
-            name="1234abc", labels = {"app":"redis"}
-        )    
+            name="1234abc", labels={"app": "redis"}
+        )
     )
 ]
 
@@ -143,18 +181,18 @@ nodes = [
 services = [
     client.V1Service(
         metadata=client.V1ObjectMeta(
-            name="example service", namespace="appx", labels = {"app":"guestbook"}
+            name="example service", namespace="appx", labels={"app": "guestbook"}
         ),
         spec=client.V1ServiceSpec(
-            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"], 
+            cluster_ip="192.168.25.5", external_i_ps=["192.168.5.1"],
         ),
         status=client.V1ServiceStatus(
-        load_balancer=client.V1LoadBalancerStatus(
-            ingress=[
-                client.V1LoadBalancerIngress(ip='192.168.5.2')
+            load_balancer=client.V1LoadBalancerStatus(
+                ingress=[
+                    client.V1LoadBalancerIngress(ip='192.168.5.2')
                 ]
+            )
         )
-    )
     )
 ]
 
@@ -219,12 +257,15 @@ def create_bgpPeer():
     b.dn = "topology/pod-1/node-204"
     return b
 
-def create_nextHop(route:str, next_hop:str, tag = "56001"):
+
+def create_nextHop(route: str, next_hop: str, tag="56001"):
     h = Expando()
-    h.dn = "topology/pod-1/node-204/sys/uribv4/dom-calico1:vrf/db-rt/rt-["+route+"]/nh-[bgp-65002]-["+next_hop+"/32]-[unspecified]-[calico1:vrf]"
+    h.dn = "topology/pod-1/node-204/sys/uribv4/dom-calico1:vrf/db-rt/rt-[" + \
+        route+"]/nh-[bgp-65002]-["+next_hop+"/32]-[unspecified]-[calico1:vrf]"
     h.addr = next_hop+"/32"
     h.tag = tag
     return h
+
 
 class ApicMethodsMock(ApicMethodsResolve):
     def __init__(self) -> None:
@@ -240,7 +281,7 @@ class ApicMethodsMock(ApicMethodsResolve):
         create_nextHop("192.168.5.1/32", "192.168.2.5"),
         create_nextHop("192.168.5.1/32", "192.168.1.2"),
         create_nextHop("0.0.0.0/0", "10.4.68.5", "65002")
-        ]
+    ]
 
     def get_fvcep(self, apic: Node, aci_vrf: str):
         return self.eps
@@ -257,15 +298,16 @@ class ApicMethodsMock(ApicMethodsResolve):
     def get_bgppeerentry(self, apic: Node, vrf: str, node_ip: str):
         return self.bgpPeers
 
-    def get_all_nexthops(self, apic:Node, dn:str):
+    def get_all_nexthops(self, apic: Node, dn: str):
         return self.nextHops
-    
-    def path_fixup(self, apic:Node, path):
+
+    def path_fixup(self, apic: Node, path):
         return path
-    
-    def get_overlay_ip_to_switch_map(self, apic:Node):
-        nodes = {"192.168.2.5":"leaf 203"}
+
+    def get_overlay_ip_to_switch_map(self, apic: Node):
+        nodes = {"192.168.2.5": "leaf 203"}
         return nodes
+
 
 @patch('kubernetes.config.load_incluster_config', MagicMock(return_value=None))
 @patch('pyaci.Node.useX509CertAuth', MagicMock(return_value=None))
@@ -300,38 +342,45 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertIsNone(build.aci_vrf)
         self.assertEqual(len(build.env.apic_ip), 0)
 
-
     def test_valid_topology(self):
         """Test that a valid topology is created"""
         # Arrange
         expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}},
+                                          'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}},
                                                    'kube-router-xfgr': {'ip': '192.168.1.2', 'primary_iface': '', 'ns': 'kube-system', 'labels': {}, 'other_ifaces': {}, 'annotations': {}},
-                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
-                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
+                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}},
+                                                   'br-pod': {'ip': '192.158.1.7', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
                                                    },
                                           'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':
                                                                                                          {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
                                           'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/3',
-                                                     'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
-                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/3',
+                                              'node_iface': 'PF-ens1f2'
+                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                          'node_leaf_macvlan_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/37',
+                                              'node_iface': 'bond1'}],
+                                          'node_leaf_br_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/38',
+                                              'node_iface': 'br1'}],
+                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                          'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}], 'mac': 'MOCKMO1C'}},
+                    'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
                                            'labels': {'app': 'guestbook'}}]}}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
         # Act
         result = build.update()
-    
+
         # Assert
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
-
 
     def test_valid_topology_cdpn(self):
         """Test that a valid topology is created with cdp neighbours"""
@@ -339,13 +388,20 @@ class TestVkaciGraph(unittest.TestCase):
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
                                           'node_leaf_sriov_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/3',
-                                                     'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/3',
+                                              'node_iface': 'PF-ens1f2'
+                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/37',
+                                              'node_iface': 'bond1'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                          'node_leaf_br_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/38',
+                                              'node_iface': 'br1'}],
+                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                          'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'CiscoLabs5': {'Description': 'Cisco '
                                                                         'version '
@@ -357,21 +413,21 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   'labels': {'guest': 'frontend'},
                                                                   'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'dockerimage'},
-                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
-                                                                  'primary_iface': '',
-                                                                  'labels': {},
-                                                                  'other_ifaces': {}, 'annotations': {},
-                                                                  'ns': 'kube-system'},
-                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
-                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
-
-                                                                  }}},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                        'primary_iface': '',
+                                                                        'labels': {},
+                                                                        'other_ifaces': {}, 'annotations': {},
+                                                                        'ns': 'kube-system'},
+                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}},
+                                                   'br-pod': {'ip': '192.158.1.7', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
+                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'load_balancer_ip': '192.168.5.2',
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
-                                           'ns':'appx'}]}}
+                                           'ns': 'appx'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(False)]
@@ -384,20 +440,26 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-
     def test_valid_topology_no_neighbours(self):
         """Test that a valid topology is created with no neighbours"""
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
                                           'node_leaf_sriov_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/3',
-                                                     'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/3',
+                                              'node_iface': 'PF-ens1f2'
+                                          }],
+                                          'node_leaf_br_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/38',
+                                              'node_iface': 'br1'}],
+                                          'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/37',
+                                              'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                          'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {},
                                           'node_ip': '192.168.1.2',
@@ -407,19 +469,20 @@ class TestVkaciGraph(unittest.TestCase):
                                                                   'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'dockerimage'},
                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
-                                                                  'primary_iface': '',
-                                                                  'labels': {},
-                                                                  'other_ifaces': {}, 'annotations': {},
-                                                                  'ns': 'kube-system'},
-                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
-                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
-                                                                  }}},
+                                                                        'primary_iface': '',
+                                                                        'labels': {},
+                                                                        'other_ifaces': {}, 'annotations': {},
+                                                                        'ns': 'kube-system'},
+                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}},
+                                                   'br-pod': {'ip': '192.158.1.7', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
+                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'load_balancer_ip': '192.168.5.2',
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
-                                           'ns':'appx'}]}}
+                                           'ns': 'appx'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = []
@@ -432,43 +495,50 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-
     def test_valid_topology_no_desc_neighbour(self):
         """Test that a neighbour with no description will not crash"""
         # Arrange
         expected = {'nodes': {'1234abc': {'bgp_peers': {'leaf-204': {'prefix_count': 2}},
                                           'labels': {'app': 'redis'},
-                                           'node_leaf_sriov_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/3',
-                                                     'node_iface': 'PF-ens1f2'
-                                                     }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}],
+                                          'node_leaf_sriov_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/3',
+                                              'node_iface': 'PF-ens1f2'
+                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/37',
+                                              'node_iface': 'bond1'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                          'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
+                                          'node_leaf_br_iface_conn': [{
+                                              'switch_name': 'leaf-101',
+                                              'switch_interface': 'eth1/38',
+                                              'node_iface': 'br1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'esxi4.cam.ciscolabs.com': {'Description': '',
-                                                                        'switches': {'leaf-204': set()}}},
+                                                                                     'switches': {'leaf-204': set()}}},
                                           'node_ip': '192.168.1.2',
                                           'pods': {'dateformat': {'ip': '192.158.1.3',
                                                                   'primary_iface': '',
                                                                   'labels': {'guest': 'frontend'},
                                                                   'other_ifaces': {}, 'annotations': {},
                                                                   'ns': 'dockerimage'},
-                                                    'kube-router-xfgr': {'ip': '192.168.1.2',
-                                                                  'primary_iface': '',
-                                                                  'labels': {},
-                                                                  'other_ifaces': {}, 'annotations': {},
-                                                                  'ns': 'kube-system'},
-                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
-                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
-                                                                  }}},
+                                                   'kube-router-xfgr': {'ip': '192.168.1.2',
+                                                                        'primary_iface': '',
+                                                                        'labels': {},
+                                                                        'other_ifaces': {}, 'annotations': {},
+                                                                        'ns': 'kube-system'},
+                                                   'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                   'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}},
+                                                   'br-pod': {'ip': '192.158.1.7', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
+                                                   }}},
                     'services': {'appx': [{'cluster_ip': '192.168.25.5',
                                            'external_i_ps': ['192.168.5.1'],
                                            'load_balancer_ip': '192.168.5.2',
                                            'labels': {'app': 'guestbook'},
                                            'name': 'example service',
-                                           'ns':'appx'}]}}
+                                           'ns': 'appx'}]}}
 
         mock = ApicMethodsMock()
         mock.lldps = [create_lldp_neighbour(desc=False)]
@@ -482,7 +552,6 @@ class TestVkaciGraph(unittest.TestCase):
         self.assertDictEqual(result, expected)
         self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-
     def test_leaf_table(self):
         """Test that a leaf table is correctly created"""
         # Arrange
@@ -491,12 +560,17 @@ class TestVkaciGraph(unittest.TestCase):
                                          'ip': '192.158.1.3',
                                                     'ns': 'dockerimage',
                                                     'value': 'dateformat'},
-                                                    {'image': 'pod.svg',
-                                         'ip': '192.168.1.2',
+                                                   {'image': 'pod.svg',
+                                                    'ip': '192.168.1.2',
                                                     'ns': 'kube-system',
                                                     'value': 'kube-router-xfgr'},
-                                                    {'value': 'sriov-pod', 'ip': '192.158.1.4', 'ns': 'dockerimage', 'image': 'pod.svg'},
-                                                    {'value': 'macvlan-pod', 'ip': '192.158.1.6', 'ns': 'dockerimage', 'image': 'pod.svg'}],
+                                                   {'value': 'sriov-pod', 'ip': '192.158.1.4',
+                                                    'ns': 'dockerimage', 'image': 'pod.svg'},
+                                                   {'value': 'macvlan-pod', 'ip': '192.158.1.6',
+                                                       'ns': 'dockerimage', 'image': 'pod.svg'},
+                                                   {'value': 'br-pod', 'ip': '192.158.1.7',
+                                                       'ns': 'dockerimage', 'image': 'pod.svg'}
+                                                   ],
                                'image': 'node.svg',
                                           'ip': '192.168.1.2',
                                           'ns': '',
@@ -526,16 +600,15 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-
     def test_bgp_table(self):
         """Test that a bgp table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
-        'data': [{'value': 'BGP Peering', 'image': 'bgp.png', 
-        'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, {'value': 'Prefixes', 'image': 'ip.png', 
-        'data': [{'value': '0.0.0.0/0', 'image': 'route.png', 'k8s_route': 'False', 'ns': '', 'svc': '', 
-        'data': [{'value': '&lt;No Hostname&gt;', 'ip': '10.4.68.5', 'image': 'Nok8slogo.png'}]}, {'value': '192.168.5.1/32', 'image': 'route.png', 'k8s_route': 'True', 'ns': 'appx', 'svc': 'example service', 
-        'data': [{'value': 'leaf 203', 'ip': '192.168.2.5', 'image': 'switch.png'}, {'value': '1234abc', 'ip': '192.168.1.2', 'image': 'node.svg'}]}]}]}]}
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png',
+                                           'data': [{'value': 'BGP Peering', 'image': 'bgp.png',
+                                                     'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg'}]}, {'value': 'Prefixes', 'image': 'ip.png',
+                                                                                                                                           'data': [{'value': '0.0.0.0/0', 'image': 'route.png', 'k8s_route': 'False', 'ns': '', 'svc': '',
+                                                                                                                                                     'data': [{'value': '&lt;No Hostname&gt;', 'ip': '10.4.68.5', 'image': 'Nok8slogo.png'}]}, {'value': '192.168.5.1/32', 'image': 'route.png', 'k8s_route': 'True', 'ns': 'appx', 'svc': 'example service',
+                                                                                                                                                                                                                                                'data': [{'value': 'leaf 203', 'ip': '192.168.2.5', 'image': 'switch.png'}, {'value': '1234abc', 'ip': '192.168.1.2', 'image': 'node.svg'}]}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -547,14 +620,13 @@ class TestVkaciGraph(unittest.TestCase):
         # Assert
         self.assertDictEqual(result, expected)
 
-
     def test_node_table(self):
         """Test that a node table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
-        'data': [{'value': 'esxi4.cam.ciscolabs.com', 'interface': ['vmxnic1-eth1/1'], 'ns': '', 'image': 'esxi.png', 
-        'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg', 
-        'data': [{'value': 'app', 'label_value': 'redis', 'image': 'label.svg'}]}]}]}]}
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png',
+                                           'data': [{'value': 'esxi4.cam.ciscolabs.com', 'interface': ['vmxnic1-eth1/1'], 'ns': '', 'image': 'esxi.png',
+                                                     'data': [{'value': '1234abc', 'ip': '192.168.1.2', 'ns': '', 'image': 'node.svg',
+                                                               'data': [{'value': 'app', 'label_value': 'redis', 'image': 'label.svg'}]}]}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -562,21 +634,28 @@ class TestVkaciGraph(unittest.TestCase):
         # Act
         build.update()
         result = table.get_node_table()
-        
+
         # Assert
         self.assertDictEqual(result, expected)
-
 
     def test_pod_table(self):
         """Test that a pod table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png', 
-        'data': [{'value': 'dateformat', 'ip': '192.158.1.3','ns': 'dockerimage', 'image': 'pod.svg', 
-        'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]},
-                {'value': 'kube-router-xfgr', 'ip': '192.168.1.2','ns': 'kube-system', 'image': 'pod.svg', 
-        'data': []},
-        {'value': 'sriov-pod', 'ip': '192.158.1.4', 'ns': 'dockerimage', 'image': 'pod.svg', 'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]}, {'value': 'macvlan-pod', 'ip': '192.158.1.6', 'ns': 'dockerimage', 'image': 'pod.svg', 'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]}
-        ]}]}
+        expected = {'parent': 0, 'data': [{'value': 'leaf-204', 'ip': '', 'image': 'switch.png',
+                                           'data': [{'value': 'dateformat', 'ip': '192.158.1.3', 'ns': 'dockerimage', 'image': 'pod.svg',
+                                                     'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]},
+                                                    {'value': 'kube-router-xfgr', 'ip': '192.168.1.2', 'ns': 'kube-system', 'image': 'pod.svg',
+                                                     'data': []},
+                                                    {
+                                                        'value': 'sriov-pod', 'ip': '192.158.1.4', 'ns': 'dockerimage', 'image': 'pod.svg', 'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]
+                                           },
+                                               {
+                                                        'value': 'macvlan-pod', 'ip': '192.158.1.6', 'ns': 'dockerimage', 'image': 'pod.svg', 'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]
+                                           },
+                                               {
+                                                        'value': 'br-pod', 'ip': '192.158.1.7', 'ns': 'dockerimage', 'image': 'pod.svg', 'data': [{'value': 'guest', 'label_value': 'frontend', 'image': 'label.svg'}]
+                                           }
+                                           ]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -584,17 +663,16 @@ class TestVkaciGraph(unittest.TestCase):
         # Act
         build.update()
         result = table.get_pod_table()
-       
+
         # Assert
         self.assertDictEqual(result, expected)
-
 
     def test_services_table(self):
         """Test that a services table is correctly created"""
         # Arrange
-        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'],'load_balancer_ip': '192.168.5.2', 
-        'labels': {'app': 'guestbook'}, 'value': 'example service', 'ns': 'appx', 
-        'image': 'svc.svg', 'data': [{'value': 'app', 'label_value': 'guestbook', 'image': 'label.svg'}]}]}
+        expected = {'parent': 0, 'data': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2',
+                                           'labels': {'app': 'guestbook'}, 'value': 'example service', 'ns': 'appx',
+                                           'image': 'svc.svg', 'data': [{'value': 'app', 'label_value': 'guestbook', 'image': 'label.svg'}]}]}
 
         build = VkaciBuilTopology(
             VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -602,10 +680,9 @@ class TestVkaciGraph(unittest.TestCase):
         # Act
         build.update()
         result = table.get_services_table()
-        
+
         # Assert
         self.assertDictEqual(result, expected)
-
 
     def assert_cluster_as(self, expected):
         build = VkaciBuilTopology(
@@ -614,12 +691,10 @@ class TestVkaciGraph(unittest.TestCase):
         asn = build.get_cluster_as()
         self.assertEqual(asn, expected)
 
-
     def test_calico_bgp_as_detection(self):
         """Test that the bgp AS is detected with calico"""
         """This is the default used on other tests but better be explicit so no one thinks it hasn't been tested"""
         self.assert_cluster_as('56001')
-
 
     @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=pods[1]))
     def test_kube_router_bgp_as_detection(self):
@@ -627,15 +702,14 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
             self.assert_cluster_as('56002')
 
-
     # AS numbers are intentionally repeated for testing.
     cilium_policies = {
         "items": [
-            {"spec": {"virtualRouters": [
-                {'localASN': 56003}, {'localASN': 56003}]}},
-            {"spec": {"virtualRouters": [{'localASN': 56003}]}}
+            {"spec": {"bgpInstances": [
+                {'localASN': 56003}, {'localASN': 56003}]}}
         ]
     }
+
     @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
     @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=cilium_policies))
     def test_cilium_bgp_as_detection(self):
@@ -643,22 +717,20 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
             self.assert_cluster_as('56003')
 
-
     # Different AS numbers in Cilium is not supported.
     invalid_cilium_policies = {
         "items": [
-            {"spec": {"virtualRouters": [
-                {'localASN': 56003}, {'localASN': 56004}]}},
-            {"spec": {"virtualRouters": [{'localASN': 56005}]}}
+            {"spec": {"bgpInstances": [
+                {'localASN': 56003}, {'localASN': 56004}]}}
         ]
     }
+
     @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
     @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=invalid_cilium_policies))
     def test_invalid_cilium_bgp_as_detection(self):
         """Test that the bgp AS is not detected with invalid cilium config"""
         with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
             self.assert_cluster_as(None)
-
 
     @patch('kubernetes.client.CoreV1Api.read_namespaced_pod', MagicMock(return_value=None))
     @patch('app.graph.VkaciBuilTopology.list_cilium_custom_objects', MagicMock(return_value=[]))
@@ -667,7 +739,6 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('app.graph.VkaciBuilTopology.get_calico_custom_object', MagicMock(return_value={})):
             self.assert_cluster_as(None)
 
-
     def test_sriov(self):
         sriov_pod = [
             client.V1Pod(
@@ -675,8 +746,9 @@ class TestVkaciGraph(unittest.TestCase):
                     host_ip="192.168.1.2", pod_ip="192.158.1.4"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="sriov-pod", namespace="dockerimage", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+                    name="sriov-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
                 ),
+
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
                 )
@@ -686,7 +758,7 @@ class TestVkaciGraph(unittest.TestCase):
             "items": [{
                 "spec": {
                     "aciTopology": {
-                        "ens1f2" : 
+                        "ens1f2":
                             {
                                 "fabricLink": [
                                     "abc/def/node-101/[eth1/3]"
@@ -707,25 +779,32 @@ class TestVkaciGraph(unittest.TestCase):
                     },
                     "primaryCni": "sriov"
                 },
-                "metadata" : {
-                    "name" : "sriov"
+                "metadata": {
+                    "name": "sriov"
                 }
             }]
         }
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=sriov_pod))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=sriov_nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {
-                                                        'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}}
-                                                        },
-                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
-                                                            'switch_name': 'leaf-101',
-                                                            'switch_interface': 'eth1/3',
-                                                            'node_iface': 'PF-ens1f2'
-                                                            }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}], 'mac': 'MOCKMO1C'}},
-                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
-                                                'labels': {'app': 'guestbook'}}]}}
+                                                  'pods': {
+                                                      'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}}
+                                                  },
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/3',
+                                                      'node_iface': 'PF-ens1f2'
+                                                  }],
+                                                  'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                                  'node_leaf_macvlan_iface_conn': [],
+                                                  'node_pod_macvlan_iface_conn': [],
+                                                  'node_pod_br_iface_conn': [],
+                                                  'node_leaf_br_iface_conn': [],
+                                                  'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}],
+                                                  'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
 
                 build = VkaciBuilTopology(
                     VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -737,12 +816,12 @@ class TestVkaciGraph(unittest.TestCase):
 
     def test_macvlan(self):
         macvlan_pod = [
-              client.V1Pod(
+            client.V1Pod(
                 status=client.V1PodStatus(
                     host_ip="192.168.1.2", pod_ip="192.158.1.6"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="macvlan-pod", namespace="dockerimage", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
+                    name="macvlan-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -753,7 +832,7 @@ class TestVkaciGraph(unittest.TestCase):
             "items": [{
                 "spec": {
                     "aciTopology": {
-                        "bond1" : 
+                        "bond1":
                             {
                                 "fabricLink": [
                                     "abc/def/node-101/[eth1/37]"
@@ -774,27 +853,35 @@ class TestVkaciGraph(unittest.TestCase):
                     },
                     "primaryCni": "macvlan"
                 },
-                "metadata" : {
-                    "name" : "macvlan"
+                "metadata": {
+                    "name": "macvlan"
                 }
             }]
         }
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=macvlan_pod))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=macvlan_nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {
-                                                        'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
-                                                        },
-                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
-                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
-                                                'labels': {'app': 'guestbook'}}]}}
+                                                  'pods': {
+                                                      'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
+                                                  },
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'},
+                                                  'node_leaf_sriov_iface_conn': [],
+                                                  'node_pod_sriov_iface_conn': [],
+                                                  'node_pod_br_iface_conn': [],
+                                                  'node_leaf_macvlan_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/37',
+                                                      'node_iface': 'bond1'}],
+                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                                  'node_leaf_br_iface_conn': [],
+                                                  'node_leaf_all_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/37',
+                                                      'node_iface': 'bond1'}],
+                                                  'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
 
                 build = VkaciBuilTopology(
                     VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -804,14 +891,25 @@ class TestVkaciGraph(unittest.TestCase):
                 self.assertDictEqual(result, expected)
                 self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-    def test_sriov_macvlan_only(self):
+    def test_sriov_macvlan_br_only(self):
         pods = [
             client.V1Pod(
                 status=client.V1PodStatus(
                     host_ip="192.168.1.2", pod_ip="192.158.1.4"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="sriov-pod", namespace="dockerimage", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+                    name="sriov-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+                ),
+                spec=client.V1PodSpec(
+                    node_name="1234abc", containers=[]
+                )
+            ),
+            client.V1Pod(
+                status=client.V1PodStatus(
+                    host_ip="192.168.1.2", pod_ip="192.158.1.8"
+                ),
+                metadata=client.V1ObjectMeta(
+                    name="br-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}])}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -822,7 +920,7 @@ class TestVkaciGraph(unittest.TestCase):
                     host_ip="192.168.1.2", pod_ip="192.158.1.6"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="macvlan-pod", namespace="dockerimage", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
+                    name="macvlan-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -833,28 +931,40 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {
-                                                         'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
-                                                        'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
-                                                        },
-                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
-                                                            'switch_name': 'leaf-101',
-                                                            'switch_interface': 'eth1/3',
-                                                            'node_iface': 'PF-ens1f2'
-                                                            }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
-                                                            'switch_name': 'leaf-101',
-                                                            'switch_interface': 'eth1/3',
-                                                            'node_iface': 'PF-ens1f2'
-                                                            },{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
-                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
-                                                'labels': {'app': 'guestbook'}}]}}
+                                                  'pods': {
+                                                      'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                      'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}},
+                                                      'br-pod': {'ip': '192.158.1.8', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
+                                                  },
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/3',
+                                                      'node_iface': 'PF-ens1f2'
+                                                  }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                                      'node_leaf_macvlan_iface_conn': [{
+                                                          'switch_name': 'leaf-101',
+                                                          'switch_interface': 'eth1/37',
+                                                          'node_iface': 'bond1'}],
+                                                      'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+
+                                                  'node_leaf_br_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/38',
+                                                      'node_iface': 'br1'}],
+                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                                  'node_leaf_all_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/3',
+                                                      'node_iface': 'PF-ens1f2'
+                                                  }, {
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/37',
+                                                      'node_iface': 'bond1'},
+                                                      {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
+                                                  'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
 
                 build = VkaciBuilTopology(
                     VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -864,14 +974,25 @@ class TestVkaciGraph(unittest.TestCase):
                 self.assertDictEqual(result, expected)
                 self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
 
-    def test_sriov_macvlan_only_diff_ns(self):
+    def test_sriov_macvlan_br_only_diff_ns(self):
         pods = [
             client.V1Pod(
                 status=client.V1PodStatus(
                     host_ip="192.168.1.2", pod_ip="192.158.1.4"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="sriov-pod", namespace="sriov", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+                    name="sriov-pod", namespace="sriov", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}])}
+                ),
+                spec=client.V1PodSpec(
+                    node_name="1234abc", containers=[]
+                )
+            ),
+            client.V1Pod(
+                status=client.V1PodStatus(
+                    host_ip="192.168.1.2", pod_ip="192.158.1.8"
+                ),
+                metadata=client.V1ObjectMeta(
+                    name="br-pod", namespace="bridge", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}])}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -882,7 +1003,7 @@ class TestVkaciGraph(unittest.TestCase):
                     host_ip="192.168.1.2", pod_ip="192.158.1.6"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="macvlan-pod", namespace="macvlan", labels={"guest":"frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
+                    name="macvlan-pod", namespace="macvlan", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}])}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -893,28 +1014,40 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {
-                                                         'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '','ns': 'sriov', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
-                                                        'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '','ns': 'macvlan', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status':'[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}}
-                                                        },
-                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
-                                                            'switch_name': 'leaf-101',
-                                                            'switch_interface': 'eth1/3',
-                                                            'node_iface': 'PF-ens1f2'
-                                                            }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}], 'node_leaf_all_iface_conn': [{
-                                                            'switch_name': 'leaf-101',
-                                                            'switch_interface': 'eth1/3',
-                                                            'node_iface': 'PF-ens1f2'
-                                                            },{
-                                                     'switch_name': 'leaf-101',
-                                                     'switch_interface': 'eth1/37',
-                                                     'node_iface': 'bond1'}], 'mac': 'MOCKMO1C'}},
-                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
-                                                'labels': {'app': 'guestbook'}}]}}
+                                                  'pods': {
+                                                      'sriov-pod': {'ip': '192.158.1.4', 'primary_iface': '', 'ns': 'sriov', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'sriov-net1': 'ens1f2v12'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.5"], "name": "sriov-net1", "interface": "ens1f2v12"}]'}},
+                                                      'macvlan-pod': {'ip': '192.158.1.6', 'primary_iface': '', 'ns': 'macvlan', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'macvlan-net1': 'net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.7"], "name": "macvlan-net1", "interface": "net1"}]'}},
+                                                      'br-pod': {'ip': '192.158.1.8', 'primary_iface': '', 'ns': 'bridge', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
+                                                  },
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/3',
+                                                      'node_iface': 'PF-ens1f2'
+                                                  }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                                      'node_leaf_macvlan_iface_conn': [{
+                                                          'switch_name': 'leaf-101',
+                                                          'switch_interface': 'eth1/37',
+                                                          'node_iface': 'bond1'}],
+                                                      'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+
+                                                  'node_leaf_br_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/38',
+                                                      'node_iface': 'br1'}],
+                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                                  'node_leaf_all_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/3',
+                                                      'node_iface': 'PF-ens1f2'
+                                                  }, {
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/37',
+                                                      'node_iface': 'bond1'},
+                                                      {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
+                                                  'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
 
                 build = VkaciBuilTopology(
                     VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -931,7 +1064,7 @@ class TestVkaciGraph(unittest.TestCase):
                     host_ip="192.168.1.2", pod_ip="192.158.1.3"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="dateformat", namespace="dockerimage", labels={"guest":"frontend"}
+                    name="dateformat", namespace="dockerimage", labels={"guest": "frontend"}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -942,7 +1075,7 @@ class TestVkaciGraph(unittest.TestCase):
             "items": [{
                 "spec": {
                     "aciTopology": {
-                        "ens1f2" : 
+                        "ens1f2":
                             {
                                 "fabricLink": [
                                     "abc/def/node-101/[eth1/3]"
@@ -955,8 +1088,8 @@ class TestVkaciGraph(unittest.TestCase):
                     },
                     "primaryCni": "sriov"
                 },
-                "metadata" : {
-                    "name" : "sriov"
+                "metadata": {
+                    "name": "sriov"
                 }
             }]
         }
@@ -964,11 +1097,11 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
-                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
-                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
-                                                'labels': {'app': 'guestbook'}}]}}
+                                                  'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_leaf_br_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_pod_br_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
 
                 build = VkaciBuilTopology(
                     VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -985,7 +1118,7 @@ class TestVkaciGraph(unittest.TestCase):
                     host_ip="192.168.1.2", pod_ip="192.158.1.3"
                 ),
                 metadata=client.V1ObjectMeta(
-                    name="dateformat", namespace="dockerimage", labels={"guest":"frontend"}
+                    name="dateformat", namespace="dockerimage", labels={"guest": "frontend"}
                 ),
                 spec=client.V1PodSpec(
                     node_name="1234abc", containers=[]
@@ -996,7 +1129,7 @@ class TestVkaciGraph(unittest.TestCase):
             "items": [{
                 "spec": {
                     "aciTopology": {
-                        "bond1" : 
+                        "bond1":
                             {
                                 "fabricLink": [
                                     "abc/def/node-101/[eth1/37]"
@@ -1009,8 +1142,8 @@ class TestVkaciGraph(unittest.TestCase):
                     },
                     "primaryCni": "macvlan"
                 },
-                "metadata" : {
-                    "name" : "macvlan"
+                "metadata": {
+                    "name": "macvlan"
                 }
             }]
         }
@@ -1018,11 +1151,11 @@ class TestVkaciGraph(unittest.TestCase):
         with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
             with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
                 expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
-                                                'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '','ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
-                                                'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
-                                                'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [], 'mac': 'MOCKMO1C'}},
-                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2','ns':'appx',
-                                                'labels': {'app': 'guestbook'}}]}}
+                                                  'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [], 'node_leaf_br_iface_conn': [], 'node_pod_br_iface_conn': [], 'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
 
                 build = VkaciBuilTopology(
                     VkaciEnvVariables(self.vars), ApicMethodsMock())
@@ -1031,6 +1164,61 @@ class TestVkaciGraph(unittest.TestCase):
                 # Assert
                 self.assertDictEqual(result, expected)
                 self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
+
+    def test_br_without_pod(self):
+        pods = [
+            client.V1Pod(
+                status=client.V1PodStatus(
+                    host_ip="192.168.1.2", pod_ip="192.158.1.3"
+                ),
+                metadata=client.V1ObjectMeta(
+                    name="dateformat", namespace="dockerimage", labels={"guest": "frontend"}
+                ),
+                spec=client.V1PodSpec(
+                    node_name="1234abc", containers=[]
+                )
+            )
+        ]
+        nfna = {
+            "items": [{
+                "spec": {
+                    "aciTopology": {
+                        "br1":
+                            {
+                                "fabricLink": [
+                                    "abc/def/node-101/[eth1/38]"
+                                ]
+                            }
+                    },
+                    "nodeName": "1234abc",
+                    "networkRef": {
+                        "name": "bridge-net1"
+                    },
+                    "primaryCni": "bridge"
+                },
+                "metadata": {
+                    "name": "bridge"
+                }
+            }]
+        }
+
+        with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=pods))):
+            with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=nfna)):
+                expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
+                                                  'pods': {'dateformat': {'ip': '192.158.1.3', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {}, 'annotations': {}}},
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':  {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'}, 'node_leaf_sriov_iface_conn': [], 'node_pod_sriov_iface_conn': [], 'node_leaf_macvlan_iface_conn': [], 'node_pod_macvlan_iface_conn': [], 'node_leaf_all_iface_conn': [], 'node_leaf_br_iface_conn': [], 'node_pod_br_iface_conn': [], 'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
+
+                build = VkaciBuilTopology(
+                    VkaciEnvVariables(self.vars), ApicMethodsMock())
+                # Act
+                result = build.update()
+                # Assert
+                self.assertDictEqual(result, expected)
+                self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
+
 
 if __name__ == '__main__':
     unittest.main()
