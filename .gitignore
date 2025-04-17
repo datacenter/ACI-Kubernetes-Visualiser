@@ -4,3 +4,4 @@ __pycache__/*
 my_values.yaml
 values_examples_local
 LocalTests
+app/import-annotations.py
