@@ -1,0 +1,27 @@
+apiVersion: v1
+entries:
+  neo4j-standalone:
+  - apiVersion: v1
+    appVersion: 4.4.6
+    created: "2025-04-17T06:36:29.338377778Z"
+    description: Neo4j is the world's leading graph database
+    digest: 5735789dd6c2ad6e1cfc17ee96a6596a79f7857c4cecf119db79639bac97a8f7
+    home: https://www.neo4j.com
+    icon: http://info.neo4j.com/rs/773-GON-065/images/neo4j_logo.png
+    keywords:
+    - graph
+    - database
+    - cypher
+    maintainers:
+    - email: bledi.feshti@neotechnology.com
+      name: bfeshti
+    - email: harshit.singhvi@neotechnology.com
+      name: harshitsinghvi22
+    name: neo4j-standalone
+    sources:
+    - https://github.com/neo4j/neo4j
+    - https://github.com/neo4j/docker-neo4j
+    urls:
+    - https://github.com/datacenter/ACI-Kubernetes-Visualiser/releases/download/neo4j-standalone-4.4.6/neo4j-standalone-4.4.6.tgz
+    version: 4.4.6
+generated: "2025-04-17T06:36:29.338387717Z"
