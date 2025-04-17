@@ -24,4 +24,18 @@ entries:
     urls:
     - https://github.com/datacenter/ACI-Kubernetes-Visualiser/releases/download/neo4j-standalone-4.4.6/neo4j-standalone-4.4.6.tgz
     version: 4.4.6
-generated: "2025-04-17T06:36:29.338387717Z"
+  vkaci:
+  - apiVersion: v2
+    appVersion: v2.1.0
+    created: "2025-04-17T06:42:33.801726404Z"
+    description: A Helm chart for VKACI
+    digest: a6a7b3a87352d6d3671be275850775119a9aa712bf61f0de64765881ca97a55f
+    maintainers:
+    - email: vkaci-tool@cisco.com
+      name: samitab, camrossi
+    name: vkaci
+    type: application
+    urls:
+    - https://github.com/datacenter/ACI-Kubernetes-Visualiser/releases/download/vkaci-2.1.1/vkaci-2.1.1.tgz
+    version: 2.1.1
+generated: "2025-04-17T06:42:33.801731985Z"
