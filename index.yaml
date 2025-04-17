@@ -1,5 +1,19 @@
 apiVersion: v1
 entries:
+  aci-kubernetes-visualiser:
+  - apiVersion: v2
+    appVersion: v2.1.0
+    created: "2025-04-17T06:44:52.4786063Z"
+    description: A Helm chart for VKACI
+    digest: 27d72f5c13dbcded9bb1286cdcd730217cf4325877c87d8e27fe047ed0eda9ee
+    maintainers:
+    - email: vkaci-tool@cisco.com
+      name: samitab, camrossi
+    name: aci-kubernetes-visualiser
+    type: application
+    urls:
+    - https://github.com/datacenter/ACI-Kubernetes-Visualiser/releases/download/aci-kubernetes-visualiser-2.1.0/aci-kubernetes-visualiser-2.1.0.tgz
+    version: 2.1.0
   neo4j-standalone:
   - apiVersion: v1
     appVersion: 4.4.6
@@ -38,4 +52,4 @@ entries:
     urls:
     - https://github.com/datacenter/ACI-Kubernetes-Visualiser/releases/download/vkaci-2.1.1/vkaci-2.1.1.tgz
     version: 2.1.1
-generated: "2025-04-17T06:42:33.801731985Z"
+generated: "2025-04-17T06:44:52.478618182Z"
