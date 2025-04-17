@@ -28,6 +28,14 @@ nfna = {
                     }
             },
             "nodeName": "1234abc",
+            "encapVlan": {
+                "encapRef": {
+                    "key": "",
+                    "nadVlanMap": ""
+                },
+                "mode": "Trunk",
+                "vlanList": "[3456]"
+            },
             "networkRef": {
                 "name": "sriov-net1"
             },
@@ -56,6 +64,14 @@ nfna = {
                     }
             },
             "nodeName": "1234abc",
+            "encapVlan": {
+                "encapRef": {
+                    "key": "",
+                    "nadVlanMap": ""
+                },
+                "mode": "Trunk",
+                "vlanList": "[3456]"
+            },
             "networkRef": {
                 "name": "macvlan-net1"
             },
@@ -83,6 +99,14 @@ nfna = {
                     }
             },
             "nodeName": "1234abc",
+            "encapVlan": {
+                "encapRef": {
+                    "key": "",
+                    "nadVlanMap": ""
+                },
+                "mode": "Trunk",
+                "vlanList": "[3456]"
+            },
             "networkRef": {
                 "name": "bridge-net1"
             },
@@ -358,7 +382,7 @@ class TestVkaciGraph(unittest.TestCase):
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/3',
                                               'node_iface': 'PF-ens1f2'
-                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}],
                                           'node_leaf_macvlan_iface_conn': [{
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/37',
@@ -367,8 +391,8 @@ class TestVkaciGraph(unittest.TestCase):
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/38',
                                               'node_iface': 'br1'}],
-                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
-                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111', 'vlan': '[3456]'}],
                                           'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}], 'mac': 'MOCKMO1C'}},
                     'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
                                            'labels': {'app': 'guestbook'}}]}}
@@ -391,16 +415,16 @@ class TestVkaciGraph(unittest.TestCase):
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/3',
                                               'node_iface': 'PF-ens1f2'
-                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
+                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}], 'node_leaf_macvlan_iface_conn': [{
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/37',
                                               'node_iface': 'bond1'}],
-                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111', 'vlan': '[3456]'}],
                                           'node_leaf_br_iface_conn': [{
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/38',
                                               'node_iface': 'br1'}],
-                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
                                           'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {'CiscoLabs5': {'Description': 'Cisco '
@@ -454,11 +478,11 @@ class TestVkaciGraph(unittest.TestCase):
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/38',
                                               'node_iface': 'br1'}],
-                                          'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
+                                          'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}], 'node_leaf_macvlan_iface_conn': [{
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/37',
-                                              'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
-                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                              'node_iface': 'bond1'}], 'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111', 'vlan': '[3456]'}],
                                           'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
                                           'mac': 'MOCKMO1C',
                                           'neighbours': {},
@@ -504,12 +528,12 @@ class TestVkaciGraph(unittest.TestCase):
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/3',
                                               'node_iface': 'PF-ens1f2'
-                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}], 'node_leaf_macvlan_iface_conn': [{
+                                          }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}], 'node_leaf_macvlan_iface_conn': [{
                                               'switch_name': 'leaf-101',
                                               'switch_interface': 'eth1/37',
                                               'node_iface': 'bond1'}],
-                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
-                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                          'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111', 'vlan': '[3456]'}],
+                                          'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
                                           'node_leaf_all_iface_conn': [{'switch_name': 'leaf-101', 'switch_interface': 'eth1/3', 'node_iface': 'PF-ens1f2'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/37', 'node_iface': 'bond1'}, {'switch_name': 'leaf-101', 'switch_interface': 'eth1/38', 'node_iface': 'br1'}],
                                           'node_leaf_br_iface_conn': [{
                                               'switch_name': 'leaf-101',
@@ -774,6 +798,14 @@ class TestVkaciGraph(unittest.TestCase):
                             }
                     },
                     "nodeName": "1234abc",
+                    "encapVlan": {
+                        "encapRef": {
+                            "key": "",
+                            "nadVlanMap": ""
+                        },
+                        "mode": "Trunk",
+                        "vlanList": "[3456]"
+                    },
                     "networkRef": {
                         "name": "sriov-net1"
                     },
@@ -796,7 +828,7 @@ class TestVkaciGraph(unittest.TestCase):
                                                       'switch_interface': 'eth1/3',
                                                       'node_iface': 'PF-ens1f2'
                                                   }],
-                                                  'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                                  'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}],
                                                   'node_leaf_macvlan_iface_conn': [],
                                                   'node_pod_macvlan_iface_conn': [],
                                                   'node_pod_br_iface_conn': [],
@@ -848,6 +880,14 @@ class TestVkaciGraph(unittest.TestCase):
                             }
                     },
                     "nodeName": "1234abc",
+                    "encapVlan": {
+                        "encapRef": {
+                            "key": "",
+                            "nadVlanMap": ""
+                        },
+                        "mode": "Trunk",
+                        "vlanList": "[3456]"
+                    },
                     "networkRef": {
                         "name": "macvlan-net1"
                     },
@@ -873,12 +913,97 @@ class TestVkaciGraph(unittest.TestCase):
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/37',
                                                       'node_iface': 'bond1'}],
-                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
                                                   'node_leaf_br_iface_conn': [],
                                                   'node_leaf_all_iface_conn': [{
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/37',
                                                       'node_iface': 'bond1'}],
+                                                  'mac': 'MOCKMO1C'}},
+                            'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
+                                                   'labels': {'app': 'guestbook'}}]}}
+
+                build = VkaciBuilTopology(
+                    VkaciEnvVariables(self.vars), ApicMethodsMock())
+                # Act
+                result = build.update()
+                # Assert
+                self.assertDictEqual(result, expected)
+                self.assertEqual(build.aci_vrf, "uni/tn-Ciscolive/ctx-vrf-01")
+    
+    def test_bridge(self):
+        br_pod = [
+            client.V1Pod(
+                status=client.V1PodStatus(
+                    host_ip="192.168.1.2", pod_ip="192.158.1.8"
+                ),
+                metadata=client.V1ObjectMeta(
+                    name="br-pod", namespace="dockerimage", labels={"guest": "frontend"}, annotations={"k8s.v1.cni.cncf.io/network-status": json.dumps([{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}])}
+                ),
+                spec=client.V1PodSpec(
+                    node_name="1234abc", containers=[]
+                )
+            )
+        ]
+        br_nfna = {
+            "items": [{
+                "spec": {
+                    "aciTopology": {
+                        "br0":
+                            {
+                                "fabricLink": [
+                                    "abc/def/node-101/[eth1/38]"
+                                ],
+                                "pods": [
+                                    {
+                                        "localIface": "br-net1",
+                                        "podRef": {
+                                            "name": "br-pod"
+                                        }
+                                    }
+                                ]
+                            }
+                    },
+                    "nodeName": "1234abc",
+                    "encapVlan": {
+                        "encapRef": {
+                            "key": "",
+                            "nadVlanMap": ""
+                        },
+                        "mode": "Trunk",
+                        "vlanList": "[3456]"
+                    },
+                    "networkRef": {
+                        "name": "br-net1"
+                    },
+                    "primaryCni": "bridge"
+                },
+                "metadata": {
+                    "name": "bridge"
+                }
+            }]
+        }
+        with patch('kubernetes.client.CoreV1Api.list_pod_for_all_namespaces', MagicMock(return_value=client.V1PodList(api_version="1", items=br_pod))):
+            with patch('kubernetes.client.CustomObjectsApi.list_namespaced_custom_object', MagicMock(return_value=br_nfna)):
+                expected = {'nodes': {'1234abc': {'node_ip': '192.168.1.2',
+                                                  'pods': {
+                                                      'br-pod': {'ip': '192.158.1.8', 'primary_iface': '', 'ns': 'dockerimage', 'labels': {'guest': 'frontend'}, 'other_ifaces': {'br-net1': 'br-net1'}, 'annotations': {'k8s.v1.cni.cncf.io/network-status': '[{"ips": ["192.158.1.8"], "name": "br-net1", "interface": "br-net1"}]'}}
+                                                  },
+                                                  'bgp_peers': {'leaf-204': {'prefix_count': 2}}, 'neighbours': {'esxi4.cam.ciscolabs.com':                                                                                       {'switches': {'leaf-204': {'vmxnic1-eth1/1'}}, 'Description': 'VMware version 123'}},
+                                                  'labels': {'app': 'redis'},
+                                                  'node_leaf_sriov_iface_conn': [],
+                                                  'node_pod_sriov_iface_conn': [],
+                                                  'node_pod_macvlan_iface_conn': [],
+                                                  'node_leaf_br_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/38',
+                                                      'node_iface': 'br0'}],
+                                                  'node_pod_br_iface_conn': [{'node_iface': 'br0', 'pod_name': 'br-pod', 'node_network': 'br-net1', 'pod_iface': 'br-net1', 'vlan': '[3456]'}],
+                                                  'node_leaf_macvlan_iface_conn': [],
+                                                  'node_leaf_all_iface_conn': [{
+                                                      'switch_name': 'leaf-101',
+                                                      'switch_interface': 'eth1/38',
+                                                      'node_iface': 'br0'}],
                                                   'mac': 'MOCKMO1C'}},
                             'services': {'appx': [{'name': 'example service', 'cluster_ip': '192.168.25.5', 'external_i_ps': ['192.168.5.1'], 'load_balancer_ip': '192.168.5.2', 'ns': 'appx',
                                                    'labels': {'app': 'guestbook'}}]}}
@@ -941,18 +1066,18 @@ class TestVkaciGraph(unittest.TestCase):
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/3',
                                                       'node_iface': 'PF-ens1f2'
-                                                  }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                                  }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}],
                                                       'node_leaf_macvlan_iface_conn': [{
                                                           'switch_name': 'leaf-101',
                                                           'switch_interface': 'eth1/37',
                                                           'node_iface': 'bond1'}],
-                                                      'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                                      'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111' , 'vlan': '[3456]'}],
 
                                                   'node_leaf_br_iface_conn': [{
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/38',
                                                       'node_iface': 'br1'}],
-                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
                                                   'node_leaf_all_iface_conn': [{
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/3',
@@ -1024,18 +1149,18 @@ class TestVkaciGraph(unittest.TestCase):
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/3',
                                                       'node_iface': 'PF-ens1f2'
-                                                  }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12'}],
+                                                  }], 'node_pod_sriov_iface_conn': [{'node_iface': 'VF-ens1f2v12', 'pod_name': 'sriov-pod', 'node_network': 'sriov-net1', 'pod_iface': 'ens1f2v12', 'vlan': '[3456]'}],
                                                       'node_leaf_macvlan_iface_conn': [{
                                                           'switch_name': 'leaf-101',
                                                           'switch_interface': 'eth1/37',
                                                           'node_iface': 'bond1'}],
-                                                      'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111'}],
+                                                      'node_pod_br_iface_conn': [{'node_iface': 'br1', 'pod_name': 'bridge-pod', 'node_network': 'bridge-net1', 'pod_iface': 'pod111111', 'vlan': '[3456]'}],
 
                                                   'node_leaf_br_iface_conn': [{
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/38',
                                                       'node_iface': 'br1'}],
-                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1'}],
+                                                  'node_pod_macvlan_iface_conn': [{'node_iface': 'net1', 'pod_name': 'macvlan-pod', 'node_network': 'macvlan-net1', 'pod_iface': 'net1', 'vlan': '[3456]'}],
                                                   'node_leaf_all_iface_conn': [{
                                                       'switch_name': 'leaf-101',
                                                       'switch_interface': 'eth1/3',

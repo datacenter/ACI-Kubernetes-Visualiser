@@ -328,6 +328,9 @@ class VkaciBuilTopology(object):
     def list_cilium_custom_objects(self):
         return self.custom_obj.list_cluster_custom_object(group="cilium.io", version="v2alpha1", plural="ciliumbgpclusterconfigs")
 
+    def list_vmi_custom_objects(self):
+        return self.custom_obj.list_cluster_custom_object(group="kubevirt.io", version="v1", plural="virtualmachineinstances")
+
     def update_bgp_info(self, apic:Node):
         '''Get the BGP information'''
         
@@ -451,7 +454,41 @@ class VkaciBuilTopology(object):
                         count = self.bgp_info[name]["prefix_count"]
                     node['bgp_peers'][name] = {"prefix_count": count}
 
+    def get_vm_mac_ips(self, nodeName, pod_name, node_iface):
+        """_summary_
+        Get the MAC and IP address of the VM Interface in the POD. The network-status annotation on the POD always has the MAC but the IP is not present if 
+        the IP is not allocated by the CNI and in that case we need to look into the VMI object to get the IP address. This requires the VM to have the guest tools installed.
+        To-DO: Add another field to say if the IP/MAC is learned on the fabric.
+        Args:
+            nodeName (_type_): _description_
+            pod_name (_type_): _description_
+            node_iface (_type_): _description_
 
+        Returns:
+            _type_: _description_
+        """
+        mac= ""
+        ips = ""
+
+        if "k8s.v1.cni.cncf.io/network-status" in self.topology['nodes'][nodeName]['pods'][pod_name]['annotations']:
+            networkStatus = self.topology['nodes'][nodeName]['pods'][pod_name]['annotations']['k8s.v1.cni.cncf.io/network-status']
+            networkStatus = json.loads(networkStatus)
+            for network in networkStatus:
+                if network["interface"] == node_iface:
+                    mac = network["mac"]
+                    if "ips" in network:
+                        ips = ",".join(network["ips"])
+                    if "kubevirt.io/domain" in self.topology['nodes'][nodeName]['pods'][pod_name]['annotations']:
+                        kubevirt_domain = self.topology['nodes'][nodeName]['pods'][pod_name]['annotations']["kubevirt.io/domain"]
+                        vmi = self.topology['nodes'][nodeName]['vmis'][kubevirt_domain]
+                        if 'interfaces' in vmi: 
+                            for interface in vmi["interfaces"]:
+                                if mac == interface["mac"]:
+                                    if 'ipAddresses' in interface:
+                                        ips = ",".join(interface["ipAddresses"])
+                            
+        return mac, ips
+    
     def update(self):
         '''Update the topology by querying the APIC and K8s cluster'''
         logger.info("Start Topology Generation")
@@ -495,6 +532,7 @@ class VkaciBuilTopology(object):
                         nodes[node_name] = {
                             "node_ip": i.status.host_ip,
                             "pods": {},
+                            "vmis": {},
                             'bgp_peers': {},
                             'neighbours': {},
                             'labels': {},
@@ -532,7 +570,25 @@ class VkaciBuilTopology(object):
                                         pods[pod_name]['primary_iface'] = str(val["interface"])
             except Exception as e:
                 logger.error(f"Error processing pod: {i.metadata.name}. Error: {str(e)}")
+        
+        try:
+            ret = self.list_vmi_custom_objects()
+            
+            for vmi in ret['items']:
+                node_name = vmi['status']['nodeName']
+                if node_name:
+                    nodes = self.topology['nodes']
+                    vmis = nodes[node_name]['vmis']
+                    vmi_name = vmi['metadata']['name']
+                    vmis[vmi_name] = {
+                        "ns": vmi['metadata']['namespace'],
+                        "interfaces": [iface for iface in vmi['status']['interfaces'] if 'multus-status' in iface.get('infoSource', '')]
+                    }
+                    
 
+        except Exception as e:
+            logger.error(f"Error: {str(e)}")
+        
         try:
             cr = self.custom_obj.list_namespaced_custom_object(group="aci.fabricattachment", version="v1", namespace="aci-containers-system", plural="nodefabricnetworkattachments")
 
@@ -551,24 +607,24 @@ class VkaciBuilTopology(object):
                                         for fabricLink in fabricLinks:
                                             fabricLinkSplit = fabricLink.split("/")
                                             switch_name = fabricLinkSplit[2].replace("node", "leaf")
-                                            switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]
+                                            switch_interface = fabricLink[fabricLink.rfind('[') + 1: fabricLink.rfind(']')]                 
                                             if "sriov" in i["spec"]["primaryCni"]:
                                                 self.topology['nodes'][nodeName]['node_leaf_sriov_iface_conn'].append({
                                                     'switch_name': switch_name,
                                                     'switch_interface': switch_interface,
-                                                    'node_iface': iface_name
+                                                    'node_iface': iface_name,
                                                 })
                                             elif "bridge" in i["spec"]["primaryCni"]:
                                                 self.topology['nodes'][nodeName]['node_leaf_br_iface_conn'].append({
                                                     'switch_name': switch_name,
                                                     'switch_interface': switch_interface,
-                                                    'node_iface': iface_name
+                                                    'node_iface': iface_name,
                                                 })
                                             else:
                                                 self.topology['nodes'][nodeName]['node_leaf_macvlan_iface_conn'].append({
                                                     'switch_name': switch_name,
                                                     'switch_interface': switch_interface,
-                                                    'node_iface': iface_name
+                                                    'node_iface': iface_name,
                                                 })
                                         # This is the POD in the NodeFabricNetworkAttachment CRD
                                         for pod in pods:
@@ -580,22 +636,28 @@ class VkaciBuilTopology(object):
                                             pod_name = pod.get("podRef")["name"]
                                             network_ref = i["spec"].get("networkRef")
                                             node_network = network_ref["name"]
+                                            vlanList = i["spec"].get("encapVlan").get("vlanList")
                                             if "sriov" in i["spec"]["primaryCni"]:
                                                 self.sriov = True
                                                 self.topology['nodes'][nodeName]['node_pod_sriov_iface_conn'].append({
                                                     'node_iface': node_iface,
                                                     'pod_name': pod_name,
                                                     'node_network': node_network,
-                                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, ""),
+                                                    'vlan': vlanList
                                                 })
                                             elif "bridge" in i["spec"]["primaryCni"]:
+                                                mac,ips = self.get_vm_mac_ips(nodeName, pod_name, node_iface)
                                                 self.bridge = True
                                                 self.topology['nodes'][nodeName]['node_pod_br_iface_conn'].append({
                                                     # For bridge mode makes more sense to map the POD internal interface to a bridge rather then to the internal Interafece name.
                                                     'node_iface': iface_name,
                                                     'pod_name': pod_name,
                                                     'node_network': node_network,
-                                                    'pod_iface': node_iface
+                                                    'pod_iface': node_iface,
+                                                    'vlan': vlanList,
+                                                    'mac': mac,
+                                                    'ips': ips
                                                 })
                                             else:
                                                 self.macvlan = True
@@ -603,9 +665,10 @@ class VkaciBuilTopology(object):
                                                     'node_iface': node_iface,
                                                     'pod_name': pod_name,
                                                     'node_network': node_network,
-                                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, "")
+                                                    'pod_iface': self.topology['nodes'][nodeName]['pods'][pod_name]['other_ifaces'].get(node_network, ""),
+                                                    'vlan': vlanList
                                                 })
-
+                                
                         self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_sriov_iface_conn'])
                         self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_macvlan_iface_conn'])
                         self.topology['nodes'][nodeName]['node_leaf_all_iface_conn'].extend(self.topology['nodes'][nodeName]['node_leaf_br_iface_conn'])
@@ -772,9 +835,15 @@ class VkaciGraph(object):
         MERGE (pod:Pod {name: p.name})
         ON CREATE SET pod.ip = p.ip, pod.ns = p.ns
         MERGE (pod)-[:RUNNING_ON {interface: p.primary_iface + " "}]->(node)
-        FOREACH (l IN p.labels | 
-            MERGE (lab:Label {name: l}) 
+        FOREACH (key IN keys(p.labels) |
+            MERGE (lab:Label {podName: p.name, name: key})
+            ON CREATE SET lab.value = p.labels[key]
             MERGE (lab)-[:ATTACHED_TO]->(pod))
+            
+        FOREACH (key IN keys(p.annotations) |
+            MERGE (ann:Annotation {podName: p.name, name: key})
+            ON CREATE SET ann.value = p.annotations[key]
+            MERGE (ann)-[:ATTACHED_TO]->(pod))
     )
 
     FOREACH (b IN n.bgp_peers | 
@@ -883,7 +952,7 @@ class VkaciGraph(object):
     UNWIND n.node_pod_sriov_iface_conn AS conn
     MATCH (pod:Pod) WHERE pod.name = conn.pod_name
     MATCH (node:Node) WHERE node.name = n.node_name
-    MERGE (pod)-[:RUNNING_ON_SRIOV {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
+    MERGE (pod)-[:RUNNING_ON_SRIOV {interface: conn.pod_iface + " : " + conn.node_iface, vlan: conn.vlan}]->(node)
     """
 
     #Query to add macvlan relationship between a node and a switch for baremetal case
@@ -915,7 +984,7 @@ class VkaciGraph(object):
     UNWIND n.node_pod_macvlan_iface_conn AS conn
     MATCH (pod:Pod) WHERE pod.name = conn.pod_name
     MATCH (node:Node) WHERE node.name = n.node_name
-    MERGE (pod)-[:RUNNING_ON_MACVLAN {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
+    MERGE (pod)-[:RUNNING_ON_MACVLAN {interface: conn.pod_iface + " : " + conn.node_iface, vlan: conn.vlan}]->(node)
     """
     
     #Query to add bridge relationship between a node and a switch for baremetal case
@@ -947,7 +1016,7 @@ class VkaciGraph(object):
     UNWIND n.node_pod_br_iface_conn AS conn
     MATCH (pod:Pod) WHERE pod.name = conn.pod_name
     MATCH (node:Node) WHERE node.name = n.node_name
-    MERGE (pod)-[:RUNNING_ON_BR {interface: conn.pod_iface + " : " + conn.node_iface}]->(node)
+    MERGE (pod)-[:RUNNING_ON_BR {interface: conn.pod_iface + " : " + conn.node_iface, vlan: conn.vlan, mac: conn.mac, ips: conn.ips}]->(node)
     """
 
     def update_database(self):
@@ -1019,8 +1088,7 @@ class VkaciGraph(object):
             
             pods = []
             for pod_name, pod in topology['nodes'][node]["pods"].items():
-                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "labels": [k+":"+v for k, v in pod["labels"].items()], "annotations": [k+":"+v for k, v in pod["annotations"].items()], "primary_iface": pod["primary_iface"]})
-            
+                pods.append({"name": pod_name, "ip": pod["ip"], "ns": pod["ns"], "primary_iface": pod["primary_iface"], "labels": pod["labels"], "annotations": pod["annotations"]})
             bgp_peers = []
             for peer_name, peer in topology['nodes'][node]["bgp_peers"].items():
                 bgp_peers.append({"name": peer_name, "prefix_count": peer["prefix_count"]})

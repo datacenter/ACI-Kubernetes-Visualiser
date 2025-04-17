@@ -214,18 +214,27 @@ const selectedLabelFilters = new Map()
 selectedPodNamespace = "!"
 
 function getLabelFilterString() {
-    const lbls = [];
-    selectedLabelFilters.forEach((value) => lbls.push(`'${value}'`));
-    let lblStr = lbls.join(",")
-    console.log(lblStr)
-    return lblStr
+    const lbls = new Map();
+    selectedLabelFilters.forEach((value) => {
+        const [key, val] = value.split(":");
+        if (!lbls.has(key)) {
+            lbls.set(key, []);
+        }
+        lbls.get(key).push(val);
+    });
+    console.log(lbls);
+    return lbls;
 }
 
 function addPodLabelQuery() {
     if (selectedLabelFilters.size > 0) {
-        var lblStr = getLabelFilterString();
-        return `MATCH (l:Label)-->(p) WHERE l.name IN [${lblStr}] `;
-        // q += `AND l2.name IN [${lblStr}]) `
+        const lblStr = getLabelFilterString();
+        let matchStatements = [];
+        lblStr.forEach((values, key) => {
+            const valueConditions = values.map(value => `l.name="${key}" and l.value="${value}"`);
+            matchStatements.push(`(${valueConditions.join(" OR ")})`);
+        });
+        return `MATCH (l:Label)-->(p) WHERE ${matchStatements.join(" OR ")} `;
     }
     return "";
 }
@@ -308,7 +317,7 @@ function draw_only_sriov_links() {
     selectedView = View.OnlySriovlinks
     let q = ``
     q += addPodLabelQuery();
-    q +=`MATCH (p)-[r:RUNNING_ON_SRIOV]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+    q +=`MATCH (p:Pod)-[r:RUNNING_ON_SRIOV]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
         OPTIONAL MATCH (n)-[r1:CONNECTED_TO_SRIOV]->(a)
         OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_SRIOV]->(b)
         RETURN p, n, r, r1, r2, r3, v, a, b`
@@ -319,7 +328,7 @@ function draw_only_macvlan_links() {
     selectedView = View.OnlyMacvlanlinks
     let q = ``
     q += addPodLabelQuery();
-    q +=`MATCH (p)-[r:RUNNING_ON_MACVLAN]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+    q +=`MATCH (p:Pod)-[r:RUNNING_ON_MACVLAN]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
         OPTIONAL MATCH (n)-[r1:CONNECTED_TO_MACVLAN]->(a)
         OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_MACVLAN]->(b)
         RETURN p, n, r, r1, r2, r3, v, a, b`
@@ -330,10 +339,11 @@ function draw_only_bridge_links() {
     selectedView = View.OnlyBridgelinks
     let q = ``
     q += addPodLabelQuery();
-    q +=`MATCH (p)-[r:RUNNING_ON_BR]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
-        OPTIONAL MATCH (n)-[r1:CONNECTED_TO_BR]->(a)
+    q +=`MATCH (p:Pod)-[r:RUNNING_ON_BR]->(n:Node) WHERE p.ns =~ '${selectedNamespace}'
+        OPTIONAL MATCH (n)-[r1:CONNECTED_TO_BR]->(br)
         OPTIONAL MATCH (n:Node)-[r2:RUNNING_IN]->(v:VM_Host)-[r3:CONNECTED_TO_BR]->(b)
-        RETURN p, n, r, r1, r2, r3, v, a, b`
+        OPTIONAL MATCH (a:Annotation)-[r3:ATTACHED_TO]->(p:Pod) WHERE a.name = "k8s.v1.cni.cncf.io/network-status"
+        RETURN p, n, r, r1, r2, r3, v, a, b, br`
     draw(q, true)
 }
 
