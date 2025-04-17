@@ -3,4 +3,4 @@ __pycache__/*
 .vscode/*
 my_values.yaml
 values_examples_local
-LocalTests/oc-ro-user.yml
+LocalTests
